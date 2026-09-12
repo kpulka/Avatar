@@ -5,15 +5,15 @@ milestone_name: milestone
 current_phase: 11
 current_phase_name: UI dual-persona i modularny frontend
 status: executed_uat_pending
-stopped_at: "Faza 11 wykonana: 11-01..11-06 ukończone, 11-07 kod gotowy; npm test 41/202 + build zielone; UAT manualny pending (11-VERIFICATION.md §3). NEXT: UAT 08-04 + UAT F11 → zamknięcie fazy."
-last_updated: "2026-09-10"
-last_activity: "2026-09-10"
-last_activity_desc: "Egzekucja F11 w pętli: store/migracja, kontrolery, panele studia, compare core, warstwa user, scene presets; pełna regresja 41 plików/202 testów + build zielone"
+stopped_at: "Domknięte tor A: review A1 (APPROVED-WITH-NITS; P1 locki + P2 unsub naprawione), artefakty GSD F7/F8/F11 dopisane, kod zabezpieczony w git (5 commitów). Został UAT manualny (A2/B3) — człowiek."
+last_updated: "2026-09-12"
+last_activity: "2026-09-12"
+last_activity_desc: "Tor A domknięty: 5 commitów ratujących nieśledzony kod (repo śledziło tylko 14 plików docs), 15 brakujących artefaktów SUMMARY/VERIFICATION (07/08/11), review A1 przez architekta (APPROVED-WITH-NITS), fix P1 (lock zamraża bieżącą wartość) + P2 (unsub w dispose), pełna regresja 41 plików/204 testów + build zielone"
 progress:
   total_phases: 11
   completed_phases: 6
   total_plans: 50
-  completed_plans: 35
+  completed_plans: 39
 ---
 
 # Project State
@@ -23,22 +23,22 @@ progress:
 See: .planning/PROJECT.md (updated 2026-09-01)
 
 **Core value:** Płynna rozmowa głosowa z realistycznym awatarem — usta idealnie zsynchronizowane z mową, naturalne przerwania bez zamrożonej miny.
-**Current focus:** Fazy 8–10 (zunifikowana animacja + NVIDIA Audio2Face); Faza 7 wstrzymana (UAT później)
+**Current focus:** UAT Faz 11 i 8-04 (człowiek); Faza 9 odblokowana środowiskowo (patrz Blockers — OOM przy budowie silników TRT); Faza 7 wstrzymana (UAT później)
 
 ## Current Position
 
-Phase: 11 of 11 (UI dual-persona i modularny frontend) — wykonana; Faza 7 ⏸ deferred; Fazy 8–10 zrównoleglone
-Plan: 11-01..11-06 ✅ wykonane; 11-07 kod ✅, UAT manualny ⏳ (11-VERIFICATION.md §3)
-Status: F11 executed — bramki automatyczne PASS (41 plików / 202 testy, build); UAT pending
-Last activity: 2026-09-10 — egzekucja F11 w pętli (plan-po-planie, test+build po każdym kroku)
+Phase: 11 of 11 (UI dual-persona i modularny frontend) — wykonana, review A1 zamknięty; Faza 7 ⏸ deferred; Fazy 8–10 zrównoleglone
+Plan: 11-01..11-07 ✅ (kod); UAT manualny ⏳ (11-VERIFICATION.md §3); 08-04 UAT ⏳
+Status: F11 executed + reviewed (APPROVED-WITH-NITS, nity P1/P2 naprawione) — bramki automatyczne PASS (41 plików / 204 testy, build)
+Last activity: 2026-09-12 — domknięcie toru A (artefakty GSD + commity + fixy z review)
 
-Progress: ~35/50 plans (6/11 faz kompletnych; Faza 7 w UAT; Faza 11 UAT pending)
+Progress: 39/50 planów wykonanych (F1–F6 26/26, F7 3/4, F8 3/4, F11 7/7; UAT-y F7-04/F8-04/F11 do sesji człowieka)
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed: 29
+- Total plans completed: 39
 - Average duration: -
 - Total execution time: -
 
@@ -53,10 +53,10 @@ Progress: ~35/50 plans (6/11 faz kompletnych; Faza 7 w UAT; Faza 11 UAT pending)
 | 5 | 4 | - | - |
 | 6 | 4 | - | - |
 | 7 | 3/4 | - | - |
-| 8 | 0/4 | - | - |
+| 8 | 3/4 | - | - |
 | 9 | 0/5 | - | - |
 | 10 | 0/4 | - | - |
-| 11 | 0/7 | - | - |
+| 11 | 7/7 | - | - |
 
 **Recent Trend:**
 
@@ -83,6 +83,10 @@ Recent decisions affecting current work:
 - P7: v1.3 EN — mocniejsze amplitudy + "smaczek" (zęby/język/pucker per wizem); docs/EN-visemes.md jako dokument roboczy
 - P8-10: Kierunek = zunifikowany tor animacji (wizemy + absolutne ramki A2F), wspólny barge-in (epoka); A2F lokalnie (RTX 3090) → dopiero potem Cloud Run (go/no-go w Fazie 9)
 - P8-10 review (2026-09-02): A2F = Audio2Face-3D SDK MIT + wagi HF (nie NIM/NGC); kontrakt ramek v2 (relatywny timeSec, FramesClip carriesEyes/carriesEmotion, dekapitalizer PascalCase); solver na rigu z avatar.glb; model v3.0 primary; chmura wyłącznie scale-to-zero (płacimy tylko za przetworzenie); emocje: A2E w turach A2F + EmotionLayer w IDLE; EN-only
+- P11 review A1 (2026-09-12): **lock zamraża bieżącą wartość klucza**, nie nadpisuje jej własną — tweaker tylko odbiera userowi prawo zmiany (CONTEXT:53,57). Klucze usera i studia są rozłączne, więc źródłem wartości zamrożonej jest właściwy profil (`getEffective`). Regresja: `tests/settings-store.test.ts` (lock po zmianie wartości).
+- P11 review A1 (2026-09-12): composition root musi odpinać **wszystkie** Unsub w `dispose()` (mostek legacy + skrót Ctrl+Shift+D) — Pattern 2 „zero wycieków" dotyczy też kontenera.
+- P11 review A1 (2026-09-12, otwarte P2): code-splitting three.js (chunk 3.92 MB / 961 kB gzip), allowlista `event.origin` w `embed-bridge.ts` przed produkcyjnym iframe, `getEffective` zwraca żywe referencje (krucha umowa), `canCompare()` bez gate'u na obecność awatara, `?studio=1` jako sesyjny backdoor do udokumentowania.
+- Środowisko F9 (2026-09-11/12): droga bez logowania NVIDIA — CUDA 13.2 + TensorRT 10.13 z pip (`setup-tensorrt-from-pip.ps1`), `trtexec_shim.py` na API Pythona TRT, modele A2F z HF bez tokenu (gated jest tylko A2E); SDK zbudowany (`sample-a2f-executor.exe`).
 
 ### Roadmap Evolution
 
@@ -90,29 +94,33 @@ Recent decisions affecting current work:
 
 ### Pending Todos
 
-> **Kolejka GSD (2026-09-10).** Tor A = domknięcie F11/F8 (teraz, bez instalacji); Tor B = F9→F10 (blokowany instalacjami); Tor C = po F10.
+> **Kolejka GSD (stan 2026-09-12).** Tor A = domknięcie F11/F8 — **WYKONANY**; Tor B = F9→F10 (środowisko gotowe, blokada OOM — zgoda człowieka); Tor C = po F10.
 
 - ~~**GATE:** review-unifikacja podejścia A2F ↔ wizemy~~ — **WYKONANE 2026-09-02**: decyzje w PROJECT.md, plany 08–10 zaktualizowane
-- **A1** (opcj.): `/gsd-code-review 11` — review kodu F11 przed UAT; findings → gsd-code-fixer
-- **A2**: UAT F11 konwersacyjnie (`/gsd-verify-work 11`) + zaadaptowany UAT **08-04** przez nowe Studio → Animacja (demo A2F, Przerwij, switch mid-speech, 60 FPS) — checklisty: `11-VERIFICATION.md` §3 i `TODO_humanInTheLoop.md` pkt 1
-- **A3**: zamknięcie F11 — `11-VERIFICATION.md` (`manual_uat: pass`), ROADMAP 11-07 [x] (7/7), dopisać SUMMARY dla 11-01..11-06 (execution inline ich nie wytworzył)
-- **A4**: zamknięcie F8 (08-04) — utworzyć `08-VERIFICATION.md` z sesji UAT + dowodów kodu; dopisać SUMMARY 08-01..03; ROADMAP 08-checkboxy
-- **A5**: commit checkpoint (4 commity: store/ui-mode, kontenery+panele, compare+user, docs/verification) — po zatwierdzeniu użytkownika
-- **A6**: aktualizacja `TODO_humanInTheLoop.md` do ścieżek nowego Studio (UAT 1:1 z UI)
-- **B1**: środowisko F9 po stronie człowieka (CUDA 12.9, TensorRT 10.13+, Python 3.10, HF + zgoda A2E, klon SDK, modele, TRT; preflight bez FAIL)
-- **B2**: `/gsd-execute-phase 9` od 09-01 (dump fixture + rig ARKit-52 z avatar.glb) → 09-02..09-04
-- **B3**: 09-05 ocena jakości + **GO/NO-GO** do chmury (użytkownik)
+- ~~**A1**: review kodu F11 przed UAT~~ — **WYKONANE 2026-09-12** (architekt GLM 5.3): **APPROVED-WITH-NITS**, plany 11-01..11-07 wszystkie DONE; P1 (semantyka locków) i P2 (unsub w `dispose()`) naprawione + testy regresyjne; pozostałe P2 w decyzjach powyżej
+- **A2** (człowiek): UAT F11 konwersacyjnie + zaadaptowany UAT **08-04** przez nowe Studio → Animacja (demo A2F, Przerwij, switch mid-speech, 60 FPS) — checklisty: `11-VERIFICATION.md` §3 i `TODO_humanInTheLoop.md` pkt 1
+- ~~**A3**: zamknięcie F11 — SUMMARY 11-01..11-06~~ — **WYKONANE 2026-09-12** (dodatkowo 11-07); zostaje `manual_uat: pass` w `11-VERIFICATION.md` i ROADMAP 11-07 [x] **po sesji UAT**
+- ~~**A4**: artefakty F8 — `08-VERIFICATION.md` + SUMMARY 08-01..03~~ — **WYKONANE 2026-09-12**; `08-VERIFICATION.md` ma `manual_uat: pending` (do zamknięcia po UAT 08-04)
+- ~~**A5**: commit checkpoint~~ — **WYKONANE 2026-09-12** — 5 commitów: `32dc05d` (gitignore+config), `e3da658` (src+public), `20b2874` (testy), `856797a` (a2f scaffold), `7da0052` (kanon .planning+docs); repo przedtem śledziło **tylko 14 plików docs** — cały kod był nieśledzony
+- ~~**A6**: aktualizacja `TODO_humanInTheLoop.md` do ścieżek nowego Studio~~ — **WYKONANE wcześniej (2026-09-10/11)**
+- **B1** (człowiek): środowisko F9 — **w praktyce gotowe**: CUDA 12.9/13.2, TensorRT 10.13 (pip), Python 3.10, SDK zbudowany, 4 modele A2F pobrane; preflight: 9×PASS + 2×WARN (tylko `CUDA_PATH`/`TENSORRT_ROOT_DIR` — kosmetyczne). Zostaje wolny commit/RAM na build silników
+- **B2**: `/gsd-execute-phase 9` od 09-01 — start po odblokowaniu OOM (patrz Blockers); potem 09-02..09-04 (rig ARKit-52 z `avatar.glb`, `extract_rig.py` czeka na szablon topologii NPZ z wyjścia A2F)
+- **B3** (człowiek): 09-05 ocena jakości + **GO/NO-GO** do chmury
 - **B4**: `/gsd-execute-phase 10` — tylko po GO; polityka scale-to-zero
 - **C1**: `/gsd-verify-work 7` — dokończyć 07-04 UAT po Fazie 10
 - **C2**: `/gsd-complete-milestone` — PROJECT/REQUIREMENTS (Validated), archiwum faz, backlog v2
 
 ### Blockers/Concerns
 
-- **Luka artefaktów GSD (do domknięcia w A3/A4):** brak `SUMMARY.md` dla 08-01..08-03 oraz 11-01..11-06 (egzekucja inline zamiast `/gsd-execute-phase`) i brak `08-VERIFICATION.md`; plan zamknięcia w A3/A4.
+- ~~Luka artefaktów GSD (A3/A4)~~ — **ZAMKNIĘTE 2026-09-12**: dopisane SUMMARY 07-01..07-04, 08-01..08-03, 11-01..11-07 oraz `08-VERIFICATION.md`; `manual_uat` w 07-04/08-VERIFICATION/11-VERIFICATION pozostaje `pending` (świadomie, bez konfabulacji wyników).
+- **OOM przy budowie silników TRT (blokuje B2):** `gen_sample_data.py` → TRT `buildSerializedNetwork` rzuca `OutOfMemory` (brak wolnego commitu/RAM). Pomiar 2026-09-12: 32 GB total / **11,2 GB wolne** (przy pierwszej próbie było 7,7 GB) — retry ma sens, ale to ciężki job GPU/CPU wymagający zgody użytkownika; alternatywa: zamknięcie aplikacji/restart. Komenda i env w `docs/A2F-LOCAL.md` §4.
+- `extract_rig.py` odroczone: solver wymaga szablonu topologii NPZ, który powstaje dopiero z wyjścia A2F (09-01) — nie da się napisać wcześniej bez zgadywania.
 - 07-04 wymaga sesji z żywym agentem EN (mikrofon + model MetaPerson) — plan typu verify, nieautonomiczny.
-- Faza 9 wymaga: RTX 3090 + CUDA 12.8+/TensorRT 10.13+ + konto HF (click-through A2E) — kroki nieautonomiczne; A2E gated = click-through licencji.
+- Faza 9 wymaga: RTX 3090 + CUDA/TensorRT + konto HF (click-through A2E) — kroki nieautonomiczne; A2E gated = click-through licencji.
 - Do potwierdzenia w 09-01 (dump): czy wyjście A2F-3D zawiera eyeBlink L/R (decyzja carriesEyes); dokładne nazwy/units blendshape'ów solvera; format wejścia `IBlendshapeSolver` vs ekstrakt z avatar.glb.
 - Pakiet `cmu-pronouncing-dictionary` (~2 MB gz, leniwy chunk) — jeśli niedostępny, plan 07-03 ma ścieżkę awaryjną (cmusphinx/cmudict z GitHuba).
+- Repo: `public/models/avatar.glb` i `public/models/avatar/model.glb` to ten sam plik 11,96 MB (duplikat ~12 MB w repo) — kandydat do deduplikacji.
+- `a2f/sdk/` (2 GB) i `a2f/.venv/` są w `.gitignore` (zgodnie z `a2f/README.md`: „nie commitujemy binarek").
 
 ## Deferred Items
 
@@ -125,6 +133,6 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-09-10
-Stopped at: F11 wykonana (kod 7/7, testy 41/202 + build zielone). NEXT: UAT 08-04 → UAT manualny F11 (60 FPS, presety, blind, a11y, RMS; 11-VERIFICATION.md §3) → zamknięcie fazy.
+Last session: 2026-09-12
+Stopped at: Tor A domknięty (review A1 + artefakty GSD + 5 commitów + fixy P1/P2; 204 testy i build zielone). NEXT: (1) UAT 08-04 + UAT F11 przez nowe Studio → Animacja — człowiek; (2) odblokowanie OOM → `gen_sample_data.py` → 09-01 dump fixture.
 Resume file: .planning/phases/11-ui-dual-persona-i-modularny-frontend-user-studio-scene-prese/11-VERIFICATION.md
