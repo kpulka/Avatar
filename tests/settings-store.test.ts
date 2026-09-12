@@ -154,6 +154,29 @@ describe('SettingsStore', () => {
     expect(store.getEffective('volume')).toBeCloseTo(0.3);
   });
 
+  it('lock zamraża bieżącą wartość klucza usera (regresja P1 — nie zrzuca na default)', () => {
+    const store = new SettingsStore(createMemoryStorage());
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    store.setUser('volume', 0.42);
+
+    store.setLock('volume', true);
+    expect(store.getEffective('volume')).toBeCloseTo(0.42);
+
+    store.setUser('volume', 0.1);
+    expect(store.getEffective('volume')).toBeCloseTo(0.42);
+
+    store.setLock('volume', false);
+    expect(store.getEffective('volume')).toBeCloseTo(0.42);
+    warn.mockRestore();
+  });
+
+  it('lock klucza studia nadal korzysta z wartości profilu studia', () => {
+    const store = new SettingsStore(createMemoryStorage());
+    const before = store.getEffective('lipSyncEngine');
+    store.setLock('lipSyncEngine', true);
+    expect(store.getEffective('lipSyncEngine')).toBe(before);
+  });
+
   it('ignoruje nieznane ścieżki zapisu', () => {
     const store = new SettingsStore(createMemoryStorage());
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);

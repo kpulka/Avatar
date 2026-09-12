@@ -74,9 +74,9 @@ export function createApp(canvas: HTMLCanvasElement): AppHandle {
 
   // ---- Stan (F11): store + mirror legacy + tryb UI
   const store = new SettingsStore(localStorage);
-  attachLegacyBridge(store, localStorage);
+  const unsubLegacyBridge = attachLegacyBridge(store, localStorage);
   const uiMode = createUiMode(store, { search: window.location.search, body: document.body });
-  uiMode.attachShortcut(window);
+  const unsubUiModeShortcut = uiMode.attachShortcut(window);
 
   // Motyw i głośność z profilu — również przy zmianach ze store (panel Sesja, import).
   const applyAppearance = (): void => {
@@ -315,6 +315,8 @@ export function createApp(canvas: HTMLCanvasElement): AppHandle {
       unsubToast();
       unsubStore();
       unsubMic();
+      unsubUiModeShortcut();
+      unsubLegacyBridge();
       unsubSceneTheme();
       unsubSceneAttr();
       unsubSceneReload();

@@ -2,8 +2,9 @@
  * SettingsStore v1 (Faza 11): jeden schemat, precedencja defaults → studio → user,
  * locki, persistence (StorageLike), export/import profilu.
  *
- * Precedencja (wytyczne researchu, F11):
- *   locked ? (studio[key] ?? default) : (user[key] ?? studio[key] ?? default)
+ * Precedencja (F11; doprecyzowana po review A1 — lock zamraża bieżącą wartość):
+ *   locked ? (klucz usera: user[key] ?? default | klucz studia: studio[key] ?? default)
+ *          : (user[key] ?? studio[key] ?? default)
  *
  * `setUser` na zablokowanym kluczu jest no-op (UI-05).
  */
@@ -83,11 +84,20 @@ export class SettingsStore {
 
   public getEffective<T = unknown>(path: string): T {
     const locked = this.state.studio.locks[path] === true;
+    const isUserKey = USER_KEYS.includes(path as keyof UserSettings);
     const userValue = (this.state.user as unknown as Record<string, unknown>)[path];
     const studioValue = (this.state.studio as unknown as Record<string, unknown>)[path];
     const defaults = (DEFAULT_SETTINGS.user as unknown as Record<string, unknown>)[path]
       ?? (DEFAULT_SETTINGS.studio as unknown as Record<string, unknown>)[path];
-    const value = locked ? studioValue ?? defaults : userValue ?? studioValue ?? defaults;
+    // Lock zamraża BIEŻĄCĄ wartość klucza (CONTEXT:53,57): tweaker odbiera userowi
+    // prawo zmiany, ale nie nadpisuje wartości własną. Klucze usera i studia są
+    // rozłączne, więc źródłem wartości zamrożonej jest właściwy profil —
+    // wcześniejsze `studioValue ?? defaults` dla klucza usera zrzucało go na default.
+    const value = locked
+      ? isUserKey
+        ? userValue ?? defaults
+        : studioValue ?? defaults
+      : userValue ?? studioValue ?? defaults;
     return value as T;
   }
 
