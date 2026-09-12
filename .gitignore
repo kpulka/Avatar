@@ -8,13 +8,13 @@ a2f/.venv/
 **/__pycache__/
 *.pyc
 
-# Audio2Face-3D SDK + wagi (2 GB) — trzymane lokalnie, NIE commitujemy
+# Audio2Face-3D SDK (2 GB, binarki) — trzymane lokalnie, NIE commitujemy
 # (klon: git clone https://github.com/NVIDIA/Audio2Face-3D-SDK a2f/sdk; patrz a2f/README.md)
 a2f/sdk/
+# rig/ = pochodna ekstrakcja z public/models/avatar.glb (regenerowalna: tools/extract_rig.py)
 a2f/rig/
-a2f/fixtures/
-a2f/wrapper/
-a2f/docker/
+# UWAGA: fixtures/ (kontrakt predict.sample.json dla 09-02), wrapper/ (FastAPI) i
+# docker/ (obraz OCI, Faza 10) to ŹRÓDŁA/artefakty kontraktowe — celowo POZA tą listą.
 
 # --- Sekrety / logi ---
 .env
@@ -27,3 +27,6 @@ logs/
 Thumbs.db
 *.swp
 *~
+
+# --- Cache researchu (regenerowalny) ---
+.planning/research/.cache/
