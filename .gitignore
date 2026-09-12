@@ -1,0 +1,29 @@
+# --- Node / Vite ---
+node_modules/
+dist/
+.vite/
+
+# --- Python (a2f PoC) ---
+a2f/.venv/
+**/__pycache__/
+*.pyc
+
+# Audio2Face-3D SDK + wagi (2 GB) — trzymane lokalnie, NIE commitujemy
+# (klon: git clone https://github.com/NVIDIA/Audio2Face-3D-SDK a2f/sdk; patrz a2f/README.md)
+a2f/sdk/
+a2f/rig/
+a2f/fixtures/
+a2f/wrapper/
+a2f/docker/
+
+# --- Sekrety / logi ---
+.env
+.env.*
+*.log
+logs/
+
+# --- OS / edytory ---
+.DS_Store
+Thumbs.db
+*.swp
+*~

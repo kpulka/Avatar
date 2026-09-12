@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="pl">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Avatar 3D — Real-time Conversational WebGL</title>
+    <link rel="stylesheet" href="/src/style.css" />
+  </head>
+  <body>
+    <div id="app">
+      <canvas id="avatar-canvas"></canvas>
+
+      <!-- WebGL Fallback Overlay -->
+      <div id="webgl-fallback" class="overlay hidden">
+        <div class="card error-card">
+          <h2>⚠️ Brak obsługi WebGL</h2>
+          <p>
+            Twoja przeglądarka lub karta graficzna nie obsługuje WebGL / akceleracji sprzętowej.
+          </p>
+          <p class="subtext">
+            Upewnij się, że masz włączoną akcelerację sprzętową w ustawieniach przeglądarki.
+          </p>
+          <div style="margin-top: 14px;">
+            <button id="btn-fallback-audio" class="btn btn-secondary">Przejdź do trybu Audio 2D (Graceful Degradation)</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ROOT warstwy UI: user (dock/status/captions/segment/ustawienia), studio shell, shared (toast/loader/modal) -->
+      <div id="ui-root"></div>
+    </div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
