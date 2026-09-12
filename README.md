@@ -76,6 +76,8 @@ Jedyny właściciel morph targetów twarzy to `FaceController` (state machine: `
 | [4-audio-i-obsluga-przerwan.md](docs/4-audio-i-obsluga-przerwan.md) | Odtwarzanie PCM, barge-in, state machine twarzy, rozwiązywane race conditions. |
 | [5-shadery-i-realizm.md](docs/5-shadery-i-realizm.md) | Materiały skóry (PBR → SSS), oświetlenie, tone mapping, optymalizacje. |
 | [6-analiza-opensource-i-rozwoj.md](docs/6-analiza-opensource-i-rozwoj.md) | Open-source warte podglądu, emocje sterowane agentem, wielojęzyczność, Faza 2. |
+| [7-audio2face-cloudrun.md](docs/7-audio2face-cloudrun.md) | Alternatywa mimiki: NVIDIA Audio2Face (neuronowy audio-to-face) na Cloud Run + GPU L4. |
+| [EN-visemes.md](docs/EN-visemes.md) | Dokument roboczy wizemów EN: artykulacja → parametry ARKit → analiza niuansów. |
 
 ---
 

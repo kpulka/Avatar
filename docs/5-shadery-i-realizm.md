@@ -124,3 +124,22 @@ function configureTextures(root, renderer) {
 2. **Włosy/brwi/rzęsy**: kartony alpha-cut (nie alpha-blend — sortowanie artefaktów); `material.alphaToCoverage = true` na MSAA.
 3. **Zęby/jama ustna**: lekki `clearcoat 0.3` (wilgotność); nie zostawiaj defaultowego materiału — "suche" zęby psują realizm przy `jawOpen`.
 4. **Tone mapping + oświetlenie > shadery**: 80% odbioru "realistyczności" w WebGL to światło i ACES, nie SSS.
+
+---
+
+## 🎬 Presety sceny (Faza 11)
+
+Cztery presety przełączalne w runtime (`src/features/scene-presets.ts`, controller z tweenem 280 ms):
+
+| Preset | Tło | Key | Fill | Rim | Ambient | Exposure | Pedestal | Kadr |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| `studio-dark` | `#0e1117` | 2.2 `#fff2e0` | 0.7 `#dbe9ff` | 2.6 `#ffe8d6` | 0.15 | 1.0 | on | bust (z=1.22) |
+| `studio-soft` | gradient `#1a2233 → #0b0f17` | 1.8 `#fff6ea` | 1.1 | 1.4 | 0.25 | 1.05 | on | bust |
+| `cinema` | `#05070c` + winieta CSS | 2.6 | 0.35 | 3.2 | 0.08 | 0.95 | off | bust |
+| `light` | `#e8eef7` | 1.4 | 1.2 | 0.9 | 0.5 | 1.0 | off | bust |
+
+Zasady:
+- **Zero nowych passów postprocessingu** — winieta w `cinema` to overlay CSS (`body[data-scene="cinema"]`); budżet 60 FPS pozostaje nienaruszony.
+- **Gradient tła** = cache'owana `CanvasTexture` (sRGB) z `dispose()` poprzedniej przy wymianie.
+- **`prefers-reduced-motion: reduce`** → preset stosowany natychmiast (bez crossfade).
+- **Sync z motywem**: zmiana motywu sugeruje preset (`light` / `studio-dark`) tylko, gdy user nie wybrał presetu ręcznie (`user.scenePresetManual`).

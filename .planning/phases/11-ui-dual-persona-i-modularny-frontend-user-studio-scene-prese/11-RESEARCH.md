@@ -1,4 +1,4 @@
-# Phase 11: UI dual-persona i modularny frontend — Research
+﻿# Phase 11: UI dual-persona i modularny frontend — Research
 
 **Researched:** 2026-09-10
 **Domain:** Vanilla TS + Vite + Three.js + vitest — modularny frontend, dual-persona (user/studio), scene presets, porównywarka A/B
@@ -373,7 +373,12 @@ update(dt: number): void { /* lerp intensywności/kolorów + exposure; koniec �
 | A4 | UI-SPEC „light sparowany z motywem jasnym" znaczy: wybór presetu `light` ustawia theme light i odwrotnie | Pattern 6 | Niespójność produktowa; do potwierdzenia w planie (Open Q2) |
 | A5 | Replay A/B jest sekwencyjny (najpierw A, potem B), nie jednoczesny split-screen | Pattern 5 | Architektura CompareController; CONTEXT mówi „chipsy A/B", co wspiera sekwencję |
 
-## Open Questions
+## Open Questions (RESOLVED 2026-09-10)
+
+> **RESOLVED w planach 11-01..11-07:**
+> - Q1 (blind mode): kolejność torów losowana raz per porównanie; wynik tylko w pamięci sesji (plan 11-05).
+> - Q2 (light ↔ theme): jednokierunkowo theme→preset tylko gdy `user.scenePresetManual !== true`; ręczny wybór wyłącza sync (plany 11-01 schemat + 11-07 controller).
+> - Q3 (mic device): `MicCapture.deviceId` + `listDevices()`; `speech-backend.setInputDevice/listInputDevices`; zapis `user.micDeviceId` (plan 11-06).
 
 1. **Blind mode — co dokładnie jest losowane?**
    - What we know: UI-SPEC dopuszcza tryb bez etykiet („który lepszy?").
@@ -413,7 +418,7 @@ update(dt: number): void { /* lerp intensywności/kolorów + exposure; koniec �
 | Framework | vitest 4.1.11 (bez configu — defaults; env `node`) |
 | Config file | none — `vite.config.ts` bez sekcji `test` (jeśli potrzebny per-file env, wystarczy komentarz `// @vitest-environment happy-dom`) |
 | Quick run command | `npx vitest run tests/settings-store.test.ts tests/ui-mode.test.ts` (podczas iteracji) |
-| Full suite command | `npm test` (`vitest run`) — 32 istniejące pliki muszą pozostać zielone |
+| Full suite command | `npm test` (`vitest run`) — 33 istniejące pliki muszą pozostać zielone |
 
 ### Phase Requirements → Test Map
 | Req ID | Behavior | Test Type | Automated Command | File Exists? |

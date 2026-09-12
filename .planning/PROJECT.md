@@ -68,6 +68,15 @@ Płynna rozmowa głosowa z realistycznym awatarem, którego usta są idealnie zs
 | Epoch-based barge-in zamiast flagi+setTimeout | Eliminuje race conditions przerwań; unieważnia zaplanowane audio/wizemy atomowo (docs/4) | — Pending |
 | `FaceController` jako jedyny właściciel morph targetów | Poprzedni projekt docs miał dwóch pisarzy → drgania miny; state machine IDLE→SPEAKING→RELAXING (docs/3,4) | — Pending |
 | SSS pre-integrated przez `onBeforeCompile` (MVP), stock PBR dla PoC | `transmission:0` zabija parametry attenuation w Three.js — poprzedni przykład docs/5 nie działał; pre-integrated SSS to właściwa ścieżka skóry (docs/5) | — Pending |
+| P8-10 review: A2F = Audio2Face-3D SDK (MIT) + wagi HF (NVIDIA Open Model License), NIM/NGC tylko porównawczo | Ścieżka darmowa/bez EULA NVAIE; SDK streaming-native i batch; VRAM 4 GB+; NIM = DeepStream + płatna licencja produkcji | — Pending |
+| P8-10 review: kontrakt ramek v2 — PoseFrame RELATYWNY, baza (baseSec) dodana JEDNORAZOWO w feedFrames; FramesClip {shapes, carriesEyes, carriesEmotion} | v1 miał double-add audioStart i heurystykę ">10 kluczy"; PascalCase ARKit nie normalizuje się w normalizeShapeName (~30/52 nazw L/R przepada po cichu) → dekapitalizer w parserze | — Pending |
+| P8-10 review: unifikacja = wspólny kontroler+epoga+safety, smoothing per-źródło | Scheduler (λ=18/s ≈ 250 ms stałej czasowej) skasowałby mikromimikę A2F; kalibracja gustowa i nadpisania Edytora zostają w torze wizemów (semantyka per-wizem ≠ per-klatka) | — Pending |
+| P8-10 review: solver blendshape na rigu ARKit-52 z naszego avatar.glb (bez template'ów NVIDIA) | A2F produkuje geometrię — solver potrzebuje rigu; własny rig = wagi 1:1 z MetaPerson, zero remapów | — Pending |
+| P8-10 review: model A2F-3D v3.0 (diffusion, 30 fps, realizm) primary; v2.3 (60 fps) porównawczo | Priorytet realizmu; kontrakt frame_time-per-ramka jest odporny na niestały krok | — Pending |
+| P8-10 review: emocje działają w obu torach — A2E prowadzi mimikę w turach A2F (carriesEmotion → EmotionLayer addytywna OFF), EmotionLayer = baza IDLE/RELAXING + tor wizemów | Bez podwójnej emocji; po turze A2F baza emocjonalna spójna (emotions[] z wrappera zasila EmotionLayer) | — Pending |
+| P8-10 review: chmura WYŁĄCZNIE scale-to-zero (płacimy tylko za przetworzenie; min-instances=0, no-gpu-zonal-redundancy, concurrency=1); cold start nieakceptowalny → NO-GO Fazy 10 | Realny koszt aktywna instancja ~$1,42/h → min-instances=1 ≈ $34/dzień = płacenie za stały serwer; request ze scale-to-zero ≈ $0,02–0,1 | — Pending |
+| P8-10 review: A2F EN-only; PL wróci później równolegle w obu torach | A2F trenowany na audio EN; PL ma własny tor wizemowy (char) bez zmian | — Pending |
+| P8-10 review: tor twarzy ma być regionem przyszłego AvatarDirector (ciało/gesty/głowa) | Zaplanowane warstwy sterowania postacią; interfejsy Fazy 8 nie mogą blokować dekompozycji | — Pending |
 
 ## Evolution
 
