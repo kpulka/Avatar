@@ -119,7 +119,8 @@ Recent decisions affecting current work:
 - Faza 9 wymaga: RTX 3090 + CUDA/TensorRT + konto HF (click-through A2E) — kroki nieautonomiczne; A2E gated = click-through licencji.
 - Do potwierdzenia w 09-01 (dump): czy wyjście A2F-3D zawiera eyeBlink L/R (decyzja carriesEyes); dokładne nazwy/units blendshape'ów solvera; format wejścia `IBlendshapeSolver` vs ekstrakt z avatar.glb.
 - Pakiet `cmu-pronouncing-dictionary` (~2 MB gz, leniwy chunk) — jeśli niedostępny, plan 07-03 ma ścieżkę awaryjną (cmusphinx/cmudict z GitHuba).
-- Repo: `public/models/avatar.glb` i `public/models/avatar/model.glb` to ten sam plik 11,96 MB (duplikat ~12 MB w repo) — kandydat do deduplikacji.
+- P2 review A1 — **domknięte 2026-09-12**: allowlista originów w `embed-bridge.ts` (`?parent_origin=<url[,url]>`, tryb same-origin bez allowlisty, `?allow_any_origin=1` jako jawna furtka; emisja nigdy „w ciemno" do `*`), gate obecności awatara w `canCompare()`, defensywna kopia wartości obiektowych w `getEffective`, vendor chunk `three`; usunięte duplikaty: `public/models/avatar/model.glb` (11,96 MB) oraz `src/avatar/avatar_black.zip` (4,2 MB — martwy, zawierał ten sam model).
+- Rozmiar bundla (2026-09-12, zmierzone): największy chunk to **nie** three.js (596 kB), lecz `cmu-pronouncing-dictionary` — **3,92 MB / 961 kB gzip**, ładowany dynamicznym importem w `src/lipsync/g2p/g2p-en.ts` (lazy, poza pierwszym renderem). Pierwszy render = ~750 kB (three 596 kB + app 154 kB). **Otwarta decyzja:** pruning słownika (np. top-N słów + reguły OOV, które już są) vs zostawienie pełnego (961 kB gzip na żądanie, bolesne na mobile).
 - `a2f/sdk/` (2 GB) i `a2f/.venv/` są w `.gitignore` (zgodnie z `a2f/README.md`: „nie commitujemy binarek").
 
 ## Deferred Items
