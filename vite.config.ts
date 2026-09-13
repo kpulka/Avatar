@@ -2,7 +2,9 @@ import { defineConfig } from 'vite';
 
 export default defineConfig({
   server: {
-    port: 3000,
+    // Port 3000 zajmuje AI Heritage (img2life) — Avatar ma własny, żeby nie kolidować.
+    port: 5310,
+    strictPort: true,
     open: false,
     host: true,
   },
