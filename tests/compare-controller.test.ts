@@ -126,6 +126,32 @@ describe('AnimationSourceRegistry', () => {
 });
 
 describe('CompareController', () => {
+  it('blokuje porównanie, gdy brak awatara (review A1 / P2)', () => {
+    const events = new TypedEventBus<AppEvents>();
+    const buffer = new LastTurnBuffer({ events });
+    events.emit('audio:chunk', {
+      bytes: new Uint8Array([1, 2, 3, 4]),
+      alignment: ALIGNMENT,
+      epoch: 0,
+      startTime: 0,
+      sampleRate: 16000,
+    });
+    events.emit('transcript:agent', 'Test turn');
+
+    const controller = new CompareController({
+      buffer,
+      audioEngine: makeEngine() as never,
+      getFaceController: () => null,
+      getA2fUrl: () => 'http://127.0.0.1:8000',
+      events,
+      sleep: async () => undefined,
+      random: () => 0.1,
+      predict: vi.fn() as never,
+    });
+
+    expect(controller.canCompare()).toBe(false);
+  });
+
   it('odtwarza tę samą turę w obu torach, w tej samej kolejności bajtów', async () => {
     const harness = makeHarness();
     const ok = await harness.controller.run();

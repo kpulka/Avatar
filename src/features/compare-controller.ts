@@ -86,7 +86,8 @@ export class CompareController {
   public canCompare(): boolean {
     if (this.state !== 'idle' && this.state !== 'done' && this.state !== 'error') return false;
     const faceController = this.deps.getFaceController();
-    if (faceController && faceController.getState() !== 'IDLE') return false;
+    // Bez awatara porównanie nie ma sensu: replay puściłby audio z nieruchomą twarzą (review A1 / P2).
+    if (!faceController || faceController.getState() !== 'IDLE') return false;
     if (this.deps.audioEngine.hasPendingAudio()) return false;
     return this.deps.buffer.getLastTurn() !== null;
   }

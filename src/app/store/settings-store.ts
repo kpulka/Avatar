@@ -98,6 +98,11 @@ export class SettingsStore {
         ? userValue ?? defaults
         : studioValue ?? defaults
       : userValue ?? studioValue ?? defaults;
+    // Defensywna kopia wartości obiektowych (review A1 / P2): `calibration` i `visemeOverrides`
+    // nie mogą wyciekać jako żywe referencje do wnętrza store — mutacja z zewnątrz omija walidację.
+    if (value !== null && typeof value === 'object') {
+      return JSON.parse(JSON.stringify(value)) as T;
+    }
     return value as T;
   }
 
