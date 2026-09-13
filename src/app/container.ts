@@ -99,6 +99,10 @@ export function createApp(canvas: HTMLCanvasElement): AppHandle {
   const loaderUi = createLoader(hostRoot);
   const modal = createModal(hostRoot);
   const unsubToast = events.on('toast', (payload) => toast.show(payload.message, payload.type));
+  // Loader znika, gdy awatar jest gotowy — również w ścieżce fallbacku (demo avatar),
+  // bo `loadDefaultAvatar()` emituje `avatar:loaded` w obu przypadkach.
+  // Bez tego `hide()` nie był wołany nigdzie i pływający wskaźnik wisiał na ekranie na zawsze.
+  const unsubAvatarLoaded = events.on('avatar:loaded', () => loaderUi.hide());
 
   const ui: PanelUi = { toast, loader: loaderUi, modal };
 
@@ -315,6 +319,7 @@ export function createApp(canvas: HTMLCanvasElement): AppHandle {
       unsubToast();
       unsubStore();
       unsubMic();
+      unsubAvatarLoaded();
       unsubUiModeShortcut();
       unsubLegacyBridge();
       unsubSceneTheme();
