@@ -30,3 +30,20 @@ Thumbs.db
 
 # --- Cache researchu (regenerowalny) ---
 .planning/research/.cache/
+# porzadki 2026-09-18: material testowy, zrzuty, modele
+*.tsbuildinfo
+coverage/
+test-results/
+.playwright/
+.playwright-report/
+playwright-report/
+captures/
+screenshots/
+renders/
+a2f/.venv/
+**/.venv/
+a2f/deps/
+*.onnx
+*.engine
+*.plan
+public/models/*.glb
