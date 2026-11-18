@@ -24,6 +24,13 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [ ] **Phase 9: Lokalny PoC NVIDIA Audio2Face (RTX 3090)** - Audio2Face-3D SDK (MIT, TensorRT) + rig z avatar.glb + REST wrapper + E2E offline + przełącznik A/B + go/no-go
 - [ ] **Phase 10: A2F w chmurze — Cloud Run MVP (L4)** - po lokalnym go/no-go: deploy serverless GPU scale-to-zero (płacimy tylko za przetwarzanie), cold start, koszty, UAT
 - [ ] **Phase 11: UI dual-persona i modularny frontend** - user/studio, porównywarka algorytmów, scene presets, refaktor modułowy (równolegle z Fazą 9)
+- [ ] **Phase 12: English language (i18n)** - docs, UI strings, comments, tests, runtime messages → English; language gate (v1.1)
+- [ ] **Phase 13: README — recruiter showcase** - English, truthful, verified quickstart, visual assets, badge slots (v1.1)
+- [ ] **Phase 14: Architecture — documentation, strictness, guards** - ARCHITECTURE.md, full typecheck, layering gate, lifecycle test, dead code (v1.1)
+- [ ] **Phase 15: Web UI refactor** - design tokens, light theme, states matrix, a11y, microcopy (v1.1)
+- [ ] **Phase 16: Animation mechanics refactor** - state machine, single writer, timebase, config extraction, hot path, extensibility (v1.1)
+- [ ] **Phase 17: Lip-sync phonemes refactor** - pruned CMU lexicon, PL G2P, table-doc reconciliation, quality harness (v1.1)
+- [ ] **Phase 18: CI, security, license, deploy, hygiene** - secrets scan, CI+badge, MIT, Pages demo, ESLint/Prettier, `npm run verify` (v1.1)
 
 ## Phase Details
 
@@ -275,6 +282,9 @@ Plans:
 Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6, następnie **8 → 9 → 10** (A2F), a **Faza 7 ⏸ (UAT) wznawia się po Fazie 10**.
 **Phase 11 (UI) startuje po UAT 08-04 i biegnie równolegle z Fazą 9** (która czeka na instalacje sprzętowe po stronie człowieka); Faza 10 dokłada źródło „A2F (cloud)" do rejestru źródeł animacji z F11.
 
+**v1.1 (Fazy 12–18)**: kolejność rekomendowana — **18-01 (secrets scan) najpierw** (repo publiczne), potem **12 → 13 → 15 → 16 → 17 → 14 → 18 (reszta)**.
+Uzasadnienie: 12 przed 13/14/15/16/17 (tłumaczenie komentarzy przed refaktorami — 12-CONTEXT §6.2); 15 przed 13-03 (screenshoty czekają na naprawiony light theme); 16/17 przed 14-05 (ARCHITECTURE.md pisany po ich zmianach) i przed promocją deep-dive'ów (16-07/17-06); 14-01/14-02 przed 18-03/18-04 (CI i ESLint konsumują typecheck + layering-rules); 13-03 i 18-05/18-06/18-07 zamykają milestone.
+
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Fundament 3D | 4/4 | Complete    | 2026-09-01 |
@@ -288,6 +298,13 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6, następnie **8
 | 9. Lokalny PoC Audio2Face | 0/5 | Not Started (czeka na środowisko) | - |
 | 10. A2F Cloud Run MVP | 0/4 | Not Started (po go/no-go z Fazy 9) | - |
 | 11. UI dual-persona | 6/7 | Executed — kod 7/7, automated PASS; UAT manualny pending (11-VERIFICATION §3) | - |
+| 12. English language (i18n) | 0/7 | Planned — CONTEXT + plany + glossary + VERIFICATION gotowe | - |
+| 13. README recruiter showcase | 0/4 | Planned — CONTEXT + DRAFT-README + VERIFICATION gotowe | - |
+| 14. Architecture guards | 0/6 | Planned — CONTEXT + DRAFT-ARCHITECTURE + VERIFICATION gotowe | - |
+| 15. Web UI refactor | 0/7 | Planned — CONTEXT + plany + DRAFT-ui-spec + VERIFICATION gotowe | - |
+| 16. Animation mechanics refactor | 0/7 | Planned — CONTEXT + plany + DRAFT-animation-runtime + VERIFICATION gotowe | - |
+| 17. Lip-sync phonemes refactor | 0/6 | Planned — CONTEXT + plany + DRAFT-lipsync-deep-dive + VERIFICATION gotowe | - |
+| 18. CI/security/license/deploy | 0/7 | Planned — CONTEXT + plany + VERIFICATION gotowe | - |
 
 ### Phase 11: UI dual-persona i modularny frontend — user/studio, scene presets, porównywarka algorytmów
 
@@ -331,6 +348,105 @@ Plans:
 **Wave 6** *(blocked on Wave 5 completion)*
 
 - [ ] 11-07: Scene presets + szlif + UAT (kod gotowy; ⏳ UAT manualny pending — 11-VERIFICATION.md §3) — `SCENE_PRESETS` (studio-dark/soft/cinema/light) z tweenem 280 ms, tło/gradient z dispose, reduced-motion, picker usera, winieta CSS; docs + 11-VERIFICATION.md (60 FPS backstop, RMS < 1%) + retro F9/F10 (UI-03 + weryfikacja UI-01..UI-05)
+
+### Phase 12: English language (i18n) — v1.1
+
+**Goal**: The repository reads as English — docs, UI strings, comments, test titles, runtime messages, TODO — everything except README content (13) and repo plumbing (18), with functional Polish data (PL phoneme tokens, sentiment keywords, PL test phrase) explicitly protected by a gate.
+**Depends on**: Nothing (first v1.1 phase; recommended before 13–17)
+**Requirements**: I18N-01..08
+**Docs refs**: `.planning/phases/12-english-language/12-CONTEXT.md` (inventory with grep evidence; decisions D1–D6), `12-DRAFT-glossary.md` (normative EN↔PL)
+**Success Criteria** (what must be TRUE):
+
+  1. 8 canonical doc renames via `git mv` (history preserved, rename-only commit); 10/10 docs translated; link integrity green
+  2. All ~120 user-visible UI strings + ~40 dev strings English per the 12-05 map; `lang="en"`; functional PL data untouched (suite green proves it)
+  3. `tests/language.test.ts` gate (diacritics + links) enforced in `npm test`; English `.planning/README.md` with rename map; archives 01–11 stay Polish by policy
+
+**Plans**: 7 — 12-01 renames+gate · 12-02..04 docs waves + living-doc path repair · 12-05 UI strings · 12-06 comments · 12-07 tests + TODO + .planning index
+
+### Phase 13: README — recruiter showcase — v1.1
+
+**Goal**: An English README a reviewer can scan in 30 seconds and trust on every line — verified quickstart, honest status table, decision matrix, docs index on canonical names, with visual assets gated on 15 and badge/demo slots wired for 18.
+**Depends on**: Phase 12 (canonical doc names; gate scope); 13-03 gated on Phase 15
+**Requirements**: READ-01..06
+**Docs refs**: `13-CONTEXT.md` (truthfulness audit — the current README claims "documentation stage, no code"; reality: 78 modules/204 tests), `13-DRAFT-README.md` (full draft)
+**Success Criteria** (what must be TRUE):
+
+  1. README rewritten from the draft; every factual claim verified at writing (truthfulness checklist in SUMMARY); zero stale claims
+  2. Quickstart proven by a cold clone (13-02): install → dev → avatar renders (GLB in repo) with no setup; conversation = agent_id + mic; troubleshooting matches real error wording
+  3. Visual assets (after 15): hero ≤ 300 kB, barge-in GIF ≤ 3 MB, light-theme shot, social card 1200×630 — slots swapped, alt text present
+  4. Badge/demo/license slots documented with exact URLs for 18 to fill
+
+**Plans**: 4 — 13-01 rewrite · 13-02 cold-clone quickstart · 13-03 assets (gated on 15) · 13-04 docs truthfulness sweep + retro
+
+### Phase 14: Architecture — documentation, strictness, guards — v1.1
+
+**Goal**: The architecture becomes visible (ARCHITECTURE.md at root), strict (full-project typecheck, `noUncheckedIndexedAccess`, zero `any`), and guarded (layering gate, lifecycle regression test) — plus dead modules removed. Document-and-guard, not restructure (16/17 own the surgery).
+**Depends on**: Phase 12 recommended first (comment translation); 14-05 after 14-01..04; feeds 18-03/18-04
+**Requirements**: ARCH-01..08
+**Docs refs**: `14-CONTEXT.md` (measured import graph — zero module cycles; the app-contracts vs app-root split; 3 `any` casts; dead-code census), `14-DRAFT-ARCHITECTURE.md`
+**Success Criteria** (what must be TRUE):
+
+  1. `tests/layering.test.ts` enforces the measured layer stack as data (`layering-rules.ts` — single source, ESLint-ready for 18-04); baseline passes unchanged; negative self-test bites
+  2. `npm run typecheck` covers src+tests (tsconfig.test.json); zero `any`; container dispose leaves zero bus handlers (regression test)
+  3. `eleven-client-smoke.ts` + `model-cache.ts` deleted; legacy-bridge carries removal criteria; ARCHITECTURE.md published with event catalog, lifecycle table, 5 extension recipes — every claim file:line-verified
+
+**Plans**: 6 — 14-01 strictness · 14-02 layering gate · 14-03 lifecycle · 14-04 dead code · 14-05 ARCHITECTURE.md · 14-06 retro
+
+### Phase 15: Web UI refactor — v1.1
+
+**Goal**: Design-token system (dark + working light theme), states matrix for every interactive surface, a11y (aria-live, targets), microcopy via `copy.ts`, icons, CSS hygiene — the user layer looks designed, not engineered.
+**Depends on**: Phase 12 recommended first (UI strings EN before rewrite)
+**Requirements**: UIX-01..11
+**Docs refs**: `15-CONTEXT.md` (audit: 150 raw hex colors, 0 aria-live, broken light theme, ~120 PL strings), `15-DRAFT-ui-spec.md` (tokens, themes, states matrix)
+**Success Criteria** (what must be TRUE):
+
+  1. `style.css` driven by custom properties; light theme correct end-to-end; dead rules removed; ≥ 44 px targets; no text < 12 px
+  2. aria-live on captions/status/algo status; inline error banners with retry; routine changes stop toast-spamming
+  3. All user-visible strings flow through `src/app/copy.ts`; gates (ui-tokens + aria) enforce the contracts in `npm test`
+
+**Plans**: 7 — 15-01 tokens · 15-02..0x per 15-CONTEXT waves · 15-VERIFICATION (visual UAT po fazie = wejście dla 13-03)
+
+### Phase 16: Animation mechanics refactor — v1.1
+
+**Goal**: The animation runtime deserves its showpiece status: exhaustive race-proof state machine (23-cell matrix), single-writer restored (gaze via provider), documented timebase, all 28 magic-number groups → named config, allocation-free hot path, third-source extensibility seam, dead code removed.
+**Depends on**: Phase 12 recommended first; conscious sequencing with 14 (container.ts:285-287)
+**Requirements**: ANIM-01..10
+**Docs refs**: `16-CONTEXT.md` (transition matrix with coverage, G-1/G-2 gaze, census §6, allocations §7, dead code §9), `16-DRAFT-animation-runtime.md` → `docs/animation-runtime.md`
+**Success Criteria** (what must be TRUE):
+
+  1. All 23 state×event cells defined + tested incl. every race; interruption idempotent; dev tools can't cut a live turn
+  2. FaceController the only morph writer again (gaze provider seam, carriesEyes gating, dead rAF relax loop removed); emotion-mix 0.3 in both tracks (intentional frames-mode change, parity-tested)
+  3. Zero per-frame allocations in SPEAKING (both tracks) by construction; constants in one typed defaults module; `docs/3`/`docs/4` synced; runtime deep-dive promoted
+
+**Plans**: 7 — 16-01 state machine · 16-02 single writer + render order · 16-03 timebase · 16-04 config+dead code · 16-05 hot path · 16-06 extensibility · 16-07 docs sync + deep-dive
+
+### Phase 17: Lip-sync phonemes refactor — v1.1
+
+**Goal**: The phoneme pipeline gets honest and lean: build-time-pruned CMU lexicon (~10k words, ≥ 95% hit-rate gate) instead of the 961 kB-gzip full dictionary, rule-based PL G2P (digraphs, softness-i, final devoicing, nasals), table-doc reconciliation, and a repeatable quality harness with UAT protocol.
+**Depends on**: Phase 12 (functional PL data protection; file relocations update the 12-01 gate allowlist); table lane distinct from 16
+**Requirements**: LIP-01..07
+**Docs refs**: `17-CONTEXT.md` (A.1–A.12 with CMU measurements), `17-DRAFT-lipsync-deep-dive.md` → `docs/lipsync-deep-dive.md`
+**Success Criteria** (what must be TRUE):
+
+  1. G2P lexicon ships pruned (build-time script, hit-rate gate in tests); OOV rules cover word-internal silent letters; merge timing keeps phoneme spans inside word windows
+  2. PL phoneme path rule-based (no dictionary), degrading to the char path honestly; jaw-only fallback surfaces its state to the user, never fakes vowels
+  3. `phoneme-visemes.ts` is the documented source of truth (table-doc reconciliation); quality harness committed (fixture corpus + metrics + UAT protocol)
+
+**Plans**: 6 — 17-01 lexicon · 17-02 merge+tables · 17-03 quality harness (automated) · 17-04 PL G2P · 17-05 UAT protocol · 17-06 fallback honesty + docs sync
+
+### Phase 18: CI, security, license, deploy, hygiene — v1.1
+
+**Goal**: The repo is credible at a glance and safe by construction: full-history secrets scan (public repo — priority 1), CI + badge, MIT license + notices + CONTRIBUTING + SECURITY, ESLint/Prettier (consuming 14's rule data), GitHub Pages demo (no live conversation by default — quota protection), `npm run verify` umbrella, and the hygiene/metadata close-out.
+**Depends on**: 14-01 (typecheck) + 14-02 (layering-rules) for CI/ESLint; 13-01 slots; 13-03 social card
+**Requirements**: QUAL-01..08
+**Docs refs**: `18-CONTEXT.md` (license audit — package-lock: all permissive, zero copyleft; Pages feasibility + quota decision; hygiene inventory)
+**Success Criteria** (what must be TRUE):
+
+  1. Secrets: full git-history scan clean; SECURITY.md published; `.env` ignored; public-agent-id policy stated
+  2. CI green on main (`npm ci` → typecheck → test → build), ≤ ~3 min, badge live; lint/format adopted with two labeled commits, layering rule single-sourced from 14-02
+  3. MIT LICENSE (owner-confirmed) + THIRD-PARTY-NOTICES + CONTRIBUTING; Pages demo live in demo mode (avatar + demo speech + synthetic A2F + bring-your-own agent_id); `npm run verify` reproducible from a cold clone; hygiene dispositions executed; milestone close-out prep delivered
+
+**Plans**: 7 — 18-01 secrets (FIRST) · 18-02 license+contributing · 18-03 CI · 18-04 lint/format · 18-05 Pages demo · 18-06 hygiene+metadata · 18-07 verify umbrella + milestone close prep
 
 ---
 *Roadmap konwencja: każda faza kończy się planem "Retrospekcja i korekta następnej fazy" — implementacja zawsze zmienia rzeczywistość; ten plan przenosi learnings do ROADMAP.md i docs/ zanim startuje kolejny epik.*

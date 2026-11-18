@@ -79,6 +79,89 @@ Decyzje (2026-09-10): dwie warstwy — `user` (ładna scena + rozmowa + porówny
 - [ ] **UI-04**: Modularny frontend: `SettingsStore` (jeden schemat + precedencja defaults → profil tweakera → user), kontrolery w `src/features/`, panele zamiast god-object `hud.ts`, `main.ts` ≤ ~100 linii (composition root `app/container.ts`), markup paneli w modułach
 - [ ] **UI-05**: Profil tweakera: export/import JSON, blokady ustawień dla usera (niewidoczne/disabled), zero martwych ustawień (`micSensitivity` podpięte albo usunięte)
 
+## v1.1 Requirements — Portfolio Polish (Fazy 12–18)
+
+Milestone v1.1 (2026-11): publiczne repo jako produkt rekruterski — język angielski, README pokazujący projekt z najlepszej strony, architektura udokumentowana i pilnowana testami, dopracowany UI, refaktor mechaniki animacji i lip-syncu na fonemach, oraz CI/licencja/deploy/higiena. Artefakty 12+ po angielsku (decyzja D2 w 12-CONTEXT); archiwa 01–11 zostają po polsku jako zapis historyczny. Każda faza ma własny CONTEXT z dowodami pomiarowymi.
+
+### English-ization (I18N, Faza 12)
+
+- [ ] **I18N-01**: Kanoniczne angielskie nazwy plików docs/ — 8 rename'ów przez `git mv` (rename-only commit, historia zachowana, `git log --follow` sięga sprzed rename)
+- [ ] **I18N-02**: 10/10 plików docs/ przetłumaczone na EN (proza, nagłówki, tabele, komentarze w blokach kodu; struktura i numeracja sekcji zachowana; terminologia wg 12-DRAFT-glossary; polskie dane fonetyczne zostają z glossami)
+- [ ] **I18N-03**: Integralność linków — każde odwołanie do ścieżki docs w egzekwowanym zakresie resolnowało; archiwa 01–11 wyłączone polityką, resolwowane przez rename-map w `.planning/README.md`
+- [ ] **I18N-04**: Stringi UI po angielsku — wszystkie etykiety, przyciski, captions, status pill, aria-labels, toasty, loader/modale, panele, `lang="en"` w index.html; mapa dokładnych zastąpień w 12-05-PLAN
+- [ ] **I18N-05**: Stringi deweloperskie po angielsku — console/Error/validate; tokeny techniczne nietknięte (testy zielone)
+- [ ] **I18N-06**: Komentarze kodu EN w src/, style.css, vite.config.ts, index.html, nie-vendored a2f/; dane funkcjonalne (wizemy PL, keywords, test phrase) nietknięte
+- [ ] **I18N-07**: Suite testowy EN — wszystkie describe/it i komentarze; fixture'e fonetyczne PL zachowane; 204+ testów zielonych
+- [ ] **I18N-08**: Gate językowy `tests/language.test.ts` (diakrytyki z allowlistą + linki) w `npm test`; angielskie `.planning/README.md` (proces GSD, mapa faz, polityka językowa, rename-map); TODO_humanInTheLoop przetłumaczone in-place
+
+### README showcase (READ, Faza 13)
+
+- [ ] **READ-01**: Angielski README w repo root — struktura rekruterska: hero + wizual, zweryfikowany quickstart (≤ 4 komendy), highlights, tabela decyzji (wybór + odrzucona alternatywa + dlaczego), architektura ≤ 10 linii + link, indeks docs, status, proces (GSD), licencja; ≤ ~150 linii body
+- [ ] **READ-02**: Truthfulness — zero nieaktualnych twierdzeń (usuń "etap dokumentacji / brak kodu" i "wymagany eksport modelu"); każde twierdzenie weryfikowalne w dniu pisania; wiersze statusu z datą "Verified"; praca eksperymentalna (A2F) oznaczona designed-not-running
+- [ ] **READ-03**: Quickstart reprodukowalny — komendy wykonane na zimnym klonie i zapisane (13-02); troubleshooting pokrywa 3 realne frictions (agent_id, mic, port 5310)
+- [ ] **READ-04**: Indeks docs — 10 kanonicznych nazw + 2 deep-dive'e (`docs/animation-runtime.md`, `docs/lipsync-deep-dive.md` z markerem do 16-07/17-06)
+- [ ] **READ-05**: Zasoby wizualne (po Fazie 15) — hero ≤ 300 kB (dark), GIF talk+barge-in ≤ 3 MB/≤ 6 s, shot light-theme, social preview 1200×630; alt-teksty; budżety rozmiarów dotrzymane
+- [ ] **READ-06**: Sloty wiarygodności — badge CI (18-03), licencja (18-02), demo (18-05) z dokładnymi URL w komentarzach placeholderów; linki wzajemne README ↔ ARCHITECTURE.md ↔ .planning/README.md
+
+### Architecture guards (ARCH, Faza 14)
+
+- [ ] **ARCH-01**: Kontrakt warstw — zmierzony stack (14-CONTEXT §1.1) udokumentowany i pilnowany przez `tests/layering.test.ts` (reguły modułowe jako dane w `layering-rules.ts`; wyjątki: para audio↔lipsync, features→app-contracts, app/store→domena); naruszenie = red `npm test`
+- [ ] **ARCH-02**: Typecheck całego projektu — `tsconfig.test.json` (src+tests) + `npm run typecheck`; `noUncheckedIndexedAccess` ON; zero `any`/`@ts-ignore` w src (3 casty wyprowadzone); decyzja `exactOptionalPropertyTypes` zapisana (OFF, revisit v1.2)
+- [ ] **ARCH-03**: Gwarancja lifecycle — po `container.dispose()` bus ma zero handlerów (regresja w container.test.ts przez test-only `handlerCount()`); wzorzec `disposables()`/Unsub udokumentowany jako obowiązkowy
+- [ ] **ARCH-04**: Katalog eventów — 16 eventów AppEvents z payload/producer/consumer w ARCHITECTURE.md (wygenerowany z grepów `emit(`, nie z pamięci); konwencja nazw `domain:action`; invariants busa udokumentowane + testowane
+- [ ] **ARCH-05**: Dead code usunięty — `eleven-client-smoke.ts`, `model-cache.ts` (+test) skasowane; `legacy-bridge.ts` z kryteriami usunięcia; one-shot sweep nieużywanych exportów z dyspozycjami (owned-by-16 przekazane)
+- [ ] **ARCH-06**: Dyscyplina composition root — container.ts jedynym miejscem wiringu; zakaz module-level side-effect imports poza app/ui (reguła w gate'cie); main.ts ≤ ~100 linii
+- [ ] **ARCH-07**: Seamy rozszerzeń udokumentowane — 5 przepisów "how to add" (panel, źródło animacji, preset sceny, event, speech backend) z listami plików
+- [ ] **ARCH-08**: ARCHITECTURE.md w repo root (EN) — każde twierdzenie z dowodem file:line na moment pisania; linkowane z README i .planning/README.md; sekcje z datą "verified"
+
+### Web UI refactor (UIX, Faza 15)
+
+- [ ] **UIX-01**: Design tokens & theming — style.css sterowany custom properties (15-DRAFT-ui-spec); light theme działa end-to-end
+- [ ] **UIX-02**: Typografia & targets — brak tekstu < 12 px; role typograficzne wg spec; targets ≥ 44 px
+- [ ] **UIX-03**: Kontrakt shared primitives — toast `role=status` (błędy `role=alert`), loader, modal wg spec
+- [ ] **UIX-04**: Accessibility — aria-live (polite) na captions/status/algo status; focus management w modale; contrast WCAG AA
+- [ ] **UIX-05**: Stany & recovery — błąd połączenia = inline banner z retry (nie toast); każda powierzchnia ma zdefiniowany stan pusty/ładowanie/błąd
+- [ ] **UIX-06**: Higiena feedbacku & compare UX — rutynowe zmiany stanu nie toastują; przebieg porównania A/B czytelny (który tor, kiedy, cancel widoczny)
+- [ ] **UIX-07**: Integralność responsive — min viewport 1152×648 deklarowany; brak nakładania/ucięcia przy 125%/150% zoom
+- [ ] **UIX-08**: Discoverability & first-run — ustawienia eksponują lock-respecting agent_id; studio wykrywalne ale nie nachalne
+- [ ] **UIX-09**: Sloty microcopy — każdy string user-visible przez `src/app/copy.ts`
+- [ ] **UIX-10**: System ikon (user layer) — dock/gear/close/presentation/status jako inline SVG (sprajt), bez zależności
+- [ ] **UIX-11**: Higiena CSS — martwe reguły usunięte; glass/button zdeduplikowane; brak raw hex poza tokenami (gate)
+
+### Animation mechanics refactor (ANIM, Faza 16)
+
+- [ ] **ANIM-01**: Poprawność state machine — każda komórka macierzy 23 przejść zdefiniowana i testowana; żadna ścieżka nie tnie/twarzy twarzy na sztywno; interruption idempotentne; dev tools nie przecinają żywej tury
+- [ ] **ANIM-02**: Single writer — FaceController jedynym modułem piszącym morphTargetInfluences; gaze przez provider seam; carriesEyes gate'uje każdego procedural eye writera; martwa pętla rAF relax usunięta
+- [ ] **ANIM-03**: Kontrakt timebase — jedna udokumentowana polityka zegarów (audio dla mowy/ramek/blink; wall dla relax; rAF dla gaze); zegary iniektywalne; damping niezależny od FPS (testy)
+- [ ] **ANIM-04**: Kompozycja warstw — jawna kolejność zapisu per-frame (udokumentowana w kodzie); scheduler dostaje subset kształtów mowy (foundation rule nie zeruje okolic oczu/brwi); jedna polityka emotion-mix w obu torach (0.3 — świadoma zmiana w frames, test parzystości); mouthClose priority raz
+- [ ] **ANIM-05**: Ekstrakcja configu — wszystkie stałe tuningu w jednym typowanym module defaults; zero gołych magic numbers w logice runtime; CalibrationProfile bez zmiany schematu
+- [ ] **ANIM-06**: Wydajność hot-path — zero alokacji per-frame w ścieżce SPEAKING (oba tory); scratch structures, in-place pruning; debug counters w testach
+- [ ] **ANIM-07**: Ekstensybilność — trzecie źródło animacji rejestruje się i działa bez edycji FaceController; brak zamkniętych unionów w source specs; seam regionowy AvatarDirector udokumentowany
+- [ ] **ANIM-08**: Dead code & naming — purgeStaleEpochs, relaxToNeutral, rodzina adaptive-prebuffer, epoch mirror, martwy fallback λ, unreachable emotion loop usunięte; zduplikowane stałe scalone; API queue-length spójnie nazwane
+- [ ] **ANIM-09**: Pokrycie testami — pełna macierz przejść łącznie ze wszystkimi wyścigami (podwójne interruption, chunk/frames w RELAXING, mode-switch races, pendingMode drop); deterministyczne zegary zamiast fake-timer coupling
+- [ ] **ANIM-10**: Sync docs — docs/4 sekwencja przerwania + docs/3 tabela wygładzania zaktualizowane do implementacji; deep-dive runtime gotowy do promocji; 16-VERIFICATION wykonany
+
+### Lip-sync phonemes refactor (LIP, Faza 17)
+
+- [ ] **LIP-01**: Pruned EN lexicon — leksykon G2P jako artefakt build-time (~10k słów) zamiast pełnego słownika (961 kB gzip); skrypt pruningu w repo; gate hit-rate ≥ 95% w testach
+- [ ] **LIP-02**: Pokrycie reguł OOV — słowa z word-internal silent letters (island, listen…) przechodzą przez reguły poprawnie; testy na korpusie edge-case'ów
+- [ ] **LIP-03**: Poprawność merge timingu — fony nie wychodzą poza okno czasowe słowa; reguły wchłaniania liter niemych testowane na alignmentach
+- [ ] **LIP-04**: Rekoncyliacja tabela-dokument — phoneme-visemes.ts jako udokumentowane source of truth (tabela w docs zgadza się z kodem, drift wykrywalny)
+- [ ] **LIP-05**: Ścieżka fonemowa PL — rule-based G2P (dwuznaki, softness-i, final devoicing, nosówki) bez słownika; degradacja do ścieżki char jawnie wykrywana
+- [ ] **LIP-06**: Fallback honesty — jaw-only fallback bez fałszywych samogłosek; user mode pokazuje stan fallbacku (badge), nie udaje pełnego toru
+- [ ] **LIP-07**: Quality harness — powtarzalny pomiar jakości w repo: fixture corpus + metryki (automatyczne) + protokół UAT (manualny) na zdaniach kontrolnych docs/en-visemes §6
+
+### CI, security, license, deploy, hygiene (QUAL, Faza 18)
+
+- [ ] **QUAL-01**: Sekrety & security — skan pełnej historii git (gitleak lub równoważne wzorce) → zero findings; `.env` w .gitignore; SECURITY.md (kanał disclosure, polityka public-agent-id); `xi-api-key` wyłącznie w kontekście polityki negatywnej
+- [ ] **QUAL-02**: CI — `.github/workflows/ci.yml`: npm ci → typecheck → test → build na push/PR (ubuntu, Node 22, cache); zielony na main; badge w README; ≤ ~3 min
+- [ ] **QUAL-03**: Licencja — LICENSE (MIT, potwierdzone przez ownera) + THIRD-PARTY-NOTICES (audyt 2026-11-18: wszystkie permissive, zero copyleft) + sekcja licencyjna README
+- [ ] **QUAL-04**: CONTRIBUTING — setup (Node 20+, 4 komendy), bramki (testy/language/layering/typecheck), proces GSD, zasady PR
+- [ ] **QUAL-05**: Lint/format — ESLint (flat, typescript-eslint) z regułą layering z `layering-rules.ts` (single source z 14-02); Prettier; `lint`/`format:check` zielone; dwa osobne commity (fix violations / one-shot format); CI je uruchamia
+- [ ] **QUAL-06**: Pages demo — build demo (`?demo=1`, base-path override) deployowany na push do main; demo = avatar + demo speech + synthetic A2F + bring-your-own agent_id (bez live conversation, chyba że owner zaakceptował koszt kwoty — D4); link w README
+- [ ] **QUAL-07**: Higiena & metadane — dyspozycje `.bak`/config.json wykonane (decyzje ownera); `.gitignore` audytowany (dist, .env, a2f/sdk, a2f/.venv — `git ls-files` czysty); description/topics/social preview ustawione; TODO header przyjazny visitorowi
+- [ ] **QUAL-08**: Anyone-can-verify — `npm run verify` (typecheck+test+build+lint+format) w package.json i README §Verification; zimny klon z samym Node.js przechodzi wszystkie bramki
+
 ## Out of Scope
 
 | Feature | Reason |
@@ -129,6 +212,13 @@ Decyzje (2026-09-10): dwie warstwy — `user` (ładna scena + rozmowa + porówny
 | UI-03 | Phase 11 | Not Started |
 | UI-04 | Phase 11 | Not Started |
 | UI-05 | Phase 11 | Not Started |
+| I18N-01..08 | Phase 12 | Not Started (planned; CONTEXT+plany gotowe) |
+| READ-01..06 | Phase 13 | Not Started (planned; DRAFT-README gotowy) |
+| ARCH-01..08 | Phase 14 | Not Started (planned; DRAFT-ARCHITECTURE gotowy) |
+| UIX-01..11 | Phase 15 | Not Started (planned; DRAFT-ui-spec gotowy) |
+| ANIM-01..10 | Phase 16 | Not Started (planned; DRAFT-animation-runtime gotowy) |
+| LIP-01..07 | Phase 17 | Not Started (planned; DRAFT-lipsync-deep-dive gotowy) |
+| QUAL-01..08 | Phase 18 | Not Started (planned) |
 
 **Coverage:**
 
@@ -136,10 +226,11 @@ Decyzje (2026-09-10): dwie warstwy — `user` (ładna scena + rozmowa + porówny
 - v1.1 requirements (fix EN): 3 total
 - v2.1 requirements (unified anim + A2F): 6 total
 - v1.2 requirements (UI dual-persona): 5 total
-- Mapped to phases: 35
+- v1.1.x requirements (Portfolio Polish, Fazy 12–18): 58 total (I18N 8, READ 6, ARCH 8, UIX 11, ANIM 10, LIP 7, QUAL 8)
+- Mapped to phases: 93
 - Unmapped: 0 ✓
 
 ---
 *Requirements defined: 2026-09-01*
-*Last updated: 2026-09-10 — dodano v1.2 (UI-01..UI-05, Faza 11: dual-persona + modularny frontend)*
+*Last updated: 2026-11-18 — dodano v1.1 Portfolio Polish (Fazy 12–18: I18N/READ/ARCH/UIX/ANIM/LIP/QUAL, 58 wymagań)*
 
