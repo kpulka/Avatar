@@ -59,6 +59,8 @@ export interface AppEvents extends Record<string, unknown> {
   'a2f:stats': A2fStatsEvent;
   'toast': { message: string; type: 'error' | 'success' };
   'avatar:loaded': AvatarLoadedEvent;
+  'avatar:progress': { fraction: number | null };
+  'avatar:error': { message: string };
   'animation:source': AnimationMode;
   'scene:preset': string;
   'compare:state': string;

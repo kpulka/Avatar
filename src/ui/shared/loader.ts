@@ -10,7 +10,7 @@ export interface LoaderHandle {
 }
 
 export function createLoader(container: HTMLElement): LoaderHandle {
-  const text = el('div', { className: 'loader-text', text: 'Ładowanie...' });
+  const text = el('div', { className: 'loader-text', text: 'Loading…' });
   const node = el('div', { className: 'loader-overlay hidden' }, [
     el('div', { className: 'spinner' }),
     text,
@@ -18,7 +18,7 @@ export function createLoader(container: HTMLElement): LoaderHandle {
   container.append(node);
 
   return {
-    show(message = 'Ładowanie modelu 3D...'): void {
+    show(message = 'Loading 3D model…'): void {
       text.textContent = message;
       node.classList.remove('hidden');
     },

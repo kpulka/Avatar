@@ -56,7 +56,9 @@ export class SceneController implements SceneService {
 
   public loadDefaultAvatar(): void {
     this.deps.loader
-      .load('/models/avatar.glb')
+      .load('/models/avatar.glb', undefined, (fraction) => {
+        this.deps.events.emit('avatar:progress', { fraction });
+      })
       .then((avatar) => {
         this.onLoaded(avatar, 'MetaPerson Rigged Avatar (avatar.glb)');
         console.log('[Avatar] Pomyślnie załadowano zrigowany model MetaPerson avatar.glb');
@@ -67,6 +69,9 @@ export class SceneController implements SceneService {
           this.onLoaded(createTestAvatar(), 'Demo ARKit Avatar (52 shapes)');
         } catch (fallbackError) {
           console.error('Błąd awatara demo:', fallbackError);
+          this.deps.events.emit('avatar:error', {
+            message: 'The 3D avatar could not be loaded. Please reload the page.',
+          });
         }
       });
   }

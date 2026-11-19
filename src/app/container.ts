@@ -106,7 +106,20 @@ export function createApp(canvas: HTMLCanvasElement): AppHandle {
   // Loader znika, gdy awatar jest gotowy — również w ścieżce fallbacku (demo avatar),
   // bo `loadDefaultAvatar()` emituje `avatar:loaded` w obu przypadkach.
   // Bez tego `hide()` nie był wołany nigdzie i pływający wskaźnik wisiał na ekranie na zawsze.
-  const unsubAvatarLoaded = events.on('avatar:loaded', () => loaderUi.hide());
+  let avatarReady = false;
+  const unsubAvatarLoaded = events.on('avatar:loaded', () => {
+    avatarReady = true;
+    loaderUi.hide();
+  });
+  const unsubAvatarProgress = events.on('avatar:progress', ({ fraction }) => {
+    if (avatarReady) return;
+    loaderUi.show(fraction === null ? 'Loading 3D avatar…' : `Loading 3D avatar… ${Math.round(fraction * 100)}%`);
+  });
+  const unsubAvatarError = events.on('avatar:error', ({ message }) => {
+    avatarReady = true;
+    loaderUi.hide();
+    events.emit('toast', { message, type: 'error' });
+  });
 
   const ui: PanelUi = { toast, loader: loaderUi, modal };
 
@@ -309,7 +322,7 @@ export function createApp(canvas: HTMLCanvasElement): AppHandle {
     start(): void {
       applyInputDevice();
       scenePresetController.apply(store.getEffective<string>('scenePreset'));
-      loaderUi.show('Ładowanie zrigowanego modelu MetaPerson 3D...');
+      loaderUi.show('Loading 3D avatar…');
       sceneController.loadDefaultAvatar();
       rafId = requestAnimationFrame(animate);
       embedBridge.notifyReady();
@@ -324,6 +337,8 @@ export function createApp(canvas: HTMLCanvasElement): AppHandle {
       unsubStore();
       unsubMic();
       unsubAvatarLoaded();
+      unsubAvatarProgress();
+      unsubAvatarError();
       unsubUiModeShortcut();
       unsubLegacyBridge();
       unsubSceneTheme();

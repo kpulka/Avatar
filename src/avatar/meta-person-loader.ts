@@ -16,7 +16,11 @@ export class MetaPersonLoader implements AvatarLoader {
     this.gltfLoader.setDRACOLoader(this.dracoLoader);
   }
 
-  public async load(urlOrFile: string | File, scene?: THREE.Scene): Promise<LoadedAvatar> {
+  public async load(
+    urlOrFile: string | File,
+    scene?: THREE.Scene,
+    onProgress?: (fraction: number | null) => void
+  ): Promise<LoadedAvatar> {
     let url: string;
     let isBlob = false;
 
@@ -28,7 +32,9 @@ export class MetaPersonLoader implements AvatarLoader {
     }
 
     try {
-      const gltf = await this.gltfLoader.loadAsync(url);
+      const gltf = await this.gltfLoader.loadAsync(url, isBlob ? undefined : (event) => {
+        onProgress?.(event.lengthComputable && event.total > 0 ? event.loaded / event.total : null);
+      });
       const avatar = gltf.scene;
       avatar.name = 'MetaPersonAvatar';
 
