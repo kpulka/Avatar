@@ -49,3 +49,6 @@ a2f/deps/
 *.engine
 *.plan
 public/models/*.glb
+
+# Owner decision 2026-11-19 (Phase 11.2 O-1): the showcase avatar ships with the repo.
+!public/models/avatar.glb
