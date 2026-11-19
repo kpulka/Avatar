@@ -4,7 +4,6 @@ import { MicCapture } from './mic-capture';
 import { AudioEngine } from './audio-engine';
 import { base64ToPcmBytes, int16ToBase64 } from './pcm-resampler';
 import { AudioEventPayload } from '../types/audio';
-import { getActiveAgentId } from './agent-config';
 import { generateEnergyFallbackAlignment } from './energy-fallback';
 import { rescaleAlignmentToAudio } from './alignment-rescale';
 
@@ -33,10 +32,10 @@ export class ElevenAgentsSpeechBackend implements SpeechBackend {
   private diagEpoch = -1;
   private diagPrevChunkEndSec = 0;
 
-  constructor(audioEngine: AudioEngine) {
+  constructor(audioEngine: AudioEngine, private readonly getAgentId: () => string) {
     this.audioEngine = audioEngine;
     this.micCapture = new MicCapture(this.audioEngine.ctx);
-    this.wssClient = new RawWssClient(getActiveAgentId());
+    this.wssClient = new RawWssClient(this.getAgentId());
 
     this.setupWssListeners();
   }
@@ -155,7 +154,7 @@ export class ElevenAgentsSpeechBackend implements SpeechBackend {
     await this.audioEngine.unlock();
 
     // 1. Połączenie WebSocket
-    this.wssClient.connect(getActiveAgentId());
+    this.wssClient.connect(this.getAgentId());
 
     // 2. Start mikrofonu
     try {

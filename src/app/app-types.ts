@@ -85,7 +85,6 @@ export interface ConversationService {
   isRunning(): boolean;
   interrupt(): void;
   say(text: string): void;
-  setAgent(id: string): void;
   setInputDevice(deviceId: string | null): void;
   listInputDevices(): Promise<Array<{ id: string; label: string }>>;
   runPocStress(): Promise<void>;

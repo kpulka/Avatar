@@ -10,6 +10,7 @@ import { EnvironmentManager } from '../scene/environment';
 import { MetaPersonLoader } from '../avatar/meta-person-loader';
 import { AudioEngine } from '../audio/audio-engine';
 import { ElevenAgentsSpeechBackend } from '../audio/speech-backend';
+import { resolveAgentId } from '../audio/agent-config';
 import { HeadMicroMovements } from '../realism/head-micro-movements';
 import { GazeSaccades } from '../realism/gaze-saccades';
 import { EmbedBridge } from '../prod/embed-bridge';
@@ -69,12 +70,15 @@ export function createApp(canvas: HTMLCanvasElement): AppHandle {
 
   // ---- Audio + mowa
   const audioEngine = new AudioEngine();
-  const speechBackend = new ElevenAgentsSpeechBackend(audioEngine);
   const embedBridge = new EmbedBridge();
 
   // ---- Stan (F11): store + mirror legacy + tryb UI
   const store = new SettingsStore(localStorage);
   const unsubLegacyBridge = attachLegacyBridge(store, localStorage);
+  const speechBackend = new ElevenAgentsSpeechBackend(
+    audioEngine,
+    () => resolveAgentId(store.getEffective<string>('agentId')).id
+  );
   const uiMode = createUiMode(store, { search: window.location.search, body: document.body });
   const unsubUiModeShortcut = uiMode.attachShortcut(window);
 

@@ -16,7 +16,7 @@ export function attachLegacyBridge(store: SettingsStore, storage: StorageLike): 
       storage.setItem(LEGACY_KEYS.visemeOverrides, JSON.stringify(state.studio.visemeOverrides));
       storage.setItem(LEGACY_KEYS.lipSyncEngine, state.studio.lipSyncEngine);
       storage.setItem(LEGACY_KEYS.animationSource, state.user.animationSource);
-      storage.setItem(LEGACY_KEYS.agentId, state.studio.agentId);
+      // agentId is NOT mirrored: SettingsStore is the single source (Phase 11.1 D-9).
       storage.setItem(LEGACY_KEYS.theme, state.user.theme);
       storage.setItem(LEGACY_KEYS.volume, String(state.user.volume));
       storage.setItem(LEGACY_KEYS.a2fUrl, state.studio.a2fUrl);

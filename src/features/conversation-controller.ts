@@ -9,7 +9,6 @@ import { AudioEngine } from '../audio/audio-engine';
 import { EmbedBridge } from '../prod/embed-bridge';
 import { TypedEventBus } from '../app/events';
 import { AppEvents, ConversationService } from '../app/app-types';
-import { setActiveAgentId } from '../audio/agent-config';
 
 export interface ConversationControllerDeps {
   speechBackend: ElevenAgentsSpeechBackend;
@@ -139,11 +138,6 @@ export class ConversationController implements ConversationService {
 
   public say(text: string): void {
     this.speechBackend.triggerDemoSpeech(text);
-  }
-
-  public setAgent(agentId: string): void {
-    setActiveAgentId(agentId);
-    this.events.emit('toast', { message: `Zmieniono agenta na: ${agentId}`, type: 'success' });
   }
 
   public setInputDevice(deviceId: string | null): void {

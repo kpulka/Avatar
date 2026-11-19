@@ -156,7 +156,8 @@ describe('Automated E2E Self-Test (Kompletny audyt systemu)', () => {
     store.setStudio('agentId', 'self-test-agent-99');
     store.setUser('theme', 'light');
     store.setUser('volume', 0.9);
-    expect(storage.getItem('elevenlabs_agent_id')).toBe('self-test-agent-99');
+    expect(storage.getItem('elevenlabs_agent_id')).toBeNull();
+    expect(store.getEffective<string>('agentId')).toBe('self-test-agent-99');
     expect(storage.getItem('avatar_settings_theme')).toBe('light');
     expect(store.getEffective<number>('volume')).toBeCloseTo(0.9);
 

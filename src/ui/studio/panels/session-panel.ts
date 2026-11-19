@@ -25,11 +25,11 @@ export function createSessionPanel(): PanelDefinition {
       agentSave.addEventListener('click', () => {
         const value = agentInput.value.trim();
         if (!value) {
-          ui.toast.show('Agent ID nie może być pusty.', 'error');
+          ui.toast.show('Agent ID cannot be empty.', 'error');
           return;
         }
         store.setStudio('agentId', value);
-        services.conversation.setAgent(value);
+        ui.toast.show('Agent saved. It will be used from the next conversation start.', 'success');
       });
 
       // --- Głośność + mikrofon
