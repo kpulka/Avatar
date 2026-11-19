@@ -95,18 +95,19 @@ export class SceneController implements SceneService {
     this.deps.camera.controls.target.set(0, faceY, 0);
     this.deps.camera.controls.update();
 
+    const shapesCount = avatar.faceDriver.listAvailableShapes().length;
+    this.avatarInfo = {
+      name,
+      shapesCount,
+      speechMeshes: avatar.speechMeshes.length,
+    };
     this.deps.events.emit('avatar:loaded', {
       root: avatar.root,
       faceDriver: avatar.faceDriver,
       speechMeshes: avatar.speechMeshes.length,
-      shapesCount: avatar.faceDriver.listAvailableShapes().length,
+      shapesCount,
       name,
     });
-    this.avatarInfo = {
-      name,
-      shapesCount: avatar.faceDriver.listAvailableShapes().length,
-      speechMeshes: avatar.speechMeshes.length,
-    };
   }
 
   public pointerMove(normX: number, normY: number): void {

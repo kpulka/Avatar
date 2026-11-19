@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { disposeObject3D } from './dispose';
 
 export class AppScene {
   public readonly instance: THREE.Scene;
@@ -85,6 +86,7 @@ export class AppScene {
     while (this.avatarContainer.children.length > 0) {
       const child = this.avatarContainer.children[0];
       this.avatarContainer.remove(child);
+      disposeObject3D(child);
     }
   }
 }

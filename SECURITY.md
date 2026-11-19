@@ -26,13 +26,10 @@ required. Never commit environment files, private keys, or credentials.
 
 ## Embedding
 
-The current embed bridge accepts configured parent origins and currently also uses
-the document referrer. It supports `avatar:set_agent` and `?allow_any_origin=1`;
-the latter is not limited to development builds yet. Do not treat the current bridge
-as providing the hardened parent-window boundary described below.
-
-Planned hardening in 11.1-01 will accept inbound messages only from the direct parent
-of a framed widget, use `?parent_origin=` as the origin allowlist (same-origin when
-empty), remove remote agent changes, and make `?allow_any_origin=1` development-only.
-After that change, agent selection is intended to follow `?agent_id=`, Settings,
-then the default. These protections remain pending verification.
+The embed bridge accepts inbound messages only from the direct parent of a framed
+widget and from a trusted origin. Configure parent origins with `?parent_origin=`
+(comma-separated); without an allowlist, only the widget's own origin is trusted.
+The document referrer does not grant trust, and messages cannot change the agent.
+The `?allow_any_origin=1` escape hatch works only in development builds and still
+requires the direct parent as the message source. Outbound messages target trusted
+origins; after a trusted message, replies target its exact origin.

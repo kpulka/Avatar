@@ -79,7 +79,6 @@ export class ConversationController implements ConversationService {
         }
       },
       onInterrupt: () => this.interrupt(),
-      onSetAgent: (agentId) => this.setAgent(agentId),
       onSay: (text) => this.say(text),
     });
   }

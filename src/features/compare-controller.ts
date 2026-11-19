@@ -62,6 +62,7 @@ export function rmsDiff(a: Float32Array, b: Float32Array): number {
 export class CompareController {
   private state: CompareState = 'idle';
   private runToken = 0;
+  private modeOwner: { token: number; face: FaceController; originalMode: ReturnType<FaceController['getAnimationMode']> } | null = null;
   private readonly subscriptions: Unsub[] = [];
   private readonly sleep: (ms: number) => Promise<void>;
   private readonly random: () => number;
@@ -99,33 +100,46 @@ export class CompareController {
     const turn = this.deps.buffer.getLastTurn();
     if (!turn) return false;
 
+    const face = this.deps.getFaceController();
+    if (!face) return false;
     const token = ++this.runToken;
+    this.modeOwner = { token, face, originalMode: face.getAnimationMode() };
     this.setState('ready');
 
     const liveFirst = !blind || this.random() < 0.5;
     const liveDurationMs = (turn.chunks.reduce((sum, chunk) => sum + chunk.bytes.byteLength, 0) / 2 / turn.sampleRate) * 1000;
 
     try {
+      if (!this.isCurrent(token)) return true;
       let a2f: A2fPrepared | null = null;
       if (liveFirst) {
-        await this.playLive(turn, token);
+        await this.playLive(turn, token, face);
         if (!this.isCurrent(token)) return true;
         await this.sleep(liveDurationMs + 150);
         if (!this.isCurrent(token)) return true;
         a2f = await this.ensureA2f(turn, token);
-        if (!a2f || !this.isCurrent(token)) return true;
-        await this.playA2f(turn, a2f, token);
+        if (!this.isCurrent(token)) return true;
+        if (!a2f) return false;
+        await this.playA2f(turn, a2f, token, face);
       } else {
         a2f = await this.ensureA2f(turn, token);
-        if (!a2f || !this.isCurrent(token)) return true;
-        await this.playA2f(turn, a2f, token);
+        if (!this.isCurrent(token)) return true;
+        if (!a2f) return false;
+        await this.playA2f(turn, a2f, token, face);
         if (!this.isCurrent(token)) return true;
         await this.sleep(liveDurationMs + 150);
         if (!this.isCurrent(token)) return true;
-        await this.playLive(turn, token);
+        await this.playLive(turn, token, face);
       }
 
       if (!this.isCurrent(token)) return true;
+      await this.sleep(liveDurationMs + 150);
+      if (!this.isCurrent(token)) return true;
+      while (this.deps.audioEngine.hasPendingAudio()) {
+        const remainingMs = (this.deps.audioEngine.getTailTime() - this.deps.audioEngine.ctx.currentTime) * 1000;
+        await this.sleep(Math.max(remainingMs, 16));
+        if (!this.isCurrent(token)) return true;
+      }
 
       const a2fDurationSec = a2f?.clip.frames.length
         ? a2f.clip.frames[a2f.clip.frames.length - 1].timeSec
@@ -144,11 +158,14 @@ export class CompareController {
         partial: a2fDurationSec > 0 && liveDurationSec > 0 ? a2fDurationSec < 0.8 * liveDurationSec : undefined,
       };
 
+      this.restoreMode(token);
       this.setState('done');
       this.deps.events.emit('compare:result', result);
       return true;
     } catch (error) {
+      if (!this.isCurrent(token)) return true;
       if (this.isCurrent(token)) {
+        this.restoreMode(token);
         this.setState('error');
         this.deps.events.emit('toast', {
           message: `Porównanie nie powiodło się: ${(error as Error).message}`,
@@ -156,13 +173,17 @@ export class CompareController {
         });
       }
       return false;
+    } finally {
+      this.restoreMode(token);
     }
   }
 
   public cancel(reason: string): void {
     if (this.state === 'idle' || this.state === 'done' || this.state === 'error') return;
+    const token = this.runToken;
     this.runToken += 1;
     this.deps.audioEngine.hardStop();
+    this.restoreMode(token);
     this.setState('idle');
     console.log(`[CompareController] Anulowano replay (${reason}).`);
     this.deps.events.emit('compare:cancelled', undefined);
@@ -171,6 +192,15 @@ export class CompareController {
   public dispose(): void {
     for (const unsub of this.subscriptions.splice(0)) {
       unsub();
+    }
+  }
+
+  private restoreMode(token: number): void {
+    const owner = this.modeOwner;
+    if (!owner || owner.token !== token) return;
+    this.modeOwner = null;
+    if (owner.face.getAnimationMode() !== owner.originalMode) {
+      owner.face.setAnimationMode(owner.originalMode);
     }
   }
 
@@ -183,10 +213,11 @@ export class CompareController {
     this.deps.events.emit('compare:state', state);
   }
 
-  private async playLive(turn: LastTurn, token: number): Promise<void> {
+  private async playLive(turn: LastTurn, token: number, faceController: FaceController): Promise<void> {
     this.setState('playing-a');
+    if (!this.isCurrent(token)) return;
     this.deps.audioEngine.hardStop();
-    const faceController = this.deps.getFaceController();
+    if (faceController.getAnimationMode() !== 'viseme') faceController.setAnimationMode('viseme');
     let epoch = this.deps.audioEngine.getEpoch();
     for (const chunk of turn.chunks) {
       if (!this.isCurrent(token)) return;
@@ -198,8 +229,16 @@ export class CompareController {
 
   private async ensureA2f(turn: LastTurn, token: number): Promise<A2fPrepared | null> {
     this.setState('predicting');
+    if (!this.isCurrent(token)) return null;
     const pcm = this.deps.buffer.concatPcm();
-    if (!pcm) return null;
+    if (!pcm) {
+      if (this.isCurrent(token)) {
+        this.restoreMode(token);
+        this.setState('error');
+        this.deps.events.emit('toast', { message: 'Nothing to compare: the last turn has no audio.', type: 'error' });
+      }
+      return null;
+    }
     const wav = encodeWav(pcm, turn.sampleRate);
     try {
       const { parsed, predictMs } = await this.predict(this.deps.getA2fUrl(), wav);
@@ -210,6 +249,7 @@ export class CompareController {
       return { clip: parsed.clip, predictMs };
     } catch (error) {
       if (this.isCurrent(token)) {
+        this.restoreMode(token);
         this.setState('error');
         this.deps.events.emit('toast', {
           message: `A2F niedostępny — sprawdź adres serwisu w Studio → A2F. (${(error as Error).message})`,
@@ -220,10 +260,10 @@ export class CompareController {
     }
   }
 
-  private async playA2f(turn: LastTurn, prepared: A2fPrepared, token: number): Promise<void> {
+  private async playA2f(turn: LastTurn, prepared: A2fPrepared, token: number, faceController: FaceController): Promise<void> {
     this.setState('playing-b');
+    if (!this.isCurrent(token)) return;
     this.deps.audioEngine.hardStop();
-    const faceController = this.deps.getFaceController();
     let baseSec = 0;
     let first = true;
     for (const chunk of turn.chunks) {
@@ -235,6 +275,7 @@ export class CompareController {
       }
     }
     const epoch = this.deps.audioEngine.getEpoch();
+    if (faceController && faceController.getAnimationMode() !== 'frames') faceController.setAnimationMode('frames');
     faceController?.feedFrames(prepared.clip, baseSec, epoch);
   }
 }

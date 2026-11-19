@@ -28,6 +28,7 @@ function makeEngine() {
   let epoch = 0;
   let tail = 0;
   return {
+    ctx: { currentTime: 0 },
     playChunk: vi.fn((bytes: Uint8Array, sampleRate: number) => {
       tail += bytes.byteLength / 2 / sampleRate;
       return tail;
@@ -42,16 +43,20 @@ function makeEngine() {
   };
 }
 
-function makeFaceController() {
+function makeFaceController(initial: 'viseme' | 'frames' = 'viseme') {
   const sequence: string[] = [];
+  const modeAtLiveChunk: string[] = [];
+  const modeAtFrames: string[] = [];
+  let mode = initial;
   return {
-    sequence,
+    sequence, modeAtLiveChunk, modeAtFrames,
     faceController: {
-      onAudioChunk: vi.fn(() => sequence.push('live')),
-      feedFrames: vi.fn(() => sequence.push('a2f')),
+      get mode() { return mode; },
+      onAudioChunk: vi.fn(() => { sequence.push('live'); modeAtLiveChunk.push(mode); }),
+      feedFrames: vi.fn(() => { sequence.push('a2f'); modeAtFrames.push(mode); }),
       getState: vi.fn(() => 'IDLE'),
-      getAnimationMode: vi.fn(() => 'viseme'),
-      setAnimationMode: vi.fn(),
+      getAnimationMode: vi.fn(() => mode),
+      setAnimationMode: vi.fn((next: 'viseme' | 'frames') => { mode = next; }),
       onInterruption: vi.fn(),
     },
   };
@@ -63,6 +68,7 @@ interface HarnessOptions {
   random?: () => number;
   withTurn?: boolean;
   pendingAudio?: boolean;
+  initialMode?: 'viseme' | 'frames';
 }
 
 function makeHarness(options: HarnessOptions = {}) {
@@ -88,7 +94,7 @@ function makeHarness(options: HarnessOptions = {}) {
 
   const engine = makeEngine();
   if (options.pendingAudio) engine.hasPendingAudio.mockReturnValue(true);
-  const { faceController, sequence } = makeFaceController();
+  const { faceController, sequence, modeAtLiveChunk, modeAtFrames } = makeFaceController(options.initialMode);
   const predict =
     options.predict ?? vi.fn(async () => ({ parsed: { clip: CLIP }, predictMs: 120 }));
   const results: CompareResultEvent[] = [];
@@ -105,7 +111,7 @@ function makeHarness(options: HarnessOptions = {}) {
     predict: predict as never,
   });
 
-  return { events, buffer, engine, faceController, sequence, predict, results, controller };
+  return { events, buffer, engine, faceController, sequence, modeAtLiveChunk, modeAtFrames, predict, results, controller };
 }
 
 describe('AnimationSourceRegistry', () => {
@@ -250,10 +256,107 @@ describe('CompareController', () => {
     const ok = await harness.controller.run();
     warn.mockRestore();
 
-    expect(ok).toBe(true);
+    expect(ok).toBe(false);
     expect(harness.controller.getState()).toBe('error');
     expect(harness.faceController.feedFrames).not.toHaveBeenCalled();
     expect(harness.results).toHaveLength(0);
+  });
+
+  it('live lane renders visemes even when A2F mode is selected', async () => {
+    const harness = makeHarness({ initialMode: 'frames' });
+    expect(await harness.controller.run()).toBe(true);
+    expect(harness.modeAtLiveChunk).toEqual(['viseme', 'viseme']);
+    expect(harness.modeAtFrames).toEqual(['frames']);
+    expect(harness.faceController.mode).toBe('frames');
+  });
+
+  it('restores the original mode after a failed run', async () => {
+    const harness = makeHarness({ initialMode: 'viseme', random: () => 0.9,
+      predict: vi.fn(async () => { throw new Error('offline'); }) });
+    expect(await harness.controller.run({ blind: true })).toBe(false);
+    expect(harness.faceController.mode).toBe('viseme');
+    expect(harness.controller.getState()).toBe('error');
+  });
+
+  it('empty last turn ends in error with a toast', async () => {
+    const harness = makeHarness();
+    vi.spyOn(harness.buffer, 'concatPcm').mockReturnValue(null);
+    const toasts: AppEvents['toast'][] = [];
+    harness.events.on('toast', toast => toasts.push(toast));
+    expect(await harness.controller.run()).toBe(false);
+    expect(harness.controller.getState()).toBe('error');
+    expect(toasts).toEqual(expect.arrayContaining([expect.objectContaining({ type: 'error' })]));
+  });
+
+  it('cancellation still returns true and restores the original mode', async () => {
+    let release!: () => void;
+    const harness = makeHarness({ initialMode: 'frames', sleep: () => new Promise<void>(resolve => { release = resolve; }) });
+    const running = harness.controller.run();
+    await Promise.resolve();
+    harness.controller.cancel('test');
+    release();
+    expect(await running).toBe(true);
+    expect(harness.faceController.mode).toBe('frames');
+  });
+
+  it.each([
+    { initialMode: 'viseme' as const, random: () => 0.1, finalMode: 'frames', finalState: 'playing-b' },
+    { initialMode: 'frames' as const, random: () => 0.9, finalMode: 'viseme', finalState: 'playing-a' },
+  ])('keeps the final lane active until its audio finishes ($finalMode)', async ({ initialMode, random, finalMode, finalState }) => {
+    const releases: Array<() => void> = [];
+    const harness = makeHarness({ initialMode, random, sleep: () => new Promise<void>(resolve => releases.push(resolve)) });
+    const running = harness.controller.run({ blind: true });
+    for (let i = 0; i < 10 && releases.length < 1; i++) await Promise.resolve();
+    expect(releases).toHaveLength(1);
+    releases[0]();
+    for (let i = 0; i < 10 && releases.length < 2; i++) await Promise.resolve();
+    expect(releases).toHaveLength(2);
+    expect(harness.faceController.mode).toBe(finalMode);
+    expect(harness.controller.getState()).toBe(finalState);
+    expect(harness.results).toHaveLength(0);
+    releases[1]();
+    expect(await running).toBe(true);
+    expect(harness.faceController.mode).toBe(initialMode);
+    expect(harness.results).toHaveLength(1);
+  });
+
+  it('waits for the audio engine tail if playback extends past the initial wait', async () => {
+    const releases: Array<() => void> = [];
+    const harness = makeHarness({ sleep: () => new Promise<void>(resolve => releases.push(resolve)) });
+    const running = harness.controller.run();
+    for (let i = 0; i < 10 && releases.length < 1; i++) await Promise.resolve();
+    releases[0]();
+    for (let i = 0; i < 10 && releases.length < 2; i++) await Promise.resolve();
+    harness.engine.hasPendingAudio.mockReturnValue(true);
+    releases[1]();
+    for (let i = 0; i < 10 && releases.length < 3; i++) await Promise.resolve();
+    expect(releases).toHaveLength(3);
+    expect(harness.faceController.mode).toBe('frames');
+    expect(harness.results).toHaveLength(0);
+    harness.engine.hasPendingAudio.mockReturnValue(false);
+    releases[2]();
+    expect(await running).toBe(true);
+    expect(harness.faceController.mode).toBe('viseme');
+  });
+
+  it('restores immediately on cancel and a stale run cannot change a new run mode', async () => {
+    const releases: Array<() => void> = [];
+    const harness = makeHarness({ initialMode: 'frames', sleep: () => new Promise<void>(resolve => releases.push(resolve)) });
+    const oldRun = harness.controller.run();
+    for (let i = 0; i < 10 && releases.length < 1; i++) await Promise.resolve();
+    expect(harness.faceController.mode).toBe('viseme');
+    harness.controller.cancel('test');
+    expect(harness.faceController.mode).toBe('frames');
+    const newRun = harness.controller.run();
+    for (let i = 0; i < 10 && releases.length < 2; i++) await Promise.resolve();
+    expect(harness.faceController.mode).toBe('viseme');
+    releases[0]();
+    expect(await oldRun).toBe(true);
+    expect(harness.faceController.mode).toBe('viseme');
+    harness.controller.cancel('test');
+    releases[1]();
+    expect(await newRun).toBe(true);
+    expect(harness.faceController.mode).toBe('frames');
   });
 
   it('nie startuje, gdy trwa audio lub nie ma tury', async () => {

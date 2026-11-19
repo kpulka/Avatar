@@ -1,8 +1,5 @@
 export interface EmbedConfig {
   agentId?: string;
-  theme?: 'dark' | 'light';
-  autostart?: boolean;
-  modelUrl?: string;
   isIframe: boolean;
 }
 
@@ -10,51 +7,41 @@ export interface EmbedBridgeCallbacks {
   onConnect?: () => void;
   onDisconnect?: () => void;
   onInterrupt?: () => void;
-  onSetAgent?: (agentId: string) => void;
   onSay?: (text: string) => void;
 }
 
 export interface EmbedBridgeOptions {
-  /**
-   * Allowlista originów okna nadrzędnego. Dopełnia wartość z `?parent_origin=<url[,url]>`.
-   * Pusta allowlista = tryb same-origin (tylko `window.location.origin`).
-   */
+  /** Parent origins in addition to ?parent_origin; an empty list uses same-origin. */
   allowedOrigins?: string[];
+  /** Dev-only escape hatch. Defaults to import.meta.env.DEV. */
+  devMode?: boolean;
 }
 
-/**
- * Mostek komunikacyjny dla osadzania widgetu awatara w iframe i obsługa postMessage (PROD-01).
- *
- * Bezpieczeństwo (review A1 / P2): wiadomości przychodzące są przyjmowane wyłącznie
- * z zaufanych originów (allowlista), a wychodzące wysyłane do konkretnego originu —
- * nigdy do `'*'`, chyba że host jawnie włączy `?allow_any_origin=1`.
- */
+/** Accepts messages only from the direct parent of a framed widget and a trusted origin. */
+export const MAX_SAY_CHARS = 500;
+
 export class EmbedBridge {
   private callbacks: EmbedBridgeCallbacks = {};
   private config: EmbedConfig;
   private readonly allowedOrigins: Set<string>;
   private readonly allowAnyOrigin: boolean;
   private readonly sameOrigin: string;
+  private lastTrustedOrigin: string | null = null;
 
   constructor(callbacks: EmbedBridgeCallbacks = {}, options: EmbedBridgeOptions = {}) {
     this.callbacks = callbacks;
     this.config = this.parseConfigFromUrl();
 
     const params = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
-    this.allowAnyOrigin =
-      params?.get('allow_any_origin') === '1' || params?.get('allow_any_origin') === 'true';
+    const devMode = options.devMode ?? import.meta.env.DEV;
+    this.allowAnyOrigin = devMode &&
+      (params?.get('allow_any_origin') === '1' || params?.get('allow_any_origin') === 'true');
     this.sameOrigin = typeof window !== 'undefined' ? window.location.origin : '';
-
-    const fromReferrer =
-      typeof document !== 'undefined' && document.referrer
-        ? EmbedBridge.normalizeOrigin(document.referrer)
-        : '';
 
     this.allowedOrigins = new Set(
       [
         ...(options.allowedOrigins ?? []).map((entry) => EmbedBridge.normalizeOrigin(entry)),
         ...EmbedBridge.parseOriginList(params?.get('parent_origin') ?? null),
-        fromReferrer,
       ].filter((entry): entry is string => Boolean(entry))
     );
 
@@ -89,9 +76,6 @@ export class EmbedBridge {
 
     return {
       agentId: params.get('agent_id') || undefined,
-      theme: (params.get('theme') as 'dark' | 'light') || 'dark',
-      autostart: params.get('autostart') === 'true' || params.get('autostart') === '1',
-      modelUrl: params.get('model_url') || undefined,
       isIframe,
     };
   }
@@ -104,35 +88,44 @@ export class EmbedBridge {
     this.callbacks = { ...this.callbacks, ...callbacks };
   }
 
-  /** Czy wiadomość z tego originu może sterować widgetem. */
-  public isOriginTrusted(origin: string | undefined): boolean {
-    if (this.allowAnyOrigin) return true;
-    if (this.allowedOrigins.size > 0) return typeof origin === 'string' && this.allowedOrigins.has(origin);
-    // Brak allowlisty → tryb same-origin (kompatybilny z osadzeniem 1:1 na własnej domenie).
-    return !origin || origin === this.sameOrigin;
+  /** Only a direct parent of a framed widget can control it. */
+  public isSourceTrusted(source: MessageEventSource | null | undefined): boolean {
+    if (typeof window === 'undefined') return false;
+    const parent = window.parent;
+    if (!parent || parent === window) return false;
+    return source === parent;
   }
 
-  /** Origin, do którego wolno wysyłać zdarzenia (nigdy `'*'` bez jawnej zgody hosta). */
-  private targetOrigin(): string {
-    if (this.allowAnyOrigin) return '*';
-    const first = this.allowedOrigins.values().next();
-    return first.done ? this.sameOrigin : first.value;
+  public isOriginTrusted(origin: string | undefined): boolean {
+    if (!origin) return false;
+    if (this.allowAnyOrigin) return true;
+    if (this.allowedOrigins.size > 0) return this.allowedOrigins.has(origin);
+    return origin === this.sameOrigin;
+  }
+
+  private targetOrigins(): string[] {
+    if (this.allowAnyOrigin) return ['*'];
+    if (this.lastTrustedOrigin) return [this.lastTrustedOrigin];
+    if (this.allowedOrigins.size > 0) return [...this.allowedOrigins];
+    return [this.sameOrigin];
   }
 
   private setupMessageListener(): void {
     if (typeof window === 'undefined') return;
 
     window.addEventListener('message', (event: MessageEvent) => {
+      if (!this.isSourceTrusted(event.source)) return;
       const data = event.data;
       if (!data || typeof data !== 'object') return;
 
       if (!this.isOriginTrusted(event.origin)) {
         console.warn(
-          `[EmbedBridge] Odrzucono wiadomość z niezaufanego originu '${event.origin ?? '(brak)'}'. ` +
-            'Dodaj go przez ?parent_origin=<url> (lista rozdzielana przecinkami).'
+          `[EmbedBridge] Rejected message from untrusted origin '${event.origin ?? '(missing)'}'. Add it via ?parent_origin=<url>.`
         );
         return;
       }
+
+      this.lastTrustedOrigin = event.origin;
 
       switch (data.type) {
         case 'avatar:connect':
@@ -144,14 +137,14 @@ export class EmbedBridge {
         case 'avatar:interrupt':
           this.callbacks.onInterrupt?.();
           break;
-        case 'avatar:set_agent':
-          if (typeof data.agentId === 'string') {
-            this.callbacks.onSetAgent?.(data.agentId);
-          }
-          break;
         case 'avatar:say':
           if (typeof data.text === 'string') {
-            this.callbacks.onSay?.(data.text);
+            let text = data.text.trim();
+            if (text.length > MAX_SAY_CHARS) {
+              console.warn(`[EmbedBridge] avatar:say truncated to ${MAX_SAY_CHARS} chars.`);
+              text = text.slice(0, MAX_SAY_CHARS);
+            }
+            if (text) this.callbacks.onSay?.(text);
           }
           break;
       }
@@ -163,14 +156,8 @@ export class EmbedBridge {
    */
   public emit(action: string, payload?: unknown): void {
     if (typeof window !== 'undefined' && window.parent) {
-      window.parent.postMessage(
-        {
-          source: 'avatar_widget',
-          action,
-          payload,
-        },
-        this.targetOrigin()
-      );
+      const message = { source: 'avatar_widget', action, payload };
+      for (const target of this.targetOrigins()) window.parent.postMessage(message, target);
     }
   }
 
