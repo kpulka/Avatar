@@ -9,7 +9,7 @@ export default defineConfig({
         tag: 'meta',
         attrs: {
           'http-equiv': 'Content-Security-Policy',
-          content: "default-src 'self'; connect-src 'self' wss://api.elevenlabs.io; img-src 'self' data: blob:; media-src 'self' blob:; style-src 'self' 'unsafe-inline'; script-src 'self'; worker-src 'self' blob:",
+          content: "default-src 'self'; connect-src 'self' blob: wss://api.elevenlabs.io; img-src 'self' data: blob:; media-src 'self' blob:; style-src 'self' 'unsafe-inline'; script-src 'self'; worker-src 'self' blob:",
         },
         injectTo: 'head-prepend',
       }];

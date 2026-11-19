@@ -15,3 +15,6 @@
 - `git check-ignore` confirmed `.env`, `.env.local`, `test.pem`, and `test.key` are ignored; `git diff --check` passed.
 - 11.1-01 has not shipped: the current bridge uses `document.referrer`, supports `avatar:set_agent`, and does not restrict `allow_any_origin` to development. Its framed-parent checks and associated tests remain pending; no 11.1 behavior is claimed as implemented here.
 
+
+- Production preview CSP divergence: added `blob:` to `connect-src` alongside `'self'` and `wss://api.elevenlabs.io`. Before this change, headless Chromium reported 30 `connect-src` violations for same-app blob texture reads while a canvas was present. Other directives are unchanged. The showcase GLB has no Draco extensions, so this observation does not establish Draco decoder behavior.
+- 2026-11-19: `npm run build` passed. The rebuilt HTML contains the revised policy. On `http://localhost:5427/`, cached Chromium headless shell logged successful initialization and successful loading of `avatar.glb`, with no CSP violation in the captured console output. It also logged a Three.js warning that a material `map` was undefined, a GPU overlay diagnostic, and unsupported media-access diagnostics. This smoke check does not verify audio playback, live ElevenLabs connectivity, other models, or deployed integrations.
