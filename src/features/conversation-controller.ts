@@ -48,7 +48,7 @@ export class ConversationController implements ConversationService {
       this.embedBridge.notifyTranscript('agent', text);
     };
 
-    this.speechBackend.onAudioChunk = (pcm, alignment, epoch, scheduledStartTime) => {
+    this.speechBackend.onAudioChunk = (pcm, alignment, epoch, scheduledStartTime, sampleRate) => {
       const startTime =
         typeof scheduledStartTime === 'number' ? scheduledStartTime : this.audioEngine.getTailTime();
       this.events.emit('audio:chunk', {
@@ -56,7 +56,7 @@ export class ConversationController implements ConversationService {
         alignment,
         epoch,
         startTime,
-        sampleRate: this.speechBackend.getOutputSampleRate(),
+        sampleRate,
       });
     };
 

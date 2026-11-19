@@ -12,7 +12,8 @@ export class ElevenAgentsSpeechBackend implements SpeechBackend {
     pcm: ArrayBuffer,
     alignment: CharAlignment,
     epoch: number,
-    scheduledStartTime?: number
+    scheduledStartTime: number | undefined,
+    sampleRate: number
   ) => void = () => {};
   public onInterruption: (reason: string) => void = () => {};
   public onUserTranscript: (text: string) => void = () => {};
@@ -43,21 +44,24 @@ export class ElevenAgentsSpeechBackend implements SpeechBackend {
   private setupWssListeners(): void {
     this.wssClient.setCallbacks({
       onMetadata: (format) => {
-        if (format.outputFormat) {
-          if (format.outputFormat.includes('16000')) this.agentOutputSampleRate = 16000;
-          else if (format.outputFormat.includes('24000')) this.agentOutputSampleRate = 24000;
-          else if (format.outputFormat.includes('44100')) this.agentOutputSampleRate = 44100;
-          else if (format.outputFormat.includes('48000')) this.agentOutputSampleRate = 48000;
-          console.log(`[SpeechBackend] Format audio agenta: ${format.outputFormat} -> sampleRate: ${this.agentOutputSampleRate}Hz`);
+        const f = format.outputFormat;
+        if (!f) return;
+        const match = /^pcm_(\d+)$/.exec(f);
+        if (match) {
+          this.agentOutputSampleRate = Number(match[1]);
+          console.log(`[SpeechBackend] Agent audio format: ${f} -> ${this.agentOutputSampleRate} Hz`);
+        } else {
+          console.warn(`[SpeechBackend] unsupported agent output format '${f}' - keeping ${this.agentOutputSampleRate} Hz (expected pcm_<rate>).`);
         }
       },
 
       onAudioChunk: (payload: AudioEventPayload) => {
         const pcmBytes = base64ToPcmBytes(payload.audio_base_64);
         const epoch = this.audioEngine.getEpoch();
+        const sampleRate = this.agentOutputSampleRate;
 
         // Odtwarzamy audio przez Web Audio API z właściwą częstotliwością próbkowania
-        const scheduledStartTime = this.audioEngine.playChunk(pcmBytes, this.agentOutputSampleRate, epoch);
+        const scheduledStartTime = this.audioEngine.playChunk(pcmBytes, sampleRate, epoch);
 
         this.onStateChange('speaking');
 
@@ -102,19 +106,19 @@ export class ElevenAgentsSpeechBackend implements SpeechBackend {
         // błąd kumuluje się → dryf w długich zdaniach. Skalujemy czasy znaków tak, by koniec
         // ostatniego znaku pokrywał się z końcem audio chunka (proporcje wewnątrz zachowane).
         if (alignment && alignment.source === 'elevenlabs') {
-          const audioDurMs = (pcmBytes.byteLength / 2 / this.agentOutputSampleRate) * 1000;
+          const audioDurMs = (pcmBytes.byteLength / 2 / sampleRate) * 1000;
           alignment = rescaleAlignmentToAudio(alignment, audioDurMs);
         }
 
         // 2. FALLBACK: Jeśli serwer ElevenLabs nie dołączył metadanych alignmentu lub są puste,
         // generujemy naturalny alignment wprost z energii próbek audio PCM!
         if (!alignment || alignment.chars.length === 0) {
-          alignment = generateEnergyFallbackAlignment(pcmBytes, this.agentOutputSampleRate);
+          alignment = generateEnergyFallbackAlignment(pcmBytes, sampleRate);
         }
 
         this.diagnoseSync(alignment, pcmBytes, epoch, scheduledStartTime);
 
-        this.onAudioChunk(pcmBytes.buffer as ArrayBuffer, alignment, epoch, scheduledStartTime);
+        this.onAudioChunk(pcmBytes.buffer as ArrayBuffer, alignment, epoch, scheduledStartTime, sampleRate);
       },
 
       onInterruption: (reason = 'user_interrupted') => {
@@ -342,7 +346,7 @@ export class ElevenAgentsSpeechBackend implements SpeechBackend {
     };
 
     const scheduled = this.audioEngine.playChunk(pcmBytes, sampleRate, epoch);
-    this.onAudioChunk(pcmBytes.buffer as ArrayBuffer, alignment, epoch, scheduled);
+    this.onAudioChunk(pcmBytes.buffer as ArrayBuffer, alignment, epoch, scheduled, sampleRate);
 
     setTimeout(() => {
       if (!this.audioEngine.hasPendingAudio()) {

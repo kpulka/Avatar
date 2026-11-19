@@ -131,6 +131,21 @@ describe('AnimationSourceRegistry', () => {
   });
 });
 
+describe('LastTurnBuffer sample rate', () => {
+  it('preserves two seconds of 44100 Hz audio', () => {
+    const events = new TypedEventBus<AppEvents>();
+    const buffer = new LastTurnBuffer({ events });
+    for (let i = 0; i < 2; i++) {
+      events.emit('audio:chunk', { bytes: new Uint8Array(44100 * 2), alignment: ALIGNMENT,
+        epoch: 0, startTime: i, sampleRate: 44100 });
+    }
+    const turn = buffer.getLastTurn()!;
+    expect(turn.sampleRate).toBe(44100);
+    expect(turn.chunks.reduce((sum, chunk) => sum + chunk.bytes.byteLength, 0) / 2 / turn.sampleRate).toBe(2);
+    expect(buffer.getDurationSec()).toBe(2);
+  });
+});
+
 describe('CompareController', () => {
   it('blokuje porównanie, gdy brak awatara (review A1 / P2)', () => {
     const events = new TypedEventBus<AppEvents>();

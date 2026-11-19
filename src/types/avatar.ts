@@ -19,7 +19,7 @@ export interface CharAlignment {
 export interface SpeechBackend {
   start(): Promise<void>;
   stop(): Promise<void>;
-  onAudioChunk: (pcm: ArrayBuffer, alignment: CharAlignment, epoch: number, scheduledStartTime?: number) => void;
+  onAudioChunk: (pcm: ArrayBuffer, alignment: CharAlignment, epoch: number, scheduledStartTime: number | undefined, sampleRate: number) => void;
   onInterruption: (reason: string) => void;
   onUserTranscript: (text: string) => void;
   onStateChange: (state: 'listening' | 'speaking' | 'thinking' | 'idle') => void;
