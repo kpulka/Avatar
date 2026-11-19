@@ -1,6 +1,20 @@
 import { defineConfig } from 'vite';
 
 export default defineConfig({
+  plugins: [{
+    name: 'production-content-security-policy',
+    apply: 'build',
+    transformIndexHtml() {
+      return [{
+        tag: 'meta',
+        attrs: {
+          'http-equiv': 'Content-Security-Policy',
+          content: "default-src 'self'; connect-src 'self' wss://api.elevenlabs.io; img-src 'self' data: blob:; media-src 'self' blob:; style-src 'self' 'unsafe-inline'; script-src 'self'; worker-src 'self' blob:",
+        },
+        injectTo: 'head-prepend',
+      }];
+    },
+  }],
   server: {
     // Port 3000 zajmuje AI Heritage (img2life) — Avatar ma własny, żeby nie kolidować.
     port: 5310,

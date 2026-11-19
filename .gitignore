@@ -19,6 +19,8 @@ a2f/rig/
 # --- Sekrety / logi ---
 .env
 .env.*
+*.pem
+*.key
 *.log
 logs/
 
