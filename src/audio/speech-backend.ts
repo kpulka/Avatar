@@ -7,6 +7,20 @@ import { AudioEventPayload } from '../types/audio';
 import { generateEnergyFallbackAlignment } from './energy-fallback';
 import { rescaleAlignmentToAudio } from './alignment-rescale';
 
+export class MicAccessError extends Error {
+  public readonly reason: 'denied' | 'not-found' | 'other';
+  constructor(cause: unknown) {
+    const name = (cause as { name?: string } | null)?.name;
+    const reason = name === 'NotAllowedError' || name === 'SecurityError' ? 'denied'
+      : name === 'NotFoundError' || name === 'OverconstrainedError' ? 'not-found' : 'other';
+    super(reason === 'denied' ? 'Microphone access is blocked. Allow it via the icon in the address bar, then press Start again.'
+      : reason === 'not-found' ? 'No microphone was found. Connect one and press Start again.'
+      : 'The microphone could not be started.');
+    this.name = 'MicAccessError';
+    this.reason = reason;
+  }
+}
+
 export class ElevenAgentsSpeechBackend implements SpeechBackend {
   public onAudioChunk: (
     pcm: ArrayBuffer,
@@ -15,6 +29,7 @@ export class ElevenAgentsSpeechBackend implements SpeechBackend {
     scheduledStartTime: number | undefined,
     sampleRate: number
   ) => void = () => {};
+  public onError: (err: Error) => void = () => {};
   public onInterruption: (reason: string) => void = () => {};
   public onUserTranscript: (text: string) => void = () => {};
   public onAgentResponse: (text: string) => void = () => {};
@@ -25,6 +40,8 @@ export class ElevenAgentsSpeechBackend implements SpeechBackend {
   private readonly audioEngine: AudioEngine;
 
   private isRunning = false;
+  private startPromise: Promise<void> | null = null;
+  private startGeneration = 0;
   private isMuted = false;
   private agentOutputSampleRate = 16000; // domyślnie 16000 dla ElevenLabs ConvAI, adaptowane z metadata
 
@@ -43,6 +60,7 @@ export class ElevenAgentsSpeechBackend implements SpeechBackend {
 
   private setupWssListeners(): void {
     this.wssClient.setCallbacks({
+      onError: (err) => this.onError(err),
       onMetadata: (format) => {
         const f = format.outputFormat;
         if (!f) return;
@@ -152,37 +170,54 @@ export class ElevenAgentsSpeechBackend implements SpeechBackend {
     });
   }
 
-  public async start(): Promise<void> {
-    if (this.isRunning) return;
+  public start(): Promise<void> {
+    if (this.isRunning) return Promise.resolve();
+    if (this.startPromise) return this.startPromise;
+    const generation = this.startGeneration;
+    const pending = this.startSession(generation);
+    this.startPromise = pending;
+    void pending.finally(() => {
+      if (this.startPromise === pending) this.startPromise = null;
+    }).catch(() => undefined);
+    return pending;
+  }
 
-    await this.audioEngine.unlock();
+  private async startSession(generation: number): Promise<void> {
+    try {
+      await this.audioEngine.unlock();
+    } catch (err) {
+      if (generation !== this.startGeneration) return;
+      throw err;
+    }
+    if (generation !== this.startGeneration) return;
 
-    // 1. Połączenie WebSocket
-    this.wssClient.connect(this.getAgentId());
-
-    // 2. Start mikrofonu
     try {
       await this.micCapture.start((base64Chunk: string) => {
-        if (!this.isMuted && this.isRunning) {
-          this.wssClient.sendUserAudio(base64Chunk);
-        }
+        if (!this.isMuted && this.isRunning) this.wssClient.sendUserAudio(base64Chunk);
       });
     } catch (err) {
-      console.warn('[SpeechBackend] Nie udało się otworzyć mikrofonu (brak uprawnień/urządzenia):', err);
+      if (generation !== this.startGeneration) return;
+      this.onStateChange('idle');
+      throw new MicAccessError(err);
+    }
+    if (generation !== this.startGeneration) {
+      this.micCapture.stop();
+      return;
     }
 
+    this.wssClient.connect(this.getAgentId());
     this.isRunning = true;
     this.onStateChange('listening');
   }
 
   public async stop(): Promise<void> {
+    this.startGeneration++;
     if (!this.isRunning) return;
 
     this.isRunning = false;
     this.micCapture.stop();
     this.wssClient.disconnect();
     this.audioEngine.hardStop();
-
     this.onStateChange('idle');
   }
 

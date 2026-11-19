@@ -34,15 +34,14 @@ function makeKeyTarget() {
 }
 
 describe('UiMode', () => {
-  it('?studio=1 ustawia tryb studio, data-mode i persystuje wybór', () => {
+  it('?studio=1 applies only to this visit', () => {
     const storage = createMemoryStorage();
     const store = new SettingsStore(storage);
-    const env = makeEnv('studio=1');
-    const uiMode = createUiMode(store, env);
-
-    expect(uiMode.getMode()).toBe('studio');
+    const env = makeEnv('?studio=1');
+    expect(createUiMode(store, env).getMode()).toBe('studio');
     expect(env.attrs['data-mode']).toBe('studio');
-    expect(store.getState().user.uiMode).toBe('studio');
+    expect(store.getEffective('uiMode')).toBe('user');
+    expect(createUiMode(new SettingsStore(storage), makeEnv('')).getMode()).toBe('user');
   });
 
   it('bez query startuje z persisted uiMode, a toggle zapisuje wybór', () => {

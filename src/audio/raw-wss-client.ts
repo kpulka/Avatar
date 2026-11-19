@@ -7,6 +7,8 @@ import {
 } from '../types/audio';
 import { DEFAULT_AGENT_CONFIG } from './agent-config';
 
+export const MAX_RECONNECT_ATTEMPTS = 5;
+
 export type ConnectionState = 'disconnected' | 'connecting' | 'connected' | 'reconnecting';
 
 export interface WssClientCallbacks {
@@ -31,6 +33,7 @@ export class RawWssClient {
   private intentionalClose = false;
   private reconnectAttempts = 0;
   private reconnectTimer: number | null = null;
+  private lastSocketError: string | null = null;
 
   constructor(agentId = DEFAULT_AGENT_CONFIG.agentId, callbacks: WssClientCallbacks = {}) {
     this.agentId = agentId;
@@ -55,18 +58,17 @@ export class RawWssClient {
     this.setState(this.reconnectAttempts > 0 ? 'reconnecting' : 'connecting');
 
     try {
-      this.ws = new WebSocket(targetUrl);
-      this.bindSocketEvents();
+      const socket = new WebSocket(targetUrl);
+      this.ws = socket;
+      this.bindSocketEvents(socket);
     } catch (err) {
       this.handleSocketFailure(err as Error);
     }
   }
 
-  private bindSocketEvents(): void {
-    if (!this.ws) return;
-
-    this.ws.onopen = () => {
-      this.reconnectAttempts = 0;
+  private bindSocketEvents(socket: WebSocket): void {
+    socket.onopen = () => {
+      if (this.ws !== socket) return;
       this.setState('connected');
 
       // 1. Handshake klienta z inicjalizacją (docs/2)
@@ -77,30 +79,39 @@ export class RawWssClient {
       this.sendJson(initMsg);
     };
 
-    this.ws.onmessage = (event: MessageEvent) => {
+    socket.onmessage = (event: MessageEvent) => {
+      if (this.ws !== socket) return;
       try {
         const msg = JSON.parse(event.data) as ServerToClientMsg;
-        this.handleServerMessage(msg);
+        this.handleServerMessage(msg, socket);
       } catch (err) {
         console.warn('[RawWssClient] Błąd parsowania wiadomości:', err);
       }
     };
 
-    this.ws.onerror = (e) => {
+    socket.onerror = (e) => {
+      if (this.ws !== socket) return;
+      this.lastSocketError = typeof ErrorEvent !== 'undefined' && e instanceof ErrorEvent && e.message
+        ? e.message.slice(0, 200)
+        : 'WebSocket connection error';
       console.warn('[RawWssClient] WebSocket error event:', e);
     };
 
-    this.ws.onclose = (_event: CloseEvent) => {
+    socket.onclose = (event: CloseEvent) => {
+      if (this.ws !== socket) return;
       this.ws = null;
-      if (!this.intentionalClose) {
-        this.scheduleReconnect();
-      } else {
-        this.setState('disconnected');
+      if (this.intentionalClose) { this.setState('disconnected'); return; }
+      const fatal = event.code === 1008 || (event.code >= 4000 && event.code < 5000);
+      if (fatal) {
+        const context = this.lastSocketError ? ` ${this.lastSocketError}.` : '';
+        this.fail(new Error(`The voice agent rejected the connection (${event.reason || `code ${event.code}`}).${context}`));
+        return;
       }
+      this.scheduleReconnect();
     };
   }
 
-  private handleServerMessage(msg: ServerToClientMsg): void {
+  private handleServerMessage(msg: ServerToClientMsg, socket: WebSocket): void {
     switch (msg.type) {
       case 'audio': {
         const audioEvent = msg.audio_event;
@@ -115,6 +126,7 @@ export class RawWssClient {
         if (pingEvent && typeof pingEvent.event_id === 'number') {
           const delay = pingEvent.ping_ms ?? 0;
           setTimeout(() => {
+            if (this.ws !== socket) return;
             const pong: PongClientMsg = {
               type: 'pong',
               event_id: pingEvent.event_id,
@@ -167,6 +179,10 @@ export class RawWssClient {
 
       case 'conversation_initiation_metadata': {
         const meta = msg.conversation_initiation_metadata_event;
+        if (meta) {
+          this.reconnectAttempts = 0;
+          this.lastSocketError = null;
+        }
         if (meta && this.callbacks.onMetadata) {
           this.callbacks.onMetadata({
             outputFormat: meta.agent_output_audio_format,
@@ -193,15 +209,21 @@ export class RawWssClient {
 
   public disconnect(): void {
     this.intentionalClose = true;
+    this.reconnectAttempts = 0;
+    this.lastSocketError = null;
     this.clearReconnectTimer();
-    if (this.ws) {
-      this.ws.close(1000, 'Intentional client disconnect');
-      this.ws = null;
-    }
+    const socket = this.ws;
+    this.ws = null;
+    socket?.close(1000, 'Intentional client disconnect');
     this.setState('disconnected');
   }
 
   private scheduleReconnect(): void {
+    if (this.reconnectAttempts >= MAX_RECONNECT_ATTEMPTS) {
+      const context = this.lastSocketError ? ` (${this.lastSocketError})` : '';
+      this.fail(new Error(`Could not reach the voice agent after ${MAX_RECONNECT_ATTEMPTS} attempts${context}. Check your connection and try again.`));
+      return;
+    }
     this.setState('reconnecting');
     this.reconnectAttempts++;
 
@@ -215,13 +237,19 @@ export class RawWssClient {
   }
 
   private handleSocketFailure(err: Error): void {
+    this.lastSocketError = err.message.slice(0, 200);
     console.error('[RawWssClient] Błąd połączenia socketu:', err);
-    if (this.callbacks.onError) this.callbacks.onError(err);
     if (!this.intentionalClose) {
       this.scheduleReconnect();
     } else {
       this.setState('disconnected');
     }
+  }
+
+  private fail(err: Error): void {
+    this.clearReconnectTimer();
+    this.setState('disconnected');
+    this.callbacks.onError?.(err);
   }
 
   private sendJson(data: unknown): void {

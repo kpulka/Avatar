@@ -118,6 +118,53 @@ describe('RawWssClient', () => {
     vi.useRealTimers();
   });
 
+  it('ignores delayed events and pongs from a stopped session after restarting', () => {
+    vi.useFakeTimers();
+    const onError = vi.fn();
+    const onAgentResponse = vi.fn();
+    const client = new RawWssClient('test-agent-123', { onError, onAgentResponse });
+    client.connect();
+    const oldSocket = MockWebSocket.instances[0];
+    oldSocket.open();
+    oldSocket.receiveMessage({ type: 'ping', ping_event: { event_id: 42, ping_ms: 50 } });
+    // Simulate a browser delivering the close event after disconnect returns.
+    const delayedClose = oldSocket.onclose!;
+    oldSocket.close = vi.fn();
+    client.disconnect();
+    client.connect();
+    const newSocket = MockWebSocket.instances[1];
+    newSocket.open();
+
+    delayedClose({ code: 1008, reason: 'old session' });
+    oldSocket.open();
+    oldSocket.receiveMessage({ type: 'agent_response', agent_response_event: { agent_response: 'stale' } });
+    oldSocket.onerror?.(new Event('error'));
+    vi.advanceTimersByTime(60_000);
+
+    expect(client.getState()).toBe('connected');
+    expect(onError).not.toHaveBeenCalled();
+    expect(onAgentResponse).not.toHaveBeenCalled();
+    expect(MockWebSocket.instances).toHaveLength(2);
+    expect(newSocket.sentData).toHaveLength(1);
+    client.sendUserAudio('current');
+    expect(newSocket.sentData.at(-1)).toContain('current');
+    vi.useRealTimers();
+  });
+
+  it('reports the current socket error once when a connection is rejected', () => {
+    const onError = vi.fn();
+    const client = new RawWssClient('test-agent-123', { onError });
+    client.connect();
+    const socket = MockWebSocket.instances[0];
+    socket.onerror?.(new Event('error'));
+    socket.close(1008, 'rejected');
+    socket.close(1008, 'rejected');
+
+    expect(onError).toHaveBeenCalledTimes(1);
+    expect(onError.mock.calls[0][0].message).toContain('WebSocket connection error');
+    expect(client.getState()).toBe('disconnected');
+  });
+
   it('triggers onInterruption callback when interruption event is received', () => {
     const onInterruption = vi.fn();
     const client = new RawWssClient('test-agent-123', { onInterruption });

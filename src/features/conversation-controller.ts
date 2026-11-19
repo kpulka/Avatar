@@ -4,7 +4,7 @@
  * Odpowiada za: start/stop rozmowy, mute, barge-in, demo speech, stress PoC oraz
  * mostek embed (postMessage). Emituje wyłącznie zdarzenia STANU na bus; nie dotyka DOM.
  */
-import { ElevenAgentsSpeechBackend } from '../audio/speech-backend';
+import { ElevenAgentsSpeechBackend, MicAccessError } from '../audio/speech-backend';
 import { AudioEngine } from '../audio/audio-engine';
 import { EmbedBridge } from '../prod/embed-bridge';
 import { TypedEventBus } from '../app/events';
@@ -22,6 +22,7 @@ export class ConversationController implements ConversationService {
   private readonly audioEngine: AudioEngine;
   private readonly embedBridge: EmbedBridge;
   private readonly events: TypedEventBus<AppEvents>;
+  private startPromise: Promise<void> | null = null;
 
   constructor(deps: ConversationControllerDeps) {
     this.speechBackend = deps.speechBackend;
@@ -33,6 +34,11 @@ export class ConversationController implements ConversationService {
   }
 
   private setupBackendCallbacks(): void {
+    this.speechBackend.onError = (err) => {
+      this.events.emit('toast', { message: err.message, type: 'error' });
+      void this.stop().catch(() => undefined);
+    };
+
     this.speechBackend.onStateChange = (state) => {
       this.events.emit('voice:state', state);
       this.embedBridge.notifyStateChange(state);
@@ -73,39 +79,47 @@ export class ConversationController implements ConversationService {
         }
       },
       onDisconnect: () => {
-        if (this.speechBackend.getIsRunning()) {
-          this.stop().catch(() => undefined);
-        }
+        this.stop().catch(() => undefined);
       },
       onInterrupt: () => this.interrupt(),
       onSay: (text) => this.say(text),
     });
   }
 
-  public async start(): Promise<void> {
-    if (this.speechBackend.getIsRunning()) return;
-    await this.speechBackend.start();
+  public start(): Promise<void> {
+    if (this.speechBackend.getIsRunning()) return Promise.resolve();
+    if (this.startPromise) return this.startPromise;
+    const pending = this.startSession();
+    this.startPromise = pending;
+    void pending.finally(() => {
+      if (this.startPromise === pending) this.startPromise = null;
+    }).catch(() => undefined);
+    return pending;
+  }
+
+  private async startSession(): Promise<void> {
+    try {
+      await this.speechBackend.start();
+    } catch (error) {
+      const message = error instanceof MicAccessError ? error.message : `Connection error: ${(error as Error).message}`;
+      this.events.emit('voice:error', message);
+      this.events.emit('toast', { message, type: 'error' });
+      throw error;
+    }
   }
 
   public async stop(): Promise<void> {
-    if (!this.speechBackend.getIsRunning()) return;
     await this.speechBackend.stop();
   }
 
   public async toggle(): Promise<void> {
-    if (this.speechBackend.getIsRunning()) {
+    if (this.speechBackend.getIsRunning() || this.startPromise) {
       await this.stop();
       this.events.emit('toast', { message: 'Rozmowa zakończona.', type: 'success' });
       return;
     }
     this.events.emit('toast', { message: 'Rozpoczynanie rozmowy z agentem...', type: 'success' });
-    try {
-      await this.start();
-    } catch (error) {
-      const message = `Błąd połączenia: ${(error as Error).message}`;
-      this.events.emit('voice:error', message);
-      this.events.emit('toast', { message, type: 'error' });
-    }
+    await this.start().catch(() => undefined);
   }
 
   public toggleMute(): void {

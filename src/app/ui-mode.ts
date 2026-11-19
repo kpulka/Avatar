@@ -47,10 +47,8 @@ function isEditableTarget(target: unknown): boolean {
 
 export function createUiMode(store: SettingsStore, env: UiModeEnv): UiModeController {
   const fromUrl = new URLSearchParams(env.search).get('studio') === '1';
+  // ?studio=1 is session-only (Phase 11.2): a shared link must not turn later visits into Studio.
   let mode: UiMode = fromUrl ? 'studio' : store.getEffective<UiMode>('uiMode');
-  if (fromUrl && !store.isLocked('uiMode')) {
-    store.setUser('uiMode', 'studio');
-  }
 
   const apply = (): void => {
     env.body.setAttribute('data-mode', mode);

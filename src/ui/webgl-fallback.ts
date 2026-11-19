@@ -16,20 +16,11 @@ export function isWebGLAvailable(): boolean {
 /**
  * Pokazuje planszę awaryjną w przypadku braku WebGL
  */
-export function handleWebGLFailure(onFallbackAudio?: () => void): void {
+export function handleWebGLFailure(): void {
   const fallbackElement = document.getElementById('webgl-fallback');
   if (fallbackElement) {
     fallbackElement.classList.remove('hidden');
 
-    const btnFallbackAudio = document.getElementById('btn-fallback-audio');
-    btnFallbackAudio?.addEventListener('click', () => {
-      fallbackElement.classList.add('hidden');
-      const canvas = document.getElementById('avatar-canvas');
-      if (canvas) {
-        canvas.style.display = 'none';
-      }
-      onFallbackAudio?.();
-    });
   }
   console.warn('[WebGL Fallback] Brak wsparcia WebGL w przeglądarce. Aktywowano graceful degradation.');
 }
