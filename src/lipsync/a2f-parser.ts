@@ -15,6 +15,7 @@
 
 import { PoseFrame, FramesClip } from '../types/avatar';
 import { normalizeShapeName } from '../avatar/shape-normalizer';
+import { clamp01 } from './anim-config';
 
 /** Canonical (camelCase) names of the 52 ARKit blendshapes — the parser whitelist. */
 export const ARKIT_52: readonly string[] = [
@@ -144,4 +145,3 @@ export function parseA2fPayload(payload: A2fPayload): A2fParseResult {
   };
 }
 
-const clamp01 = (v: number): number => (v < 0 ? 0 : v > 1 ? 1 : v);

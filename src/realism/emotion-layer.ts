@@ -1,3 +1,7 @@
+import { ANIM_DEFAULTS } from '../lipsync/anim-config';
+
+const { emotion: emotionConfig } = ANIM_DEFAULTS;
+
 export type EmotionType = 'neutral' | 'happy' | 'surprised' | 'focused';
 
 export interface EmotionProfile {
@@ -33,8 +37,8 @@ export class EmotionLayer {
 
   // Current cross-fade weights
   private readonly activeWeights: Map<string, number> = new Map();
-  private crossFadeDurationSec = 0.4; // 400ms cross-fade between states
-  private crossFadeElapsed = 0.4;
+  private readonly crossFadeDurationSec = emotionConfig.crossFadeSec; // cross-fade between states
+  private crossFadeElapsed = emotionConfig.crossFadeSec;
 
   /**
    * Analyses the utterance text for lexical sentiment
@@ -120,7 +124,7 @@ export class EmotionLayer {
       const currentVal = this.activeWeights.get(shape) ?? 0.0;
       const nextVal = currentVal + (targetVal - currentVal) * ease;
 
-      if (nextVal < 0.002 && targetVal === 0) {
+      if (nextVal < emotionConfig.decayEpsilon && targetVal === 0) {
         this.activeWeights.delete(shape);
       } else {
         this.activeWeights.set(shape, nextVal);

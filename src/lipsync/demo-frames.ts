@@ -13,6 +13,7 @@
  */
 
 import { FramesClip, PoseFrame } from '../types/avatar';
+import { clamp01 } from './anim-config';
 
 const FPS = 60;
 
@@ -26,7 +27,6 @@ const ROUND_CONSONANTS = new Set('wr'.split(''));
 /** Voiced consonants (resonant) — a quiet voiced source. */
 const VOICED_CONSONANTS = new Set('mbnwlrgyjdżdźdz'.split(''));
 
-const clamp01 = (v: number): number => (v < 0 ? 0 : v > 1 ? 1 : v);
 
 /** Target pose for a single letter (simplified, for the demo only). */
 function poseForChar(ch: string): Record<string, number> {

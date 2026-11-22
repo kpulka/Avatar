@@ -1,13 +1,17 @@
+import { ANIM_DEFAULTS } from './anim-config';
+
+const { blink: blinkConfig } = ANIM_DEFAULTS;
+
 export interface BlinkWeights {
   left: number;
   right: number;
 }
 
 export interface BlinkOptions {
-  minIntervalSec?: number; // Minimum interval between blinks (default 2.5s)
-  maxIntervalSec?: number; // Maximum interval (default 6.0s)
-  closeDurationSec?: number; // Eyelid closing time (default 80ms)
-  openDurationSec?: number; // Eyelid opening time (default 200ms)
+  minIntervalSec?: number; // Minimum interval between blinks (default blink.intervalMinSec)
+  maxIntervalSec?: number; // Maximum interval (default blink.intervalMaxSec)
+  closeDurationSec?: number; // Eyelid closing time (default blink.closeSec)
+  openDurationSec?: number; // Eyelid opening time (default blink.openSec)
 }
 
 /**
@@ -26,11 +30,11 @@ export class ProceduralBlink {
   private isDoubleBlink = false;
 
   constructor(options: BlinkOptions = {}) {
-    this.minIntervalSec = options.minIntervalSec ?? 2.5;
-    this.maxIntervalSec = options.maxIntervalSec ?? 6.0;
-    this.closeDurationSec = options.closeDurationSec ?? 0.08; // 80ms
-    this.openDurationSec = options.openDurationSec ?? 0.2; // 200ms
-    this.totalBlinkDurationSec = this.closeDurationSec + this.openDurationSec; // 280ms
+    this.minIntervalSec = options.minIntervalSec ?? blinkConfig.intervalMinSec;
+    this.maxIntervalSec = options.maxIntervalSec ?? blinkConfig.intervalMaxSec;
+    this.closeDurationSec = options.closeDurationSec ?? blinkConfig.closeSec;
+    this.openDurationSec = options.openDurationSec ?? blinkConfig.openSec;
+    this.totalBlinkDurationSec = this.closeDurationSec + this.openDurationSec;
 
     this.scheduleNextBlink(0);
   }
@@ -39,8 +43,8 @@ export class ProceduralBlink {
     const range = this.maxIntervalSec - this.minIntervalSec;
     const interval = this.minIntervalSec + Math.random() * range + delayBonus;
     this.nextBlinkTimeSec = currentTimeSec + interval;
-    // 15% chance of a double blink (a natural biological reflex)
-    this.isDoubleBlink = Math.random() < 0.15;
+    // A chance of a double blink (a natural biological reflex)
+    this.isDoubleBlink = Math.random() < blinkConfig.doubleBlinkChance;
   }
 
   /**
@@ -62,8 +66,8 @@ export class ProceduralBlink {
       this.isBlinking = false;
       if (this.isDoubleBlink) {
         this.isDoubleBlink = false;
-        // Second blink after a short pause ~100ms
-        this.nextBlinkTimeSec = currentTimeSec + 0.1;
+        // Second blink after a short pause
+        this.nextBlinkTimeSec = currentTimeSec + blinkConfig.doubleBlinkPauseSec;
       } else {
         this.scheduleNextBlink(currentTimeSec);
       }
@@ -84,10 +88,10 @@ export class ProceduralBlink {
 
     const clamped = Math.max(0, Math.min(1, weight));
 
-    // Subtle eyelid asymmetry (~2%) for extra realism
+    // Subtle eyelid asymmetry for extra realism
     return {
       left: clamped,
-      right: Math.max(0, Math.min(1, clamped * 0.98)),
+      right: Math.max(0, Math.min(1, clamped * blinkConfig.rightScale)),
     };
   }
 

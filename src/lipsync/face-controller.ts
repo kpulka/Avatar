@@ -22,22 +22,11 @@ import { ProceduralBlink } from './procedural-blink';
 import { EmotionLayer, EmotionType } from '../realism/emotion-layer';
 import { CalibrationProfile } from './calibration';
 import { createAudibleClock } from '../audio/audible-clock';
+import { ANIM_DEFAULTS, clamp01 } from './anim-config';
 
 export type FaceState = 'IDLE' | 'SPEAKING' | 'RELAXING';
 
-/** Hard cap on mouthClose for the frames track — mirrors CLOSE_SAFETY_CAP from VisemeScheduler
-  *  (protects MetaPerson from the "lip on the nose" artifact). */
-const FRAME_CLOSE_CAP = 0.85;
-
-/**
- * Share of the base emotion mixed in during SPEAKING — the ONE policy for both tracks
- * (viseme and frames): brows/cheeks keep the expression subtle while the mouth is busy.
- * Moves to anim-config in 16-04.
- */
-export const EMOTION_MIX_SPEAKING = 0.3;
-
-/** Morph weight of the procedural gaze (the eyelids gently follow the eyeball bones). */
-const GAZE_MORPH_WEIGHT = 0.35;
+const { relax, fallback, viseme, emotion, manual, common, gaze: gazeConfig } = ANIM_DEFAULTS;
 
 /** The eyeLook* morphs owned by the gaze provider (fixed key order, no per-frame Object.entries). */
 const EYE_LOOK_SHAPES: ReadonlyArray<keyof EyeLookWeights> = [
@@ -51,7 +40,8 @@ const EYE_LOOK_SHAPES: ReadonlyArray<keyof EyeLookWeights> = [
   'eyeLookDownRight',
 ];
 
-const clamp01 = (v: number): number => (v < 0 ? 0 : v > 1 ? 1 : v);
+/** Anatomical guard on manual overrides: mouthClose may not exceed jawOpen + margin. */
+const guardClose = (close: number, jaw: number): number => Math.min(close, jaw + manual.jawGuardMargin);
 
 /** Meta of the active clip in frames mode (08-CONTEXT v2). */
 interface FrameMeta {
@@ -92,9 +82,7 @@ export class FaceController {
   private readonly emotionLayer: EmotionLayer;
 
   private state: FaceState = 'IDLE';
-  private epoch = 0;
   private relaxStartedAt = 0;
-  private relaxDurationMs = 150; // 150 ms smooth return to neutral (docs/4)
 
   // --- Animation mode (08-CONTEXT v2): 'viseme' (default) | 'frames' (absolute A2F frames) ---
   private animationMode: AnimationMode = 'viseme';
@@ -229,7 +217,6 @@ export class FaceController {
       console.warn('[FaceController] feedFrames from a stale epoch — ignoring');
       return;
     }
-    this.epoch = epoch;
 
     // One source at a time: drop any visemes left over from the previous track.
     this.scheduler.clear();
@@ -250,7 +237,7 @@ export class FaceController {
     );
   }
 
-  /** Number of pending frames (frames track) or queue items (viseme track). */
+  /** Number of pending frames (frames track). */
   public getFrameQueueLength(): number {
     return this.frameBuffer.length;
   }
@@ -260,7 +247,7 @@ export class FaceController {
   public setVisemeOverride(key: string, shapes: Map<string, number>): void {
     const clean = new Map<string, number>();
     for (const [shape, value] of shapes.entries()) {
-      if (value > 0.001) clean.set(shape, Math.max(0, Math.min(1, value)));
+      if (value > common.snapEpsilon) clean.set(shape, clamp01(value));
     }
     if (clean.size === 0) this.visemeOverrides.delete(key);
     else this.visemeOverrides.set(key, clean);
@@ -353,7 +340,6 @@ export class FaceController {
       return;
     }
 
-    this.epoch = epoch;
 
     if (this.state === 'RELAXING' || this.state === 'IDLE') {
       this.state = 'SPEAKING';
@@ -367,15 +353,15 @@ export class FaceController {
       const syncOffsetSec = profile.syncOffsetMs / 1000;
       for (let i = 0; i < alignment.chars.length; i++) {
         const energy = alignment.energies[i] ?? 0;
-        if (energy <= 0.02) continue; // silence → no viseme (natural decay)
+        if (energy <= fallback.skipEnergyBelow) continue; // silence → no viseme (natural decay)
         const startMs = alignment.char_start_times_ms[i] ?? 0;
         const durationMs = alignment.char_durations_ms[i] ?? 70;
         this.scheduler.enqueue({
           epoch,
           char: '#energy',
-          shapes: new Map([['jawOpen', Math.min(0.5, energy * 2.0)]]),
+          shapes: new Map([['jawOpen', Math.min(fallback.jawCap, energy * fallback.jawScale)]]),
           startTimeSec: chunkStartTimeSec + startMs / 1000 + syncOffsetSec,
-          durationSec: Math.max(0.035, durationMs / 1000),
+          durationSec: Math.max(fallback.minDurationSec, durationMs / 1000),
         });
       }
       this.state = 'SPEAKING';
@@ -405,7 +391,7 @@ export class FaceController {
             char: span.phoneme,
             shapes,
             startTimeSec: chunkStartTimeSec + span.startMs / 1000 + syncOffsetSec,
-            durationSec: Math.max(0.035, span.durationMs / 1000),
+            durationSec: Math.max(viseme.minDurationSec, span.durationMs / 1000),
           });
         }
         return; // the phoneme queue replaces the per-character loop
@@ -437,7 +423,7 @@ export class FaceController {
         char,
         shapes,
         startTimeSec: chunkStartTimeSec + startMs / 1000 + syncOffsetSec,
-        durationSec: Math.max(0.035, durationMs / 1000),
+        durationSec: Math.max(viseme.minDurationSec, durationMs / 1000),
       });
     }
   }
@@ -546,9 +532,9 @@ export class FaceController {
   /**
    * Frames track — applies absolute frames (contract v2) on the audible audio-clock axis.
    * Zero-order hold: keep the last frame with baseSec+timeSec <= now; no smoothing,
-   * no addition. Safety: clamp 0..1 + mouthClose cap (FRAME_CLOSE_CAP). Stores
+   * no addition. Safety: clamp 0..1 + mouthClose cap (common.mouthCloseCap). Stores
    * currentWeights so RELAXING starts from the last pose. Emotions: only the shapes NOT
-   * owned by the clip (e.g. brows) receive the base emotion, at EMOTION_MIX_SPEAKING —
+   * owned by the clip (e.g. brows) receive the base emotion, at emotion.mixFactorSpeaking —
    * the same policy as the viseme track.
    */
   private updateFrames(nowSec: number, emotionWeights: Map<string, number>): void {
@@ -595,8 +581,8 @@ export class FaceController {
     for (const shape of meta.shapes) {
       const raw = frame.weights[shape] ?? 0;
       let w = clamp01(raw);
-      if (shape === 'mouthClose') w = Math.min(w, FRAME_CLOSE_CAP);
-      if (w < 0.001) w = 0;
+      if (shape === 'mouthClose') w = Math.min(w, common.mouthCloseCap);
+      if (w < common.snapEpsilon) w = 0;
       this.currentWeights.set(shape, w);
       this.driver.applyWeight(shape, w);
     }
@@ -605,7 +591,7 @@ export class FaceController {
     for (const [shape, emWeight] of emotionWeights.entries()) {
       if (shape.startsWith('eyeBlink')) continue;
       if (meta.shapes.indexOf(shape) !== -1) continue; // absolute shape — no blending
-      const w = clamp01(emWeight * EMOTION_MIX_SPEAKING);
+      const w = clamp01(emWeight * emotion.mixFactorSpeaking);
       this.currentWeights.set(shape, w);
       this.driver.applyWeight(shape, w);
     }
@@ -621,7 +607,7 @@ export class FaceController {
    *   1. blink            eyeBlink*      (skipped when the frames clip carries its own eyes)
    *   2. gaze morphs      eyeLook*       (via the gaze provider; same carriesEyes gate as blink)
    *   3. scheduler        jaw/mouth/tongue/cheek/nose ONLY (speech subset — never eye/brow regions)
-   *   4. emotion mix      EMOTION_MIX_SPEAKING on speech shapes + the non-speech emotion shapes
+   *   4. emotion mix      emotion.mixFactorSpeaking on speech shapes + the non-speech emotion shapes
    *      (or, in frames mode: clip-absolute shapes first, then the same emotion mix on the rest)
    *   5. manual overrides HUD sliders / previews, only while not SPEAKING
    * Clocks: speech/frames use the audible audio clock, RELAXING the wall clock (see 16-03).
@@ -645,7 +631,7 @@ export class FaceController {
       if (gaze) {
         for (let i = 0; i < EYE_LOOK_SHAPES.length; i++) {
           const shape = EYE_LOOK_SHAPES[i];
-          this.driver.applyWeight(shape, gaze[shape] * GAZE_MORPH_WEIGHT);
+          this.driver.applyWeight(shape, gaze[shape] * gazeConfig.morphWeight);
         }
       }
     }
@@ -673,12 +659,12 @@ export class FaceController {
           let finalWeight = weight;
           const emWeight = emotionWeights.get(shape) ?? 0;
 
-          if (shape.startsWith('mouthSmile') && activeMouthClose > 0.25) {
+          if (shape.startsWith('mouthSmile') && activeMouthClose > emotion.smileSuppressClose) {
             // Suppress the smile on bilabial consonants M/B/P
             finalWeight = weight;
           } else {
             // Subtle emotion influence during speech to keep the expression balanced
-            finalWeight = Math.min(1.0, weight + emWeight * EMOTION_MIX_SPEAKING);
+            finalWeight = Math.min(1.0, weight + emWeight * emotion.mixFactorSpeaking);
           }
 
           this.currentWeights.set(shape, finalWeight);
@@ -690,7 +676,7 @@ export class FaceController {
         for (const [shape, emWeight] of emotionWeights.entries()) {
           if (isSpeechShape(shape) || shape.startsWith('eyeBlink')) continue;
           if (gazeActive && shape.startsWith('eyeLook')) continue;
-          const w = clamp01(emWeight * EMOTION_MIX_SPEAKING);
+          const w = clamp01(emWeight * emotion.mixFactorSpeaking);
           this.currentWeights.set(shape, w);
           this.driver.applyWeight(shape, w);
         }
@@ -706,7 +692,7 @@ export class FaceController {
 
       case 'RELAXING': {
         const elapsedMs = this.nowMs() - this.relaxStartedAt;
-        const progress = Math.min(1, elapsedMs / this.relaxDurationMs);
+        const progress = Math.min(1, elapsedMs / relax.durationMs);
         // Cosine ease of the return to neutral
         const relaxFactor = 1 - Math.sin((progress * Math.PI) / 2);
 
@@ -728,7 +714,7 @@ export class FaceController {
           if (next > maxWeight) maxWeight = next;
         }
 
-        if (progress >= 1 || maxWeight < 0.005) {
+        if (progress >= 1 || maxWeight < relax.finishEpsilon) {
           this.state = 'IDLE';
           this.scheduler.resetAll();
           // Clean up the frames track after relaxation finishes — meta/eyes must not
@@ -754,13 +740,8 @@ export class FaceController {
     if (this.state !== 'SPEAKING') {
       const currentJaw = this.manualOverrides.get('jawOpen') ?? this.currentWeights.get('jawOpen') ?? 0;
       for (const [shape, val] of this.manualOverrides.entries()) {
-        let safeVal = val;
         // Anatomical safeguard against the lower lip riding up onto the nose:
-        if (shape === 'mouthClose') {
-          const maxLimit = currentJaw + 0.20;
-          safeVal = Math.min(val, maxLimit);
-        }
-        this.driver.applyWeight(shape, safeVal);
+        this.driver.applyWeight(shape, shape === 'mouthClose' ? guardClose(val, currentJaw) : val);
       }
     }
   }
@@ -774,8 +755,7 @@ export class FaceController {
       let safeVal = value;
       if (shape === 'mouthClose') {
         const currentJaw = this.manualOverrides.get('jawOpen') ?? this.currentWeights.get('jawOpen') ?? 0;
-        const maxLimit = currentJaw + 0.20;
-        safeVal = Math.min(value, maxLimit);
+        safeVal = guardClose(value, currentJaw);
       }
       this.driver.applyWeight(shape, safeVal);
 
@@ -783,8 +763,7 @@ export class FaceController {
       if (shape === 'jawOpen') {
         const existingClose = this.manualOverrides.get('mouthClose');
         if (existingClose !== undefined) {
-          const closeLimit = value + 0.20;
-          this.driver.applyWeight('mouthClose', Math.min(existingClose, closeLimit));
+          this.driver.applyWeight('mouthClose', guardClose(existingClose, value));
         }
       }
     }
@@ -812,11 +791,8 @@ export class FaceController {
     return this.state;
   }
 
-  public getEpoch(): number {
-    return this.epoch;
-  }
-
-  public getQueueLength(): number {
+  /** Pending visemes in the scheduler (viseme track). */
+  public getVisemeQueueLength(): number {
     return this.scheduler.getQueueLength();
   }
 
