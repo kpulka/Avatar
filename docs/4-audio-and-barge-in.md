@@ -1,28 +1,28 @@
-# 4. Audio i Obsługa Przerwań ("Barge-in")
+# 4. Audio and Interruption Handling ("Barge-in")
 
-## 📌 Dwa obszary odpowiedzialności
+## 📌 Two areas of responsibility
 
-W Trybie A ([docs/2](2-integracja-elevenlabs-wss.md)) **serwer wykrywa przerwanie** (agent słucha cały czas; gdy użytkownik zaczyna mówić w trakcie wypowiedzi agenta, ElevenLabs przerywa generację i wysyła event `interruption` + `agent_response_correction`). Klient odpowiada tylko za:
+In Mode A ([docs/2](2-elevenlabs-wss-integration.md)) **the server detects the interruption** (the agent listens all the time; when the user starts speaking while the agent's utterance is in progress, ElevenLabs stops the generation and sends the `interruption` event + `agent_response_correction`). The client is responsible only for:
 
-1. **Natychmiastowy stop odtwarzania** zaplanowanego audio.
-2. **Anulowanie kolejki wizemów** i płynny relaks twarzy.
-3. Sprzątnięcie zaplanowanych, ale nieodtworzonych chunków.
+1. **Immediate stop of playback** of the scheduled audio.
+2. **Cancelling the viseme queue** and a smooth relaxation of the face.
+3. Clean-up of scheduled but not yet played chunks.
 
-W Trybie B (własny pipeline) dochodzi dodatkowo własny VAD i zamknięcie strumienia TTS — patrz sekcja na końcu.
+In Mode B (our own pipeline) we additionally need our own VAD and closing of the TTS stream — see the section at the end.
 
 ---
 
 ## 🎵 AudioEngine — Web Audio API
 
-### Dlaczego Web Audio, nie `<audio>`?
+### Why Web Audio, not `<audio>`?
 
-* **Gapless**: chunki dokładamy na precyzyjną oś `ctx.currentTime` — zero szwów między paczkami.
-* **Natychmiastowy stop**: `node.stop()` bez pop/kliku + czyszczenie zaplanowanych węzłów.
-* **Wspólna oś czasu dla lip-syncu**: wizemy i dźwięk planujemy na tym samym zegarze — to warunek synchronizacji ([docs/3](3-lip-sync-i-koartykulacja.md)).
+* **Gapless**: we schedule chunks on the precise `ctx.currentTime` axis — no seams between packets.
+* **Immediate stop**: `node.stop()` without pop/click + clean-up of scheduled nodes.
+* **Shared time axis for lip-sync**: visemes and sound are scheduled on the same clock — this is the condition for synchronization ([docs/3](3-lip-sync-and-coarticulation.md)).
 
-### PCM, nie mp3 — ważne
+### PCM, not mp3 — important
 
-Agent ElevenAgents streamuje domyślnie **surowy PCM 44.1 kHz** (`agent_output_audio_format` z `conversation_initiation_metadata` — czytamy to przy starcie, nie hardkodujemy). Unikamy `decodeAudioData` (stworzone dla plików; dekodowanie mp3 na chunkach potrafi dodawać szczeliny/przerwy kodera):
+The ElevenAgents agent streams **raw PCM 44.1 kHz** by default (`agent_output_audio_format` from `conversation_initiation_metadata` — we read it at startup, we do not hardcode it). We avoid `decodeAudioData` (designed for files; decoding mp3 on chunks can add gaps/breaks from the encoder):
 
 ```javascript
 class AudioEngine {
@@ -31,31 +31,31 @@ class AudioEngine {
     this.master = this.ctx.createGain();
     this.master.connect(this.ctx.destination);
     this.activeNodes = [];
-    this.tailTime = 0;     // koniec ostatnio zaplanowanego audio
-    this.epoch = 0;        // numer "pokolenia" — patrz niżej
+    this.tailTime = 0;     // end of the last scheduled audio
+    this.epoch = 0;        // "generation" number — see below
   }
 
-  // Po geście użytkownika (klik "Talk") — polityka autoplay przeglądarek!
+  // After a user gesture (click "Talk") — browser autoplay policy!
   async unlock() { if (this.ctx.state === 'suspended') await this.ctx.resume(); }
 
   playChunk(pcmBytes, sampleRate = 44100) {
     const buffer = this.ctx.createBuffer(1, pcmBytes.length / 2, sampleRate); // mono, 16-bit
     buffer.copyToChannel(this.toFloat32(pcmBytes), 0);
 
-    // Gapless: start = max(teraz, koniec poprzedniego) — z małym prebufferem
+    // Gapless: start = max(now, end of previous) — with a small prebuffer
     const start = Math.max(this.ctx.currentTime + 0.06, this.tailTime);
     this.tailTime = start + buffer.duration;
 
     const node = this.ctx.createBufferSource();
     node.buffer = buffer;
     node.connect(this.master);
-    node.start(start);                     // może być "w przyszłości" — to OK
+    node.start(start);                     // may be "in the future" — that is OK
     this.activeNodes.push(node);
     node.onended = () => {
       const i = this.activeNodes.indexOf(node);
-      if (i !== -1) this.activeNodes.splice(i, 1);   // brak wycieków węzłów
+      if (i !== -1) this.activeNodes.splice(i, 1);   // no node leaks
     };
-    return start;                          // !! FaceController planuje wizemy względem TEGO czasu
+    return start;                          // !! FaceController schedules visemes relative to THIS time
   }
 
   toFloat32(bytes) {
@@ -68,24 +68,24 @@ class AudioEngine {
 }
 ```
 
-**Prebuffering**: nie startuj pierwszego chunka natychmiast — odczekaj 2–3 chunki (~100–200 ms) od pierwszego `audio`, potem odtwarzaj gapless. To pochłania jitter sieci i zapobiega "rwanym" startom (rekomendacja z dokumentacji ElevenLabs: adaptive buffering).
+**Prebuffering**: do not start the first chunk immediately — wait for 2–3 chunks (~100–200 ms) from the first `audio` event, then play gaplessly. This absorbs network jitter and prevents "choppy" starts (recommendation from the ElevenLabs documentation: adaptive buffering).
 
 ---
 
-## 🛑 Barge-in — architektura poprawiona
+## 🛑 Barge-in — revised architecture
 
-### Błędy, które naprawiamy (były w poprzedniej wersji tego dokumentu)
+### Bugs we are fixing (they were in the previous version of this document)
 
-1. **Flaga `isInterrupted` + `setTimeout(200 ms)` resetu** — race condition: nowa wypowiedź rozpoczęta w oknie 200 ms byłaby **cicho odrzucona**. Poprawka: **epoch** — każdy start wypowiedzi podnosi licznik; wszystkie zaplanowane audio/wizemy przechowują epoch, w którym zostały utworzone; po przerwaniu wszystko ze starym epochem jest ignorowane i sprzątane. Zero timerów, zero okien czasowych.
-2. **Dwa moduły piszą do `morphTargetInfluences`** (`updateMorphTargets` i osobny `smoothResetFace`) — konflikt pisarzy dawał drgania miny. Poprawka: **jedyny właściciel — `FaceController`** (state machine).
-3. **AudioEngine oddzielnie zarządza kolejką wizemów** — wizemy były poza kontrolą przerwań. Poprawka: scheduler wizemów żyje w `FaceController`, który słucha przerwań przez wspólny epoch.
+1. **The `isInterrupted` flag + `setTimeout(200 ms)` reset** — race condition: a new utterance started within the 200 ms window would be **silently rejected**. Fix: an **epoch** — every start of an utterance increments a counter; all scheduled audio/visemes store the epoch in which they were created; after an interruption everything with the old epoch is ignored and cleaned up. Zero timers, zero time windows.
+2. **Two modules write to `morphTargetInfluences`** (`updateMorphTargets` and a separate `smoothResetFace`) — the conflict between the writers caused the expression to jitter. Fix: **a single owner — `FaceController`** (state machine).
+3. **AudioEngine managed the viseme queue separately** — visemes were outside interruption control. Fix: the viseme scheduler lives in `FaceController`, which listens to interruptions through the shared epoch.
 
-### FaceController — state machine (jeden właściciel twarzy)
+### FaceController — state machine (single owner of the face)
 
 ```
-IDLE ──(pierwszy audio chunk, epoch++)──► SPEAKING
-SPEAKING ──(interruption / koniec kolejki)──► RELAXING
-RELAXING ──(wszystkie wagi ≈ 0)──► IDLE
+IDLE ──(first audio chunk, epoch++)──► SPEAKING
+SPEAKING ──(interruption / end of queue)──► RELAXING
+RELAXING ──(all weights ≈ 0)──► IDLE
 ```
 
 ```javascript
@@ -95,74 +95,74 @@ class FaceController {
     this.engine = audioEngine;
     this.state = 'IDLE';
     this.epoch = 0;
-    this.queue = [];                 // zaplanowane wizemy (docs/3)
+    this.queue = [];                 // scheduled visemes (docs/3)
     this.relaxStartedAt = 0;
   }
 
-  // Wywoływane przy każdym evencie audio (docs/2)
+  // Called on every audio event (docs/2)
   onAudioChunk(alignment, chunkStartTimeSec, epoch) {
-    if (epoch !== this.epoch) return;               // waryjny check
+    if (epoch !== this.epoch) return;               // defensive check
     if (this.state === 'RELAXING' || this.state === 'IDLE') {
-      this.state = 'SPEAKING';                       // nowa wypowiedź
+      this.state = 'SPEAKING';                       // new utterance
       this.epoch = epoch;                            // = engine.epoch
     }
     for (let i = 0; i < alignment.chars.length; i++) {
       this.queue.push({
         epoch,
-        shapes: mapCharToShapes(alignment.chars, i),  // tabela z docs/3 (z lookaheadiem)
+        shapes: mapCharToShapes(alignment.chars, i),  // table from docs/3 (with lookahead)
         startTimeSec: chunkStartTimeSec + alignment.char_start_times_ms[i] / 1000,
         durationSec:  alignment.char_durations_ms[i] / 1000,
       });
     }
   }
 
-  // Wywoływane przy evencie interruption (docs/2)
+  // Called on the interruption event (docs/2)
   onInterruption() {
-    this.queue = this.queue.filter(() => false);     // wyczyść wszystko
+    this.queue = this.queue.filter(() => false);     // clear everything
     this.state = 'RELAXING';
     this.relaxStartedAt = performance.now();
   }
 
-  // Jedna pętla — z pętli renderującej Three.js, dt w sekundach
+  // Single loop — from the Three.js render loop, dt in seconds
   render(dt) {
     if (this.state === 'SPEAKING') {
-      // algorytm z docs/3: suma aktywnych wizemów + damping
+      // algorithm from docs/3: sum of active visemes + damping
       this.renderSpeaking(this.engine.ctx.currentTime, dt);
       if (this.queue.length === 0 && !this.engine.hasPendingAudio()) {
-        this.state = 'RELAXING';                     // naturalne wygaszenie końca zdania
+        this.state = 'RELAXING';                     // natural fade-out at the end of the sentence
         this.relaxStartedAt = performance.now();
       }
     } else if (this.state === 'RELAXING') {
-      // Płynny powrót do neutralu: ~150 ms cosine ease (wygaszanie reguły fundamentu z docs/3)
+      // Smooth return to neutral: ~150 ms cosine ease (decay-to-zero rule from docs/3)
       const t = (performance.now() - this.relaxStartedAt) / 150;
       if (this.renderRelax(Math.min(1, t)) === 0) this.state = 'IDLE';
     }
-    // IDLE: same proceduralne blinki/mikroruchy (docs/6)
+    // IDLE: the same procedural blinks/micro-movements (docs/6)
   }
 }
 ```
 
-### Sekwencja przerwania (end-to-end)
+### Interruption sequence (end-to-end)
 
 ```
-Użytkownik zaczyna mówić w trakcie wypowiedzi agenta
-        │ (detekcja po stronie ElevenAgents — VAD/turn-taking serwera)
+User starts speaking while the agent's utterance is in progress
+        │ (detection on the ElevenAgents side — server VAD/turn-taking)
         ▼
-Klient: { "type": "interruption" }
+Client: { "type": "interruption" }
         │
    ┌────┴──────────────────────────┐
    ▼                               ▼
 AudioEngine.hardStop()        FaceController.onInterruption()
-   • epoch++                     • epoch ignorowany w sprawdzaniu
-   • stop() wszystkich węzłów    • czyszczenie kolejki wizemów
-   • tailTime = 0                 • stan → RELAXING (150–300 ms ease)
-   • (serwer sam przerywa          • usta wracają do neutralu
-     generację TTS)                  — nigdy "zamrożona" mina
+   • epoch++                     • epoch ignored in the check
+   • stop() all nodes            • clear the viseme queue
+   • tailTime = 0                 • state → RELAXING (150–300 ms ease)
+   • (the server itself stops     • mouth returns to neutral
+     the TTS generation)             — never a "frozen face"
 ```
 
 ```javascript
 hardStop() {
-  this.epoch++;                       // unieważnia wszystko zaplanowane (audio i wizemy)
+  this.epoch++;                       // invalidates everything scheduled (audio and visemes)
   for (const node of this.activeNodes) {
     try { node.onended = null; node.stop(); node.disconnect(); } catch (e) {}
   }
@@ -171,23 +171,23 @@ hardStop() {
 }
 ```
 
-**Dlaczego to jest wrażliwe na race'y i dlaczego epoch to rozwiązuje:** event `audio` może być już "w locie" gdy przychodzi `interruption` (kolejność WS nie gwarantuje, że przeglądarka przetworzyła je w tej samej kolejności mikro-zadań). Z epoch: chunk opóźniony po przerwaniu trafia do `onAudioChunk` ze starym epochem → ignorowany. Nowa wypowiedź agenta → nowy epoch → wszystko czyste. Bez timerów.
+**Why this is sensitive to races, and why the epoch solves it:** the `audio` event may already be "in flight" when the `interruption` arrives (WS ordering does not guarantee that the browser processed them in the same microtask order). With the epoch: a chunk delayed past the interruption arrives at `onAudioChunk` with the old epoch → ignored. A new agent utterance → a new epoch → everything is clean. No timers.
 
 ---
 
-## 🎤 Tryb B: własny pipeline przerwań (Faza 2, tylko zarys)
+## 🎤 Mode B: own interruption pipeline (Phase 2, outline only)
 
-Bez ElevenAgents musimy sami:
-1. **VAD**: Silero VAD (WASM) lub WebRTC VAD na strumieniu mikrofonu; próg + histereza (300 ms hangover) żeby nie odpalać na oddech.
-2. **Przerwanie generacji**: zamknąć WS TTS (lub `flush` + zignorować pozostałe chunki przez epoch).
-3. **Turn-taking**: decyzja "user skończył vs oddech" — to najtrudniejszy element; frameworki: Pipecat / LiveKit Agents / Speech Engine ([docs/6](6-analiza-opensource-i-rozwoj.md)).
+Without ElevenAgents we have to do the following ourselves:
+1. **VAD**: Silero VAD (WASM) or WebRTC VAD on the microphone stream; threshold + hysteresis (300 ms hangover) so it does not fire on breathing.
+2. **Interrupting the generation**: close the TTS WS (or `flush` + ignore the remaining chunks via the epoch).
+3. **Turn-taking**: the decision "user is done vs. just breathing" — the hardest element; frameworks: Pipecat / LiveKit Agents / Speech Engine ([docs/6](6-opensource-analysis-and-future.md)).
 
 ---
 
-## ✅ Checklist jakości audio (PoC)
+## ✅ Audio quality checklist (PoC)
 
-- [ ] `AudioContext` odblokowany gestem użytkownika (autoplay policy).
-- [ ] Chunki PCM 44.1 kHz mono 16-bit (`agent_output_audio_format` czytane z metadanych).
-- [ ] Prebuffer 2–3 chunki przed pierwszym dźwiękiem.
-- [ ] Wszystkie `AudioBufferSourceNode` sprzątane w `onended` (brak wycieków w rozmowie 10 min).
-- [ ] Przerwanie: audio stop < 50 ms, twarz neutral < 300 ms, zero "uwięzionych" chunków (test: przerwij 10× w losowych momentach).
+- [ ] `AudioContext` unlocked by a user gesture (autoplay policy).
+- [ ] PCM chunks 44.1 kHz mono 16-bit (`agent_output_audio_format` read from the metadata).
+- [ ] Prebuffer of 2–3 chunks before the first sound.
+- [ ] All `AudioBufferSourceNode`s cleaned up in `onended` (no leaks in a 10-minute conversation).
+- [ ] Interruption: audio stop < 50 ms, face neutral < 300 ms, zero "trapped" chunks (test: interrupt 10× at random moments).
