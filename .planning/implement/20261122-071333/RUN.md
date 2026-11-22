@@ -33,3 +33,4 @@ Skipped per user; plans stop at checkpoint:human-* and are recorded as PARTIAL/B
 - Wave A complete. 11.2-03, 11.2-09 BLOCKED (real ElevenLabs recording; hero capture).
 - B started: 12-01 [haiku].
 - B/12-01 merged a8c8dc1 DONE [haiku]. Gate: build OK, 51 files / 281 tests. Docs renamed (8). Drift B1 recorded.
+- B/12-02 merged DONE [haiku]: 3 core docs EN, docs/core Gate A scope ON. Gate 51/282. Drift: none downstream (docs-only; 'Etap'→'Stage' glossary candidate).
