@@ -3,13 +3,16 @@ phase: 12-english-language
 type: glossary
 status: normative
 created: 2026-11-18
+updated: 2026-11-22
 ---
 
 # 12-DRAFT-GLOSSARY — Normative EN↔PL domain terminology
 
 > NORMATIVE for every translation in Phase 12 (docs, UI, comments, tests) and for EN
 > artifacts of phases 13–18. Reviewer greps translated output against the EN column.
-> Terms verified to occur in the repo (docs/, src/, .planning/) as of 2026-11-18.
+> Terms verified to occur in the repo (docs/, src/, .planning/) as of 2026-11-18; re-verified
+> 2026-11-22 (12-01 Task 1): every row has at least one attested form in the repo, and
+> articulation terms from docs/3 and docs/EN-visemes.md missing in the first draft were added.
 
 ## Product & architecture
 
@@ -67,6 +70,18 @@ created: 2026-11-18
 | ściśnięcie warg | lip press |
 | usta okrągłe / tunikowe | rounded lips / rounding |
 | zęby / język / pucker (smaczki wizem) | teeth / tongue / pucker (viseme nuances) |
+| samogłoska / spółgłoska | vowel / consonant |
+| zaokrąglenie / zaokrąglony | rounding / rounded (lips) |
+| uśmiech | smile |
+| kąciki (ust) | mouth corners |
+| otwór (ust) | mouth opening (aperture) |
+| dzióbek | pucker ("beak": small protruded lip opening) |
+| wysunięcie (warg) | lip protrusion |
+| tuba (warg) / tubę | lip tube (funnel shape) |
+| zębodołowe | alveolar |
+| tylnojęzykowe | velar / dorsal (back of tongue) |
+| półotwarte | half-open (mid vowel) |
+| zamknięta / wąsko | closed / narrow |
 | wygładzanie | smoothing |
 | tłumienie / damping λ | damping (λ) |
 | grupy mięśni | muscle groups (closure, jaw, round, smile) |
