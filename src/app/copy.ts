@@ -58,6 +58,10 @@ export const COPY: Readonly<Record<string, string>> = {
   'loader.avatar': 'Loading 3D avatar…',
   'loader.avatarProgress': 'Loading 3D avatar… {percent}%',
 
+  // ---- Shared primitives (toast / modal)
+  'shared.dismiss': 'Dismiss',
+  'shared.close': 'Close',
+
   // ---- Conversation / animation / compare (feature layer, emitted as toasts)
   'toast.conversationEnded': 'Conversation ended.',
   'toast.conversationStarting': 'Starting conversation with the agent…',

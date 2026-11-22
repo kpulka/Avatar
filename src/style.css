@@ -1067,10 +1067,17 @@ dialog.settings-dialog::backdrop {
   background: var(--scrim);
 }
 
+.dialog-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+}
+
 .dialog-header h3 {
   font-size: var(--text-heading);
   font-weight: var(--fw-semibold);
-  margin-bottom: var(--space-4);
 }
 
 .form-group {
@@ -1135,21 +1142,56 @@ dialog.settings-dialog::backdrop {
   font-weight: var(--fw-semibold);
 }
 
-/* Toast */
-.toast {
+/* Toast (stack of up to 3; errors persist with a close button) */
+.toast-stack {
   position: fixed;
   bottom: var(--space-6);
   right: var(--space-6);
+  z-index: var(--z-toast);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  max-width: 360px;
+  pointer-events: none;
+}
+
+.toast {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
+  pointer-events: auto;
   background: var(--surface-raised);
   border: 1px solid var(--glass-border);
   border-left: 4px solid var(--danger);
-  padding: var(--space-3) var(--space-5);
+  padding: var(--space-3) var(--space-4);
   border-radius: var(--radius-md);
   font-size: var(--text-label);
   color: var(--text-primary);
   box-shadow: var(--shadow-panel);
-  z-index: var(--z-toast);
   transition: opacity var(--motion-panel) ease, transform var(--motion-panel) ease;
+}
+
+.toast-close,
+.dialog-close {
+  flex: none;
+  min-width: 36px;
+  min-height: 36px;
+  margin: calc(var(--space-2) * -1) calc(var(--space-2) * -1) calc(var(--space-2) * -1) 0;
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  font-size: var(--text-heading);
+  line-height: 1;
+  cursor: pointer;
+  transition: var(--transition-ctrl);
+}
+
+.toast-close:hover,
+.dialog-close:hover {
+  color: var(--text-primary);
+  background: var(--surface-hover);
 }
 
 .toast.toast-success {
@@ -1190,6 +1232,25 @@ dialog.settings-dialog::backdrop {
   font-size: var(--text-label);
   font-weight: var(--fw-semibold);
   color: var(--text-primary);
+}
+
+.loader-overlay.loader-error {
+  border-color: var(--danger);
+}
+
+.loader-error-icon {
+  flex: none;
+  width: 16px;
+  height: 16px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: var(--danger);
+  color: var(--text-on-accent);
+  font-size: var(--text-label);
+  font-weight: var(--fw-semibold);
+  line-height: 1;
 }
 
 /* Overlay & fallback card */
