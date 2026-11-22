@@ -1,19 +1,19 @@
-# 5. Shadery i Realizm Renderowania w Three.js
+# 5. Shaders and Realistic Rendering in Three.js
 
-## 📌 Dlaczego nie NVIDIA DLSS 5 w WebGL?
+## 📌 Why not NVIDIA DLSS 5 in WebGL?
 
-Technologia neural renderingu NVIDII wymaga natywnego dostępu do sterowników i bibliotek GPU (serie RTX, `nvngx_dlssnr.dll`) oraz integracji C++ z silnikami klasy Unreal/Unity. Piaskownica przeglądarki (WebGL/WebGPU) nie ma do nich dostępu — i nie będzie miała. Realizm w przeglądarce budujemy klasycznym arsenałem: **PBR + dobre tekstury + oświetlenie studiem + tone mapping**, z docelowym upgrade'em SSS dla skóry.
+NVIDIA's neural rendering technology requires native access to GPU drivers and libraries (RTX series, `nvngx_dlssnr.dll`) and C++ integration with Unreal/Unity-class engines. The browser sandbox (WebGL/WebGPU) has no access to them — and never will. In the browser we build realism with the classic toolkit: **PBR + good textures + studio lighting + tone mapping**, with a planned SSS upgrade for skin.
 
 ---
 
-## 🎨 Strategia realizmu skóry — etapami
+## 🎨 Skin realism strategy — in stages
 
-### Etap 1 (PoC): stock `MeshPhysicalMaterial`
+### Stage 1 (PoC): stock `MeshPhysicalMaterial`
 
-Sufit jakości bez custom shaderów. Skóra = dielektryk: `metalness: 0`, średnia chropowatość, subtelny sheen (miękki rim na skosach — najtańszy zamiennik SSS), minimalny clearcoat (film lipidowy):
+A quality ceiling without custom shaders. Skin = dielectric: `metalness: 0`, medium roughness, subtle sheen (a soft rim on the edges — the cheapest substitute for SSS), minimal clearcoat (sebum film):
 
 ```javascript
-function skinMaterial(tex) { // tex: {map, normalMap, roughnessMap} z GLB MetaPerson
+function skinMaterial(tex) { // tex: {map, normalMap, roughnessMap} from the MetaPerson GLB
   return new THREE.MeshPhysicalMaterial({
     map: tex.map,
     normalMap: tex.normalMap,
@@ -22,66 +22,66 @@ function skinMaterial(tex) { // tex: {map, normalMap, roughnessMap} z GLB MetaPe
     roughness: 0.52,
     metalness: 0.0,
 
-    sheen: 0.35,                       // miękki połysk krawędzi skóry
+    sheen: 0.35,                       // soft sheen on the skin edges
     sheenRoughness: 0.55,
     sheenColor: new THREE.Color('#ffd6c2'),
 
-    clearcoat: 0.08,                   // film sebum/potu — głównie nos/czoło
+    clearcoat: 0.08,                   // sebum/sweat film — mainly nose/forehead
     clearcoatRoughness: 0.4,
   });
 }
 ```
 
-> ⚠️ **Korekta techniczna względem poprzedniej wersji dokumentu:** parametry `thickness`/`attenuationColor`/`attenuationDistance` w Three.js działają **tylko przy `transmission > 0`** (światło transmitowane). Ustawienie `transmission: 0` czyni je martwymi — poprzedni przykład "SSS bez transmission" niczego realnie nie robił. Skóra nie powinna też używać dużego `transmission` (przezroczysta skóra = woszek): prawidłową ścieżką SSS w Three.js jest **pre-integrated subsurface scattering** (niżej).
+> ⚠️ **Technical correction relative to the previous version of this document:** the `thickness`/`attenuationColor`/`attenuationDistance` parameters in Three.js work **only when `transmission > 0`** (transmitted light). Setting `transmission: 0` makes them dead — the previous "SSS without transmission" example did nothing real. Skin should also not use a large `transmission` (transparent skin = a wax-figure look): the correct SSS path in Three.js is **pre-integrated subsurface scattering** (below).
 
-### Etap 2 (MVP): pre-integrated SSS (`onBeforeCompile`)
+### Stage 2 (MVP): pre-integrated SSS (`onBeforeCompile`)
 
-Symulacja rozproszenia podpowierzchniowego przez modyfikację oświetlenia diffuse — klasyczne przybliżenie Pennera (GDC "Pre-Integrated Skin Shading"):
+Simulating subsurface light scattering by modifying the diffuse lighting — the classic approximation by Penner (GDC "Pre-Integrated Skin Shading"):
 
-1. **Wrap diffuse**: rozciągnięcie terminatora NdotL → `(NdotL + w) / (1 + w)` (w ≈ 0.2–0.4) — światło "oblewa" terminator zamiast go ścinać.
-2. **Translucency term**: dodatkowy wkład światła "prześwieconego" przez skórę, widoczny pod kątem: `pow(saturate(dot(V, -(L + N·distortion))), power) · scale` — najmocniej na uszach, nosie, wargach (maska grubości z tekstury lub vertex color).
-3. Kluczowa twardość światła zależna od kąta padania (profil pre-integrated dla skóry) — inaczej niż w stock PBR.
+1. **Wrap diffuse**: stretching the NdotL terminator → `(NdotL + w) / (1 + w)` (w ≈ 0.2–0.4) — light "wraps around" the terminator instead of cutting it off.
+2. **Translucency term**: an additional contribution of light "shining through" the skin, visible at an angle: `pow(saturate(dot(V, -(L + N·distortion))), power) · scale` — strongest on the ears, nose and lips (thickness mask from a texture or vertex color).
+3. The key hardness of the light depends on the angle of incidence (a pre-integrated profile for skin) — unlike stock PBR.
 
 ```javascript
 material.onBeforeCompile = (shader) => {
-  // ...podmiany fragmentShadera: wrap na lights_physical_fragment +
-  // dodanie translucent termu sterowanego uniformami {distortion, scale, power, thicknessMap}
+  // ...fragment shader substitutions: wrap on lights_physical_fragment +
+  // adding a translucent term driven by the uniforms {distortion, scale, power, thicknessMap}
 };
-material.customProgramCacheKey = () => 'skin-sss-v1'; // pamięć cache programów!
+material.customProgramCacheKey = () => 'skin-sss-v1'; // program cache!
 ```
 
-Pełny referencyjny przykład: oficjalne demo Three.js `webgl_materials_subsurface_scattering` (technika: `onBeforeCompile` na materiale fizycznym). Nasza wersja: + maska grubości (znormalizowana czerwień tekstury albedo daje przyzwoitą aproksymację).
+Full reference example: the official Three.js demo `webgl_materials_subsurface_scattering` (technique: `onBeforeCompile` on a physical material). Our version: + a thickness mask (the normalized red channel of the albedo texture gives a decent approximation).
 
-Zawsze porównujemy A/B (zrzuty referencyjne: uszy/nos/wargi pod kontr-światłem) — SSS jest subtelny i łatwo go "przesolić".
+Always compare A/B (reference shots: ears/nose/lips against backlight) — SSS is subtle and easy to overdo.
 
 ---
 
-## 💡 Oświetlenie studiem + environment
+## 💡 Studio lighting + environment
 
-**Środowisko jest obowiązkowe** — bez `scene.environment` PBR skóry wygląda płasko niezależnie od świateł:
+**The environment is mandatory** — without `scene.environment` the PBR skin looks flat regardless of the lights:
 
 ```javascript
 const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
 renderer.outputColorSpace = THREE.SRGBColorSpace;
-renderer.toneMapping = THREE.ACESFilmicToneMapping;   // kluczowe dla naturalnych przejść świateł
+renderer.toneMapping = THREE.ACESFilmicToneMapping;   // key for natural light transitions
 renderer.toneMappingExposure = 1.0;
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
-// Environment: RoomEnvironment (zero zasobów) lub HDRI 2K z Poly Haven
+// Environment: RoomEnvironment (zero assets) or a 2K HDRI from Poly Haven
 const pmrem = new THREE.PMREMGenerator(renderer);
 scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
 
 // 3-point studio:
 const key  = new THREE.DirectionalLight(0xfff2e0, 2.2); key.position.set(1.5, 2.0, 2.0);
 const fill = new THREE.DirectionalLight(0xdbe9ff, 0.7); fill.position.set(-2.0, 1.0, 1.5);
-const rim  = new THREE.DirectionalLight(0xffe8d6, 2.6); rim.position.set(0.0, 2.5, -2.5); // kontr: akcentuje krawędzie — tam, gdzie SSS ma być widoczny
-key.castShadow = true; // twarz = 1 odbierający cień; soft: shadow.radius
+const rim  = new THREE.DirectionalLight(0xffe8d6, 2.6); rim.position.set(0.0, 2.5, -2.5); // rim: accentuates the edges — where SSS should be visible
+key.castShadow = true; // face = 1 receiving shadow; soft: shadow.radius
 ```
 
 ---
 
-## 🔍 Tekstury i filtracja
+## 🔍 Textures and filtering
 
 ```javascript
 function configureTextures(root, renderer) {
@@ -93,53 +93,53 @@ function configureTextures(root, renderer) {
       for (const prop of ['map', 'normalMap', 'roughnessMap']) {
         const tex = mat[prop];
         if (!tex) continue;
-        tex.anisotropy = maxAniso;                     // pory/skóra ostre pod kątem
+        tex.anisotropy = maxAniso;                     // pores/skin sharp at an angle
         tex.colorSpace = prop === 'map' ? THREE.SRGBColorSpace : THREE.NoColorSpace;
       }
   });
 }
 ```
 
-* **Kompresja**: preferuj GLB z teksturami KTX2/Basis (VRAM ↓ 4–8× vs PNG). `KTX2Loader.detectSupport(renderer)` — patrz [docs/1](1-architektura-i-modele-3d.md).
-* **Normal maps skóry**: nadmierne normalScale = "plastik". Przy 2K teksturach startuj od 0.8.
+* **Compression**: prefer GLB with KTX2/Basis textures (VRAM ↓ 4–8× vs PNG). `KTX2Loader.detectSupport(renderer)` — see [docs/1](1-architecture-and-3d-models.md).
+* **Skin normal maps**: an excessive normalScale = "plastic". With 2K textures start from 0.8.
 
 ---
 
-## ⚙️ Budżet wydajności (cel: 60 FPS @ 1080p, GPU klasy GTX 1060/M1)
+## ⚙️ Performance budget (target: 60 FPS @ 1080p, GTX 1060/M1-class GPU)
 
-| Dźwignia | Ustawienie | Uzasadnienie |
+| Lever | Setting | Rationale |
 | :--- | :--- | :--- |
-| Pixel ratio | `min(devicePixelRatio, 2)` | 4K DPR na laptopach zabija fill-rate |
-| Cienie | 1 źródło, mapa 1024², `PCFSoft` | twarz potrzebuje jednego miękkiego cienia |
-| Postprocessing | PoC: brak; MVP: maks. SSAO | każdy pass = kopia bufora |
-| Materiały | 1 materiał na część ciała, bez `transmission` | transmission wymaga osobnego render passu |
-| Tekstury | KTX2, max 2K | VRAM i czas ładowania |
-| `frustumCulled = false` | tylko siatki głowy | patrz [docs/1](1-architektura-i-modele-3d.md) — morph targety vs bounding sphere |
+| Pixel ratio | `min(devicePixelRatio, 2)` | 4K DPR on laptops kills fill-rate |
+| Shadows | 1 source, 1024² map, `PCFSoft` | the face needs one soft shadow |
+| Postprocessing | PoC: none; MVP: max SSAO | every pass = a copy of the buffer |
+| Materials | 1 material per body part, no `transmission` | transmission requires a separate render pass |
+| Textures | KTX2, max 2K | VRAM and loading time |
+| `frustumCulled = false` | head meshes only | see [docs/1](1-architecture-and-3d-models.md) — morph targets vs bounding sphere |
 
 ---
 
-## 👁️ Realizm detali (po skórze — największe "unlocki" odbioru)
+## 👁️ Detail realism (beyond skin — the biggest "unlocks" for perception)
 
-1. **Oczy**: nie używaj emisyjnej "kartki" — rogówka z `clearcoat 1.0`, tęczówka z albedo teksturą, proceduralne odbicie środowiska; delikatne sakkady (docs/6) ożywiają spojrzenie bardziej niż jakikolwiek shader.
-2. **Włosy/brwi/rzęsy**: kartony alpha-cut (nie alpha-blend — sortowanie artefaktów); `material.alphaToCoverage = true` na MSAA.
-3. **Zęby/jama ustna**: lekki `clearcoat 0.3` (wilgotność); nie zostawiaj defaultowego materiału — "suche" zęby psują realizm przy `jawOpen`.
-4. **Tone mapping + oświetlenie > shadery**: 80% odbioru "realistyczności" w WebGL to światło i ACES, nie SSS.
+1. **Eyes**: don't use an emissive "card" — a cornea with `clearcoat 1.0`, an iris with an albedo texture, a procedural reflection of the environment; gentle saccades (docs/6) bring the gaze to life more than any shader.
+2. **Hair/brows/lashes**: alpha-cut cards (not alpha-blend — sorting artifacts); `material.alphaToCoverage = true` on MSAA.
+3. **Teeth/mouth cavity**: a light `clearcoat 0.3` (moisture); don't leave the default material — "dry" teeth break realism at `jawOpen`.
+4. **Tone mapping + lighting > shaders**: 80% of the perceived "realism" in WebGL comes from light and ACES, not SSS.
 
 ---
 
-## 🎬 Presety sceny (Faza 11)
+## 🎬 Scene presets (Phase 11)
 
-Cztery presety przełączalne w runtime (`src/features/scene-presets.ts`, controller z tweenem 280 ms):
+Four presets switchable at runtime (`src/features/scene-presets.ts`, controller with a 280 ms tween):
 
-| Preset | Tło | Key | Fill | Rim | Ambient | Exposure | Pedestal | Kadr |
+| Preset | Background | Key | Fill | Rim | Ambient | Exposure | Pedestal | Framing |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
 | `studio-dark` | `#0e1117` | 2.2 `#fff2e0` | 0.7 `#dbe9ff` | 2.6 `#ffe8d6` | 0.15 | 1.0 | on | bust (z=1.22) |
 | `studio-soft` | gradient `#1a2233 → #0b0f17` | 1.8 `#fff6ea` | 1.1 | 1.4 | 0.25 | 1.05 | on | bust |
-| `cinema` | `#05070c` + winieta CSS | 2.6 | 0.35 | 3.2 | 0.08 | 0.95 | off | bust |
+| `cinema` | `#05070c` + CSS vignette | 2.6 | 0.35 | 3.2 | 0.08 | 0.95 | off | bust |
 | `light` | `#e8eef7` | 1.4 | 1.2 | 0.9 | 0.5 | 1.0 | off | bust |
 
-Zasady:
-- **Zero nowych passów postprocessingu** — winieta w `cinema` to overlay CSS (`body[data-scene="cinema"]`); budżet 60 FPS pozostaje nienaruszony.
-- **Gradient tła** = cache'owana `CanvasTexture` (sRGB) z `dispose()` poprzedniej przy wymianie.
-- **`prefers-reduced-motion: reduce`** → preset stosowany natychmiast (bez crossfade).
-- **Sync z motywem**: zmiana motywu sugeruje preset (`light` / `studio-dark`) tylko, gdy user nie wybrał presetu ręcznie (`user.scenePresetManual`).
+Rules:
+- **Zero new postprocessing passes** — the `cinema` vignette is a CSS overlay (`body[data-scene="cinema"]`); the 60 FPS budget stays intact.
+- **Background gradient** = a cached `CanvasTexture` (sRGB) with `dispose()` of the previous one when it is swapped.
+- **`prefers-reduced-motion: reduce`** → the preset is applied immediately (no crossfade).
+- **Theme sync**: a change of theme suggests a preset (`light` / `studio-dark`) only when the user has not chosen a preset manually (`user.scenePresetManual`).

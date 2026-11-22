@@ -24,7 +24,7 @@ WebGL, konwersacyjny ElevenLabs). Twoje zadanie jest DWUCZĘŚCIOWE:
 
 ### Dokumentacja / planowanie GSD (`.planning/`)
 - `docs/7-audio2face-cloudrun.md` — architektura A2F na Cloud Run (L4, scale-to-zero) + kontrakt JSON.
-- `docs/EN-visemes.md` — dokument roboczy wizemów EN (artykulacja→ARKit→niuanse).
+- `docs/en-visemes.md` — dokument roboczy wizemów EN (artykulacja→ARKit→niuanse).
 - `.planning/phases/08-unified-animation-core/` (08-CONTEXT.md, 08-01..08-04)
 - `.planning/phases/09-a2f-local-poc/` (09-CONTEXT.md, 09-01..09-05)
 - `.planning/phases/10-a2f-cloud-mvp/` (10-CONTEXT.md, 10-01..10-04)
@@ -36,7 +36,7 @@ WebGL, konwersacyjny ElevenLabs). Twoje zadanie jest DWUCZĘŚCIOWE:
 - **A2F jest offline/batch** (cały `.wav` → JSON ramek). Ma dać mikromimikę i reakcję na głos/emocję.
 - Sprzęt do lokalnego PoC: **RTX 3090 24 GB**; chmura (Cloud Run L4) tylko po go/no-go.
 - Zasada: TYLKO `FaceController` pisze do morphów; oś czasu = `AudioContext.currentTime`; barge-in = epoka.
-- Zespół ma Edytor Wizemów (ręczne pozy per głoska, persist) i dokument EN-visemes jako źródło prawdy dla wizemów.
+- Zespół ma Edytor Wizemów (ręczne pozy per głoska, persist) i dokument en-visemes jako źródło prawdy dla wizemów.
 
 ## Część 1 — Krytyczna rewizja Faz 8–10
 Oceń każdą fazę/plan pod kątem: (a) czy cel jest osiągalny w podanej kolejności i bez brakujących

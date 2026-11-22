@@ -1,47 +1,47 @@
-# 6. Ekosystem Open-Source, Emocje, Wielojęzyczność, Rozwój
+# 6. Open-Source Ecosystem, Emotions, Multilingual Support, Development
 
-## 📌 Projekty open-source warte podglądu
+## 📌 Open-source projects worth a look
 
-Zanim napiszemy coś od zera, sprawdzamy, co rozwiązano już inni — **zawsze weryfikujemy licencję przed użyciem komercyjnym**:
+Before we write anything from scratch, we check what others have already solved — **always verify the license before commercial use**:
 
-| Projekt | Rola | Wartość dla nas | Uwaga licencyjna |
+| Project | Role | Value for us | Licensing note |
 | :--- | :--- | :--- | :--- |
-| **TalkingHead (met4citizen)** | Gotowa klasa JS: Three.js + GLB + ARKit/Oculus blendshapes | Referencja interpolacji i reguł językowych (EN/DE/FR...); punkt odniesienia dla naszego scheduler wizemów | sprawdź licencję repo przed wpięciem kodu |
-| **Rhubarb Lip Sync** | Analiza audio → wizemy (WASM) | Fallback akustyczny dla języków, gdzie mapowanie znakowe nie wystarczy (Faza 2) | licencja ogranicza komercyjne użycie — zweryfikuj |
-| **HeadAudio / MFCC worklets** | Fonemizacja audio w AudioWorklet | Alternatywa dla Rhubarb; < 10 ms latencji | badawczy, wymaga tuningu |
-| **@elevenlabs/client + @elevenlabs/react** | Oficjalne SDK ElevenAgents | Szybkie testy agenta; `onAudioAlignment` | oficjalne, używamy w PoC do walidacji konfiguracji |
-| **Pipecat / LiveKit Agents** | Frameworki pipeline'ów głosowych | Gotowy szkielet dla Trybu B (własny mózg, Faza 2) | permissive |
-| **elevenlabs-avatar / szablony Threlte** | Szablony EL + WebGL | Referencje integracji i wygładzania warg | głównie inspiracja |
+| **TalkingHead (met4citizen)** | Ready-made JS class: Three.js + GLB + ARKit/Oculus blendshapes | Reference for interpolation and language rules (EN/DE/FR...); a reference point for our viseme scheduler | check the repo's license before wiring in the code |
+| **Rhubarb Lip Sync** | Audio → visemes analysis (WASM) | Acoustic fallback for languages where character mapping is not enough (Phase 2) | the license restricts commercial use — verify |
+| **HeadAudio / MFCC worklets** | Phonemization of audio in an AudioWorklet | An alternative to Rhubarb; < 10 ms latency | research-grade, needs tuning |
+| **@elevenlabs/client + @elevenlabs/react** | Official ElevenAgents SDK | Quick agent tests; `onAudioAlignment` | official, we use it in the PoC to validate the configuration |
+| **Pipecat / LiveKit Agents** | Voice pipeline frameworks | A ready skeleton for Mode B (own brain, Phase 2) | permissive |
+| **elevenlabs-avatar / Threlte templates** | EL + WebGL templates | References for integration and lip smoothing | mainly inspiration |
 
-**Ready Player Me — zamknięte** (projekt wygaszony). Wszystkie referencje do RPM w starszych notatkach są nieaktualne; alternatywy realistyczne: MetaPerson (nasz wybór, [docs/1](1-architektura-i-modele-3d.md)), HeyGen LiveAvatar (oficjalny guide ElevenLabs — wideo-awatar bez silnika 3D), MetaHuman + Pixel Streaming (Faza 2).
+**Ready Player Me — closed** (project discontinued). All references to RPM in older notes are outdated; realistic alternatives: MetaPerson (our choice, [docs/1](1-architecture-and-3d-models.md)), HeyGen LiveAvatar (ElevenLabs' official guide — a video avatar with no 3D engine), MetaHuman + Pixel Streaming (Phase 2).
 
 ---
 
-## 🎭 Emocje sterowane agentem — mechanizmy ElevenAgents
+## 🎭 Agent-driven emotions — ElevenAgents mechanisms
 
-Zamiast wymyślać własny kanał metadanych, używamy dwóch natywnych mechanizmów:
+Instead of inventing our own metadata channel, we use two native mechanisms:
 
-### Wariant 1: client tools (zalecany na MVP)
+### Variant 1: client tools (recommended for the MVP)
 
-Agent wywołuje narzędzie po stronie klienta (`client_tool_call`), gdy "czuje" emocję. Rejestrujemy w konfiguracji agenta tool np. `set_emotion` z parametrami `emotion`, `intensity`; w prompcie instruujemy agenta, żeby wywoływał je przed wypowiedziami o wyraźnym ładunku:
+The agent calls a client-side tool (`client_tool_call`) when it "feels" an emotion. We register a tool such as `set_emotion` with the parameters `emotion` and `intensity` in the agent's configuration; in the prompt we instruct the agent to call it before utterances with a clear emotional charge:
 
 ```jsonc
-// Klient odbiera:
+// The client receives:
 { "type": "client_tool_call",
   "client_tool_call": { "tool_name": "set_emotion",
     "tool_call_id": "call_123",
     "parameters": { "emotion": "thoughtful", "intensity": 0.7 } } }
 
-// FaceController: baza emocjonalna blendshape'ów, na którą nakładają się wizemy mowy:
+// FaceController: emotional baseline of the blendshapes, on which the speech visemes are layered:
 //   thoughtful → browInnerUp 0.5 · eyeSquint* 0.2
 //   happy      → mouthSmile* 0.4 · cheekSquint* 0.3
 //   surprised  → browOuterUp* 0.6 · eyeWide* 0.4 · jawOpen floor +0.15
-// Odpowiadamy: { "type": "client_tool_result", "tool_call_id": "call_123", "result": "ok" }
+// We respond: { "type": "client_tool_result", "tool_call_id": "call_123", "result": "ok" }
 ```
 
-### Wariant 2: `agent_response_metadata` (custom LLM)
+### Variant 2: `agent_response_metadata` (custom LLM)
 
-Jeśli agent działa na własnym LLM (custom LLM endpoint), odpowiedź może nieść metadane (trzeba włączyć event w `client_events` agenta):
+If the agent runs on its own LLM (a custom LLM endpoint), the response may carry metadata (the event has to be enabled in the agent's `client_events`):
 
 ```jsonc
 { "type": "agent_response_metadata",
@@ -49,43 +49,43 @@ Jeśli agent działa na własnym LLM (custom LLM endpoint), odpowiedź może nie
     "metadata": { "emotion": "thoughtful", "intensity": 0.7, "gesture": "nod_affirmative" } } }
 ```
 
-**Reguła mieszania z mową**: emocja to **baza** (offset), wizemy to **dodatek** (delta). `FinalWeight = clamp(emotionBase[key] + visemeWeight[key])`, z osobnym, wolniejszym dampinguem dla emocji (lambda ~3–6) — emocje nie mogą "przeskakiwać" między zdaniami.
+**Rule for mixing with speech**: the emotion is the **base** (offset), the visemes are the **addition** (delta). `FinalWeight = clamp(emotionBase[key] + visemeWeight[key])`, with a separate, slower damping for emotions (lambda ~3–6) — emotions must not "jump" between sentences.
 
 ---
 
-## 🌍 Wielojęzyczność
+## 🌍 Multilingual support
 
-Tabela mapowania z [docs/3](3-lip-sync-i-koartykulacja.md) jest **dedykowana EN+PL** (dwuznaki `sz/cz/rz/ch`, nosówki `ą/ę` zmapowane jak `a/e` + lekkie `mouthFunnel`). Strategia etapowa:
+The mapping table in [docs/3](3-lip-sync-and-coarticulation.md) is **dedicated to EN+PL** (digraphs `sz/cz/rz/ch`, nasal vowels `a-ogonek`/`e-ogonek` mapped like `a/e` + a light `mouthFunnel`). Staged strategy:
 
 ```
-Faza 1 (MVP):  EN + PL — mapowanie znakowe (alignment), zero CPU
-Faza 2 (opcja): inne języki fonetyczne — kolejne moduły słownikowe (tabela per język)
-Faza 2 (opcja): języki "niefonetyczne" — fallback akustyczny (Rhubarb WASM / MFCC)
+Phase 1 (MVP):    EN + PL — character mapping (alignment), zero CPU
+Phase 2 (option): other phonetic languages — further dictionary modules (a table per language)
+Phase 2 (option): "non-phonetic" languages — acoustic fallback (Rhubarb WASM / MFCC)
 ```
 
-Agent ElevenAgents mówi w 70+ językach (głos wielojęzyczny); **lip-sync nie jest wąskim gardłem wielojęzyczności** — wąskim gardłem jest tabela znaków. Rozszerzenie o język = nowy moduł mapowań + testy wzrokowe.
+The ElevenAgents agent speaks 70+ languages (a multilingual voice); **lip-sync is not the bottleneck of multilingual support** — the bottleneck is the character table. Adding a language = a new mapping module + visual tests.
 
 ---
 
-## 🧠 Faza 2: pełne ożywienie (mowa ciała)
+## 🧠 Phase 2: full aliveness (body language)
 
-Elementy, które przenoszą awatar przez "dolinę niesamowitości" — w kolejności ROI:
+Elements that carry the avatar across the "uncanny valley" — in order of ROI:
 
-1. **Mruganie** (już w PoC): `eyeBlink*` co 2,5–6 s, zamknięcie 80 ms, otwarcie 200 ms; podsypywanie podwójnych mrugnięć; świadome pomijanie blinków przy `eyeWide` (zaskoczenie).
-2. **Mikroruchy głowy**: szum Perlina → kości `Neck/Head`, amplituda 1–2°, częstotliwość 0,2–0,5 Hz; redukcja amplitudy podczas mowy (unikaj "bobbingu").
-3. **Sakkady wzroku**: celowanie `eyeLook*` na losowe punkty co 1–4 s + "shared attention" (spojrzenie na użytkownika, gdy mówi; lekko w bok, gdy agent "myśli").
-4. **Idle ciała**: animacje Mixamo (oddech, sway) przez `AnimationMixer` z crossfade 0,3 s — rig już zgodny ([docs/1](1-architektura-i-modele-3d.md)).
-5. **Gestyka akcentująca**: bazowe"beat gestures" zsynchronizowane z interpunkcją alignmentu (kropka = gest akcentujący).
+1. **Blinking** (already in the PoC): `eyeBlink*` every 2.5–6 s, closing 80 ms, opening 200 ms; occasional double blinks; deliberately skipping blinks during `eyeWide` (surprise).
+2. **Head micro-movements**: Perlin noise → `Neck/Head` bones, amplitude 1–2°, frequency 0.2–0.5 Hz; reduced amplitude during speech (avoid "bobbing").
+3. **Eye saccades**: aiming `eyeLook*` at random points every 1–4 s + "shared attention" (look at the user when they speak; slightly aside when the agent is "thinking").
+4. **Body idle**: Mixamo animations (breathing, sway) via an `AnimationMixer` with a 0.3 s crossfade — the rig is already compatible ([docs/1](1-architecture-and-3d-models.md)).
+5. **Accent gestures**: basic "beat gestures" synchronized with the punctuation of the alignment (a period = an accent gesture).
 
 ---
 
-## 🗺️ Ścieżki rozwoju architektury (podsumowanie)
+## 🗺️ Architecture development paths (summary)
 
-| Kierunek | Co się zmienia | Koszt/ryzyko |
+| Direction | What changes | Cost/risk |
 | :--- | :--- | :--- |
-| Własny mózg (Tryb B, [docs/2](2-integracja-elevenlabs-wss.md)) | `SpeechBackend`: ElevenAgents → TTS WSS + własny LLM + VAD | wysoki (turn-taking!), zysk: pełna kontrola |
-| Renderer premium (MetaHuman/Pixel Streaming) | `FaceDriver` → sterownik po stronie Unreal | wysoki (GPU per stream), zysk: fotorealizm |
-| Wideo-awatar (HeyGen LiveAvatar) | `AvatarLoader` → stream wideo; lip-sync zbędny | średni (koszt/min), zysk: realizm bez silnika 3D |
-| Lip-sync akustyczny | scheduler wizemów: źródło alignment → źródło wizemów | niski, zysk: dowolny język |
+| Own brain (Mode B, [docs/2](2-elevenlabs-wss-integration.md)) | `SpeechBackend`: ElevenAgents → TTS WSS + own LLM + VAD | high (turn-taking!), gain: full control |
+| Premium renderer (MetaHuman/Pixel Streaming) | `FaceDriver` → a driver on the Unreal side | high (GPU per stream), gain: photorealism |
+| Video avatar (HeyGen LiveAvatar) | `AvatarLoader` → video stream; lip-sync unnecessary | medium (cost/min), gain: realism without a 3D engine |
+| Acoustic lip-sync | viseme scheduler: alignment source → visemes source | low, gain: any language |
 
-Dzięki interfejsom z [docs/1](1-architektura-i-modele-3d.md) żaden z tych kierunków nie wymusza przepisywania rdzenia.
+Thanks to the interfaces from [docs/1](1-architecture-and-3d-models.md), none of these directions forces a rewrite of the core.

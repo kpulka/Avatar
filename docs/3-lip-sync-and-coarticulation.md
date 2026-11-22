@@ -1,183 +1,173 @@
-# 3. Lip-Sync i Koartykulacja (podejście oparte na alignmentie znaków)
+# 3. Lip-Sync and Coarticulation (character-alignment-based approach)
 
-## 📌 Założenia
+> Polish-specific letters are written as ASCII names so this document stays free of diacritics
+> (for example `a-ogonek` and `e-ogonek` for the nasal vowels, `o-acute`, `s-acute`, `c-acute`,
+> `z-acute`, `z-dot`, `l-stroke`, `n-acute`; `dz-acute` and `dz-dot` for the two digraphs; capitals
+> follow the same pattern, e.g. `A-ogonek`).
 
-W PoC/MVP wykorzystujemy **alignment znaków** dostarczany przez ElevenLabs (w Trybie A: `audio_event.alignment`; w Trybie B: `normalizedAlignment` — identyczny kształt). Zalety: zero narzutu CPU (bez WASM/ML w przeglądarce), znaczniki przychodzą razem z audio.
+## 📌 Assumptions
 
-Od v1.1 (Faza 7) angielski ma **warstwę fonemową G2P** (patrz niżej): litery → fonemy ARPAbet (leksykon CMUdict) → wizemy. Tabela znak→wizem pozostaje dla polskiego oraz jako fallback (brak/niegotowy G2P lub przełącznik A/B).
+In the PoC/MVP we use the **character alignment** delivered by ElevenLabs (in Mode A: `audio_event.alignment`; in Mode B: `normalizedAlignment` — identical shape). Advantages: zero CPU overhead (no WASM/ML in the browser), and the markers arrive together with the audio.
 
-Ograniczenia, o których musimy pamiętać:
-1. **Alignment dotyczy tekstu znormalizowanego** — liczby/odczyty są rozwinięte do słów; mapujemy wyłącznie znaki z alignmentu.
-2. **Alignment podaje litery, nie fonemy** — w EN fonemy odtwarzamy warstwą G2P; w PL (ortografia fonetyczna) wystarcza tabela znaków z heurystykami.
-3. **Języki bez fonetycznego zapisu** (poza EN obsługiwanym przez G2P/CMUdict, poza PL) → fallback akustyczny jaw-only (brak alignmentu) lub w Faza 2 Rhubarb/MFCC ([docs/6](6-analiza-opensource-i-rozwoj.md)).
+Since v1.1 (Phase 7), English has a **G2P phoneme layer** (see below): letters → ARPAbet phonemes (CMUdict lexicon) → visemes. The character→viseme table remains for Polish and as a fallback (G2P missing or not ready, or the A/B switch).
+
+Limitations we must keep in mind:
+1. **The alignment applies to normalized text** — numbers/readings are expanded into words; we map only the characters from the alignment.
+2. **The alignment gives letters, not phonemes** — in EN we reconstruct phonemes with the G2P layer; in PL (phonetic spelling) the character table with heuristics is sufficient.
+3. **Languages without a phonetic script** (other than EN, handled by G2P/CMUdict, and other than PL) → acoustic fallback, jaw-only (no alignment), or in Phase 2 Rhubarb/MFCC ([docs/6](6-opensource-analysis-and-future.md)).
 
 ---
 
-## 🧬 Warstwa fonemowa EN (v1.1, Faza 7) — G2P
+## 🧬 EN phoneme layer (v1.1, Phase 7) — G2P
 
-Angielska ortografia nie jest fonetyczna: litery nieme ("know", "though", "listen"), dwuznaki
-samogłoskowe ("ee", "ea", "oo", "ou") i nieme końcówki ("-ed", "-tion") powodowały albo
-fantomowe ruchy ust bez dźwięku, albo nadmierną artykulację. ElevenLabs dostarcza tylko timing
-**liter** — fonemy odtwarzamy po stronie klienta.
+English spelling is not phonetic: silent letters ("know", "though", "listen"), vowel digraphs ("ee", "ea", "oo", "ou") and silent endings ("-ed", "-tion") caused either phantom mouth movements without sound, or excessive articulation. ElevenLabs delivers timing only for **letters** — we reconstruct the phonemes on the client side.
 
-### Potok
+### Pipeline
 
 ```
-audio_event.alignment (litery + czasy)          src/audio/speech-backend.ts
+audio_event.alignment (letters + times)          src/audio/speech-backend.ts
         │  source: 'elevenlabs'
         ▼
 mergeCharAlignmentToPhonemes()                  src/lipsync/g2p/phoneme-merge.ts
-   • podział na słowa wg runów liter
-   • każde słowo → fonemy ARPAbet (G2P)
-   • czas słowa rozkładany proporcjonalnie na fonemy
-     (samogłoski/dyftongi 1.2, spółgłoski 0.8) — litery nieme oddają czas sąsiadom
-        ▼  PhonemeSpan[] { phoneme, startMs, durationMs }  (kotwice z ElevenLabs!)
+   • split into words by runs of letters
+   • each word → ARPAbet phonemes (G2P)
+   • word time distributed proportionally over the phonemes
+     (vowels/diphthongs 1.2, consonants 0.8) — silent letters give their time to their neighbors
+        ▼  PhonemeSpan[] { phoneme, startMs, durationMs }  (anchors from ElevenLabs!)
 mapPhonemeToShapes()                            src/lipsync/g2p/phoneme-visemes.ts
-   • ARPAbet → wizemy ARKit (13 grup, pełna tabela w module)
+   • ARPAbet → ARKit visemes (13 groups, full table in the module)
         ▼
-VisemeScheduler.enqueue()  (bez zmian API)
+VisemeScheduler.enqueue()  (no API change)
 ```
 
-### Komponenty
+### Components
 
-| Moduł | Rola |
+| Module | Role |
 | :--- | :--- |
-| `g2p-en.ts` | `ensureG2pLoaded()` (leniwy dynamiczny import `cmu-pronouncing-dictionary`, ~135 tys. słów, osobny chunk Vite ~1 MB gz), `wordToPhonemesSync()` (leksykon + reguły letter-to-sound dla OOV; usuwa cyfry stresu 0/1/2) |
-| `phoneme-merge.ts` | `mergeCharAlignmentToPhonemes(alignment)` — timing słów 1:1 z alignmentu; wynik to rozpiętości fonemów |
-| `phoneme-visemes.ts` | `mapPhonemeToShapes(phoneme)` — ARPAbet → combosy ARKit (Left/Right symetrycznie) |
+| `g2p-en.ts` | `ensureG2pLoaded()` (lazy dynamic import of `cmu-pronouncing-dictionary`, ~135k words, separate Vite chunk ~1 MB gz), `wordToPhonemesSync()` (lexicon + rule-based letter-to-sound for OOV words; strips stress digits 0/1/2) |
+| `phoneme-merge.ts` | `mergeCharAlignmentToPhonemes(alignment)` — 1:1 word timing from the alignment; the result is phoneme spans |
+| `phoneme-visemes.ts` | `mapPhonemeToShapes(phoneme)` — ARPAbet → ARKit combos (Left/Right symmetric) |
 
-> 📄 **Praca nad pozycjami ust per głoska:** `docs/EN-visemes.md` — dokument roboczy (opis artykulacji → parametry ARKit → analiza „bliźniaczych" wizemów i niuanse różnicujące).
+> 📄 **Work on per-phoneme mouth poses:** `docs/en-visemes.md` — working document (description of articulation → ARKit parameters, analysis of "twin" visemes and the nuances that tell them apart).
 
-### Reguły działania
+### Operating rules
 
-1. G2P ładowane jest leniwie (`FaceController` preloaduje w konstruktorze). Do czasu
-   `isG2pReady() === true` (pierwsze ~1-2 s) działa ścieżka znakowa — awatar zawsze mówi.
-2. Brak wpisu w leksykonie → regułowy fallback letter-to-sound (nigdy pusta lista dla słowa
-   z literami).
-3. `source === 'energy-fallback'` (brak alignmentu z serwera) ma pierwszeństwo — wtedy tylko
-   żuchwa ∝ energia RMS (patrz niżej), bez konwersji tekstowej.
-4. Przełącznik HUD "Fonemowy silnik EN (G2P)" (A/B, `localStorage.avatar_lipsync_engine`)
-   wymusza ścieżkę fonemową albo znakową w czasie rzeczywistym.
+1. G2P is loaded lazily (`FaceController` preloads it in the constructor). Until `isG2pReady() === true` (the first ~1–2 s) the character path runs — the avatar always speaks.
+2. No lexicon entry → rule-based letter-to-sound fallback (never an empty list for a word that has letters).
+3. `source === 'energy-fallback'` (no alignment from the server) takes priority — then only the jaw ∝ RMS energy (see below) is driven, without text conversion.
+4. The HUD switch "EN phoneme engine (G2P)" (A/B, `localStorage.avatar_lipsync_engine`) forces the phoneme path or the character path in real time.
 
-## ✏️ Edytor Wizemów (v1.1) — ręczne ułożenie per głoska
+## ✏️ Viseme Editor (v1.1) — manual per-phoneme posing
 
-Domyślne combosy ARKit to wartości referencyjne — na konkretnym riggu (MetaPerson) potrafią
-deformować (np. `mouthClose` ciągnie dolną wargę na nos). Drawer **„Wizemy"** (✏️) pozwala
-nadpisać ułożenie blendshape'ów dla KAŻDEJ głoski:
+The default ARKit combos are reference values — on a specific rig (MetaPerson) they can deform (e.g., `mouthClose` pulls the lower lip onto the nose). The **"Visemes"** drawer (✏️) lets you override the blendshape pose for EVERY viseme key:
 
-- lista głosek w dwóch grupach: **Silnik EN (fonemy G2P)** oraz **Ścieżka znaków (PL / fallback)**,
-- wybór głoski → suwaki ~15 kształtów aparatu mowy → **podgląd pozy na żywo na modelu**,
-- nadpisanie zapisuje się automatycznie (localStorage, `avatar_viseme_overrides_v1`) i ma
-  **pierwszeństwo przed domyślnymi tabelami** w live lip-syncu (ścieżka fonemowa i znakowa),
-- „Reset tej głoski" przywraca domyślną tabelę; „Reset wszystkich" czyści całość.
+- a list of viseme keys in two groups: **EN engine (G2P phonemes)** and **Character path (PL / fallback)**,
+- selecting a viseme key → sliders for ~15 vocal-tract shapes → **live pose preview on the model**,
+- the override is saved automatically (localStorage, `avatar_viseme_overrides_v1`) and takes **precedence over the default tables** in live lip-sync (both the phoneme path and the character path),
+- "↺ Reset this key" restores the default table; "✖ Reset ALL viseme keys" clears everything.
 
-Warstwa danych: `src/lipsync/viseme-overrides.ts` (lista głosek, storage, `defaultVisemeShapes`);
-aplikacja: `FaceController.visemeOverrides` (`resolveVisemeShapes` / `setVisemeOverride` /
+Data layer: `src/lipsync/viseme-overrides.ts` (list of viseme keys, storage, `defaultVisemeShapes`);
+application: `FaceController.visemeOverrides` (`resolveVisemeShapes` / `setVisemeOverride` /
 `previewViseme`); UI: `Hud.initVisemeEditor`.
 
-### Fallback akustyczny jaw-only (brak alignmentu)
-Gdy `audio_event` nie niesie `alignment`, `src/audio/energy-fallback.ts` generuje zastępcze
-znaczniki z energii RMS sygnału (okna 70 ms, `source: 'energy-fallback'`). `FaceController`
-kolejkuje wtedy **wyłącznie `jawOpen`** ∝ energia (bez fałszywych samogłosek — przed v1.1 fallback
-wstawiał A/O/E/I i powodował rytmiczne machanie ustami). Telemetria + badge HUD
-(`ALIGN: EL ✓` / `ALIGN: FALLBACK ⚠`) pokazują, które źródło faktycznie napędza usta.
+### Acoustic fallback, jaw-only (no alignment)
+When `audio_event` does not carry `alignment`, `src/audio/energy-fallback.ts` generates substitute markers from the RMS energy of the signal (70 ms windows, `source: 'energy-fallback'`). `FaceController` then queues **only `jawOpen`** ∝ energy (no false vowels — before v1.1 the fallback inserted A/O/E/I and caused a rhythmic flapping of the mouth). Telemetry and the HUD badge (`ALIGN: EL ✓` / `ALIGN: FALLBACK ⚠`) show which source actually drives the mouth.
 
 ---
 
-## 👄 Tabela mapowania: znaki/dwuznaki → ARKit
+## 👄 Mapping table: characters/digraphs → ARKit
 
-### Krok 1: Dwuznaki (lookahead — sprawdź PRZED pojedynczym znakiem)
+### Step 1: Digraphs (lookahead — check BEFORE the single character)
 
-| Dwuznak (EN/PL) | Klucze ARKit | Wagi | Opis |
+| Digraph (EN/PL) | ARKit keys | Weights | Description |
 | :--- | :--- | :--- | :--- |
-| `SH`, `sz` | `jawOpen`, `mouthFunnel` | `0.20`, `0.50` | syczące, zaokrąglony przedsionek |
-| `CH`, `cz` | `jawOpen`, `mouthFunnel` | `0.25`, `0.45` | jak SH + zwarcie |
-| `TH` | `jawOpen` (+`tongueOut` jeśli jest) | `0.20`, `0.30` | język między zębami |
-| `PH` | = `F` | patrz F | |
-| `WH` | `mouthPucker` | `0.40` | zaokrąglenie przed samogłoską |
+| `SH`, `sz` | `jawOpen`, `mouthFunnel` | `0.20`, `0.50` | hissing, rounded vestibule |
+| `CH`, `cz` | `jawOpen`, `mouthFunnel` | `0.25`, `0.45` | like SH + stop |
+| `TH` | `jawOpen` (+`tongueOut` if present) | `0.20`, `0.30` | tongue between the teeth |
+| `PH` | = `F` | see F | |
+| `WH` | `mouthPucker` | `0.40` | rounding before a vowel |
 | `QU` | `mouthPucker` + `K` | `0.50` + `jawOpen 0.35` | /kw/ |
-| `NG` | `jawOpen` | `0.25` | tylnojęzykowe, usta półotwarte |
-| `rz`, `ż`, `dź`, `dż` | = `SH`-like | `0.20`, `0.40` | pl: dźwięki "ż" |
+| `NG` | `jawOpen` | `0.25` | velar, lips half-open |
+| `rz`, `z-dot`, `dz-acute`, `dz-dot` | = `SH`-like | `0.20`, `0.40` | PL: the "z-dot"-type sounds |
 
-### Krok 2: Pojedyncze znaki
+### Step 2: Single characters
 
-| Znak(i) | Klucze ARKit | Wagi | Opis |
+| Character(s) | ARKit keys | Weights | Description |
 | :--- | :--- | :--- | :--- |
-| `A`, `ą` | `jawOpen`, `mouthSmile*` | `0.55`, `0.10` | szerokie otwarcie |
-| `E`, `ę` | `jawOpen`, `mouthSmile*` | `0.35`, `0.30` | średnio otwarte, rozszerzone kąciki |
-| `I`, `Y` (jako samogłoska) | `jawOpen`, `mouthSmile*` | `0.25`, `0.20` | wąskie otwarcie |
-| `O`, `ó` | `jawOpen`, `mouthPucker`, `mouthFunnel` | `0.40`, `0.60`, `0.40` | zaokrąglone |
-| `U` | `jawOpen`, `mouthPucker`, `mouthFunnel` | `0.25`, `0.75`, `0.50` | mocny dzióbek |
-| `W` (spółgłoska) | `mouthPucker` | `0.40` | szybki glide — koartykulacja z następną samogłoską |
-| `M`, `B`, `P` | `mouthClose`, `mouthPress*` | `1.00`, `0.30` | **pełne domknięcie** — najważniejszy test lip-syncu |
-| `F`, `V` | `jawOpen`, `mouthRollLower` | `0.15`, `0.55` | dolna warga pod górne zęby |
-| `L` | `jawOpen` (+`tongueOut`) | `0.30`, `0.30` | język w górze; bez `tongueOut` w modelu — tylko otwarcie |
-| `T`, `D`, `N` | `jawOpen` | `0.20` | zęby/blisko podniebienia |
-| `S`, `Z`, `ś`, `ź`, `ć` | `jawOpen`, `mouthSmile*` | `0.15`, `0.15` | wąsko, zęby widoczne |
-| `K`, `G` | `jawOpen` | `0.35` | tylnojęzykowe |
-| `C` | zależne: przed `E/I/Y` → jak `S`; inaczej → jak `K` | — | heurystyka kontekstowa (patrz niżej) |
-| `X` | sekwencja `K`+`S` w jednym oknie | — | /ks/ |
-| `H`, `ch` (PL) | `jawOpen` | `0.25` | neutralna apertura, wargi bez udziału |
-| `R` | `jawOpen`, `mouthFunnel` | `0.30`, `0.20` | aproksymacja (pl: lekkie zaokrąglenie) |
-| `J` (PL `j`) | jak `I` krótkie | `0.25` | palatalne |
-| Spacja, interpunkcja | *(wygaszenie wszystkich kluczy mowy)* | `0.0` | spoczynek; przecinek/kropka = mikropauza z pełnym domknięciem |
+| `A`, `a-ogonek` | `jawOpen`, `mouthSmile*` | `0.55`, `0.10` | wide opening |
+| `E`, `e-ogonek` | `jawOpen`, `mouthSmile*` | `0.35`, `0.30` | medium opening, widened mouth corners |
+| `I`, `Y` (as a vowel) | `jawOpen`, `mouthSmile*` | `0.25`, `0.20` | narrow opening |
+| `O`, `o-acute` | `jawOpen`, `mouthPucker`, `mouthFunnel` | `0.40`, `0.60`, `0.40` | rounded |
+| `U` | `jawOpen`, `mouthPucker`, `mouthFunnel` | `0.25`, `0.75`, `0.50` | strong pucker |
+| `W` (consonant) | `mouthPucker` | `0.40` | quick glide — coarticulation with the following vowel |
+| `M`, `B`, `P` | `mouthClose`, `mouthPress*` | `1.00`, `0.30` | **full closure** — the most important lip-sync test |
+| `F`, `V` | `jawOpen`, `mouthRollLower` | `0.15`, `0.55` | lower lip under the upper teeth |
+| `L` | `jawOpen` (+`tongueOut`) | `0.30`, `0.30` | tongue up; without `tongueOut` in the model — opening only |
+| `T`, `D`, `N` | `jawOpen` | `0.20` | teeth / close to the palate |
+| `S`, `Z`, `s-acute`, `z-acute`, `c-acute` | `jawOpen`, `mouthSmile*` | `0.15`, `0.15` | narrow, teeth visible |
+| `K`, `G` | `jawOpen` | `0.35` | velar |
+| `C` | depends: before `E/I/Y` → like `S`; otherwise → like `K` | — | context heuristic (see below) |
+| `X` | `K`+`S` sequence in one window | — | /ks/ |
+| `H`, `ch` (PL) | `jawOpen` | `0.25` | neutral aperture, lips not involved |
+| `R` | `jawOpen`, `mouthFunnel` | `0.30`, `0.20` | approximant (PL: slight rounding) |
+| `J` (PL `j`) | like short `I` | `0.25` | palatal |
+| Space, punctuation | *(fade out all speech keys)* | `0.0` | rest; comma/period = micro-pause with full closure |
 
-`mouthSmile*`/`mouthPress*` = aplikacja symetrycznie do wariantów `Left`/`Right`.
+`mouthSmile*`/`mouthPress*` = applied symmetrically to the `Left`/`Right` variants.
 
-### Heurystyka kontekstowa dla `C` (i miękka/twarda wymowa)
+### Context heuristic for `C` (and soft/hard pronunciation)
 
 ```
-jeśli C przed {E, I, Y, ę, i}  →  mapuj jak S ("cell")
-w przeciwnym razie             →  mapuj jak K ("cat")
+if C before {E, I, Y, e-ogonek, i}  →  map like S ("cell")
+otherwise                           →  map like K ("cat")
 ```
 
-To uproszczenie — błędy wymowy agenta zdarzają się rzadziej niż wygląda, bo alignment opisuje faktycznie wypowiedziane znaki. Fałszywe trafienia są wizualnie łagodzone koartykulacją (niżej).
+This is a simplification — the agent's pronunciation errors occur less often than it looks, because the alignment describes the characters that were actually spoken. False hits are visually softened by coarticulation (below).
 
 ---
 
-## 📈 Koartykulacja i krzywe wygładzania
+## 📈 Coarticulation and smoothing curves
 
-Mowa ludzka nie skacze między pozycjami ust — mięśnie przechodzą płynnie, a sąsiednie dźwięki się mieszają.
+Human speech does not jump between mouth positions — the muscles move smoothly, and neighboring sounds blend into each other.
 
-### 1. Cykl życia wizemu (dla znaku o czasie trwania `D`)
+### 1. Life cycle of a viseme (for a character with duration `D`)
 
 ```
-Waga
+Weight
  1.0 ┼          ╭────────────╮
      │         ╱              ╲
      │        ╱                ╲
- 0.0 ┼───────╯                  ╰───────────► Czas
+ 0.0 ┼───────╯                  ╰───────────► Time
      ├───────┼────────────────┼─────────────┤
      │BlendIn│      Hold      │  BlendOut   │
 ```
 
-* **Blend-In** ~30–50 ms: narastanie 0 → wartość docelowa (cosine ease).
-* **Hold**: czas trwania fonemu/znaku (EN: rozpiętość fonemu z `phoneme-merge`; PL/fallback: `char_durations_ms`).
-* **Blend-Out** ~40–60 ms: wygaszanie, chyba że ten sam klucz przejmuje następny fonem.
+* **Blend-In** ~30–50 ms: rise 0 → target value (cosine ease).
+* **Hold**: the duration of the phoneme/character (EN: the phoneme span from `phoneme-merge`; PL/fallback: `char_durations_ms`).
+* **Blend-Out** ~40–60 ms: fade out, unless the same key is taken over by the next phoneme.
 
-### 2. Additive blending z limitem
+### 2. Additive blending with a limit
 
-Kiedy sąsiednie znaki aktywują ten sam klucz (np. `O` → `U`):
+When neighboring characters activate the same key (e.g., `O` → `U`):
 
 ```
-FinalWeight(key) = min(1.0, Σ aktywnych wkładów(key))
+FinalWeight(key) = min(1.0, Σ active contributions(key))
 ```
 
-### 3. Wygaszanie do zera — **reguła fundamentu**
+### 3. Decay to zero — **the foundation rule**
 
-Każdy klucz mowy dąży do 0 w każdym oknie bez aktywnego wkładu. Dzięki temu:
-* koniec zdania = spoczynek (usta przymknięte, żuchwa opuszczona),
-* brak "zamrożonej" pozy,
-* przerwanie = naturalny relaks (wsparty przez `FaceController` z [docs/4](4-audio-i-obsluga-przerwan.md)).
+Every speech key tends toward 0 in every window without an active contribution. Thanks to this:
+* the end of a sentence = rest (mouth closed, jaw lowered),
+* no "frozen" pose,
+* an interruption = natural relaxation (supported by `FaceController` from [docs/4](4-audio-and-barge-in.md)).
 
-### 4. Semantyka skal (v1.1 — JEDNO mnożenie)
+### 4. Scale semantics (v1.1 — ONE multiplication)
 
-Wartości w tabelach mapowań (znak→wizem i fonem→wizem) są **wartościami EFEKTYWNYMI** — scheduler
-mnoży je **dokładnie raz**, przez scale z profilu kalibracji:
+The values in the mapping tables (character→viseme and phoneme→viseme) are **EFFECTIVE values** — the scheduler multiplies them **exactly once**, by the scale from the calibration profile:
 
 ```ts
 contribution = maxVal × scaleForShape(shape) × easingWeight
-scaleForShape(shape):           // domyślnie 1.0 (preset balanced)
+scaleForShape(shape):           // default 1.0 (balanced preset)
   mouthClose / mouthPress*  → closeScale
   jawOpen                    → jawScale
   mouthPucker                → puckerScale
@@ -185,89 +175,82 @@ scaleForShape(shape):           // domyślnie 1.0 (preset balanced)
   mouthRollLower, mouthShrug*→ rollScale
   mouthUpperUp*, mouthLowerDown* → teethExposureScale
   mouthSmile*                → smileScale
-  (tongueOut i pozostałe)    → 1.0
+  (tongueOut and the rest)   → 1.0
 ```
 
-Presety to mnożniki **gustowe** wokół 1.0 (subtle 0.85 / balanced 1.00 / expressive 1.15),
-a nie tłumiki — dzięki temu M/B/P osiąga realne domknięcie (~1.0), a 'A' jawOpen ~0.55 zamiast
-zgniecionych ~0.30 (przyczyna wizualnej "płaskości" przed v1.1).
+Presets are **tasteful** multipliers around 1.0 (subtle 0.85 / balanced 1.00 / expressive 1.15), not dampers — this way M/B/P reaches a real closure (~1.0), and 'A' jawOpen reaches ~0.55 instead of the squashed ~0.30 (the cause of the visual "flatness" before v1.1).
 
-**Reguła priorytetu domknięcia** pozostaje: gdy `mouthClose` > 0.15, `jawOpen` jest tłumione
-(`jaw × max(0, 1 − 0.95 × mouthClose/closeScale)`) — chroni przed artefaktem MetaPerson
-"dolna warga podjeżdża pod nos". Usunięto natomiast stary cap `min(closeScale, 0.28 + 0.5×jaw)`,
-który uniemożliwiał pełne domknięcie.
+**The closure-priority rule** still applies: when `mouthClose` > 0.15, `jawOpen` is suppressed (`jaw × max(0, 1 − 0.95 × mouthClose/closeScale)`) — this protects against the MetaPerson artifact where the "lower lip rides up under the nose". The old cap `min(closeScale, 0.28 + 0.5×jaw)`, which prevented full closure, was removed.
 
-### 5. Lambda per grupa mięśni (v1.1)
+### 5. Lambda per muscle group (v1.1)
 
-Pojedyncza lambda = 18 była za wolna dla krótkich spółgłosek EN (40–80 ms) — kształt nie osiągał
-celu przed końcem fonemu (kolejna przyczyna "płaskości"). Lambda jest teraz zależna od grupy
-mięśni (baza: `coarticulationSpeed` z profilu, default 18):
+A single lambda = 18 was too slow for short EN consonants (40–80 ms) — the shape did not reach its target before the end of the phoneme (another cause of the "flatness"). Lambda now depends on the muscle group (base: `coarticulationSpeed` from the profile, default 18):
 
-| Grupa | Klucze | Lambda |
+| Group | Keys | Lambda |
 | :--- | :--- | :--- |
-| Domknięcie | `mouthClose`, `mouthPress*` | ~1.7 × cs (≈31) — szybki, ostry kontakt |
-| Żuchwa | `jawOpen`, `tongueOut` | ~1.55 × cs (≈28) |
-| Okrągłe wargi | `pucker`, `funnel`, `roll`, `shrug`, `upperUp`, `lowerDown` | ~1.0 × cs (≈18) |
-| Uśmiech | `mouthSmile*` | ~0.45 × cs (≈8) — wolny powrót po pauzie |
+| Closure | `mouthClose`, `mouthPress*` | ~1.7 × cs (≈31) — fast, sharp contact |
+| Jaw | `jawOpen`, `tongueOut` | ~1.55 × cs (≈28) |
+| Rounded lips | `pucker`, `funnel`, `roll`, `shrug`, `upperUp`, `lowerDown` | ~1.0 × cs (≈18) |
+| Smile | `mouthSmile*` | ~0.45 × cs (≈8) — slow return after a pause |
 
 ```ts
-alpha(shape) = 1 − exp(−lambdaForShape(shape) × dt)   // niezależne od FPS
+alpha(shape) = 1 − exp(−lambdaForShape(shape) × dt)   // independent of FPS
 ```
 
 ---
 
-## 💻 Pętla aktualizacji (poprawiony algorytm)
+## 💻 Update loop (improved algorithm)
 
-Poprzednia wersja tego dokumentu miała dwa błędy: (a) klucze nieobecne w słowniku aktywnych wizemów **nigdy nie wracały do 0** (usta zostawały otwarte), (b) sztywny `lerp(…, 0.35)` zależał od FPS. Poniższa wersja naprawia oba:
+The previous version of this document had two bugs: (a) keys absent from the dictionary of active visemes **never returned to 0** (the mouth stayed open), (b) the fixed `lerp(…, 0.35)` depended on the FPS. The version below fixes both:
 
 ```javascript
-// FaceController.render(dt) — wywoływane z pętli renderującej Three.js.
-// Jedyny moduł, który pisze do morphTargetInfluences (docs/4).
+// FaceController.render(dt) — called from the Three.js render loop.
+// The only module that writes to morphTargetInfluences (docs/4).
 render(dt) {
   const now = this.audioCtx.currentTime;
   const targets = new Map(); // (shape → weight)
 
-  // 1. Wygaszanie do zera (reguła fundamentu): startujemy od zera,
-  //    wkłady dodają się addytywnie — klucze bez wkładu naturalnie dążą do 0.
-  const SPEECH_KEYS = this.speechShapeNames; // lista kluczy mowy z FaceDriver
+  // 1. Decay to zero (foundation rule): start from zero,
+  //    contributions add up — keys without a contribution naturally tend to 0.
+  const SPEECH_KEYS = this.speechShapeNames; // list of speech keys from FaceDriver
 
-  // 2. Suma aktywnych wizemów (z eposem — patrz docs/4)
+  // 2. Sum of active visemes (with the epoch — see docs/4)
   for (const item of this.queue) {
-    if (item.epoch !== this.epoch) continue;            // świeżość po przerwaniu
+    if (item.epoch !== this.epoch) continue;            // freshness after an interruption
     const elapsed = now - item.startTimeSec;
     if (elapsed < -0.05 || elapsed > item.totalDurationSec) continue;
 
     const w = this.easing(elapsed, item);               // blend-in/hold/blend-out
-    for (const [shape, maxVal] of item.shapes) {         // Map z tabeli powyżej
-      const scaled = maxVal * this.scaleForShape(shape); // JEDNO mnożenie (v1.1)
+    for (const [shape, maxVal] of item.shapes) {         // Map from the table above
+      const scaled = maxVal * this.scaleForShape(shape); // ONE multiplication (v1.1)
       targets.set(shape, Math.min(1.0, (targets.get(shape) ?? 0) + scaled * w));
     }
   }
 
-  // 3. Wygładzanie niezależne od FPS — alpha PER KSZTAŁT (v1.1)
+  // 3. FPS-independent smoothing — alpha PER SHAPE (v1.1)
   for (const shape of SPEECH_KEYS) {
-    const target = targets.get(shape) ?? 0;              // brak wkładu → 0 (relaks)
+    const target = targets.get(shape) ?? 0;              // no contribution → 0 (relaxation)
     const alpha = 1 - Math.exp(-this.lambdaForShape(shape) * dt);
     const current = this.currentWeights.get(shape) ?? 0;
     const next = current + (target - current) * alpha;
     this.currentWeights.set(shape, next);
-    this.faceDriver.applyWeight(shape, next);            // synchronizacja wszystkich sub-meshy
+    this.faceDriver.applyWeight(shape, next);            // synchronize all sub-meshes
   }
 }
 ```
 
-Własności tej pętli:
-* **Jeden właściciel** `morphTargetInfluences` — `FaceController` (patrz architektura w [docs/4](4-audio-i-obsluga-przerwan.md)).
-* `lambdaForShape` steruje "gabarytem" ust per grupa mięśni (tabela wyżej): za małe = ocięta mowa, za duże = maszyna do żucia.
-* **Wymuszone domknięcie**: przy `M/B/P` celuj w `mouthClose: 1.0` z priorytetem — jeśli additive sum przekroczy, to `mouthClose` ma pierwszeństwo przed `jawOpen` (domknięcie jest dominujące wizualnie).
-* Realizacja w kodzie: `src/lipsync/viseme-scheduler.ts` — `scaleForShape()`, `lambdaForShape()`, `update()`.
+Properties of this loop:
+* **Single owner** of `morphTargetInfluences` — `FaceController` (see the architecture in [docs/4](4-audio-and-barge-in.md)).
+* `lambdaForShape` controls the "size" of the mouth per muscle group (table above): too small = clipped speech, too large = a chewing machine.
+* **Forced closure**: for `M/B/P` aim at `mouthClose: 1.0` with priority — if the additive sum exceeds it, `mouthClose` takes precedence over `jawOpen` (closure is visually dominant).
+* Implementation in code: `src/lipsync/viseme-scheduler.ts` — `scaleForShape()`, `lambdaForShape()`, `update()`.
 
 
 ---
 
-## 🧪 Anty-robotyczność (checklist wyższej jakości)
+## 🧪 Anti-robotic checklist (higher-quality speech)
 
-* Interpunkycja (`.` `,` `?` `!`) = mikropauza 60–120 ms z pełnym domknięciem — naturalne "oddychanie" między zdaniami.
-* Nigdy nie wracaj z pauzy pełnym uśmiechem — po pauzie `mouthSmile*` rośnie wolniej (lambda osobna: ~6).
-* Mikro-jitter na `jawOpen` (szum ±1% o częstotliwości ~4 Hz) — eliminuje "perfekcyjną", nienaturalną płaskość ruchu.
-* Mruganie podczas mowy pozostaje włączone (nie wyłączaj blinków, gdy awatar mówi — to najsilniejszy sygnał "żywości").
+* Punctuation (`.` `,` `?` `!`) = a 60–120 ms micro-pause with full closure — natural "breathing" between sentences.
+* Never come back from a pause with a full smile — after a pause `mouthSmile*` rises more slowly (separate lambda: ~6).
+* Micro-jitter on `jawOpen` (±1% noise at ~4 Hz) — removes the "perfect", unnatural flatness of the motion.
+* Blinking during speech stays enabled (do not turn blinks off while the avatar speaks — it is the strongest signal of "aliveness").
