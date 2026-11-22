@@ -1,13 +1,13 @@
 /**
- * Rejestr źródeł animacji (Faza 11, 11-05, Pattern 4).
+ * Animation source registry (Phase 11, 11-05, Pattern 4).
  *
- * Segment `LIVE | A2F` i porównywarka czytają źródła z tego rejestru — Faza 10 dorejestruje
- * `a2f-cloud` jako wpis DANYCH (zero zmian shella/HTML).
+ * The `LIVE | A2F` segment and the comparison tool read sources from this registry — Phase 10 will register
+ * `a2f-cloud` as a DATA entry (zero shell/HTML changes).
  */
 import { AnimationMode } from '../types/avatar';
 
 export interface AnimationSourceApplyContext {
-  /** Przełączenie źródła w AnimationController (persist + defer). */
+  /** Switching the source in AnimationController (persist + defer). */
   setSource(mode: AnimationMode): void;
 }
 
@@ -24,7 +24,7 @@ export class AnimationSourceRegistry {
 
   public register(spec: AnimationSourceSpec): void {
     if (this.specs.has(spec.id)) {
-      console.warn(`[AnimationSourceRegistry] Źródło '${spec.id}' już zarejestrowane — nadpisuję.`);
+      console.warn(`[AnimationSourceRegistry] Source '${spec.id}' is already registered — overwriting.`);
     }
     this.specs.set(spec.id, spec);
   }
@@ -38,7 +38,7 @@ export class AnimationSourceRegistry {
   }
 }
 
-/** Domyślne źródła wbudowane (F10 doda tu wpis 'a2f-cloud'). */
+/** Built-in default sources (F10 will add the 'a2f-cloud' entry here). */
 export function createDefaultAnimationSources(): AnimationSourceRegistry {
   const registry = new AnimationSourceRegistry();
   registry.register({
@@ -52,7 +52,7 @@ export function createDefaultAnimationSources(): AnimationSourceRegistry {
     id: 'a2f-local',
     label: 'A2F (lokalny)',
     short: 'A2F',
-    // Dostępność realnie weryfikuje panel A2F (/status); segment nie blokuje wyboru.
+    // Availability is actually verified by the A2F panel (/status); the segment does not block selection.
     available: () => true,
     apply: (ctx) => ctx.setSource('frames'),
   });

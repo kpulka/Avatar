@@ -1,10 +1,10 @@
 /**
- * Merge czasu — fonemy z kotwic alignmentu znaków ElevenLabs (docs/3, v1.1, Faza 7).
+ * Time merge — phonemes from ElevenLabs character-alignment anchors (docs/3, v1.1, Phase 7).
  *
- * Alignment ElevenLabs podaje czasy LITER. Ten moduł dzieli tekst na słowa, dla każdego
- * słowa pobiera fonemy (G2P) i rozkłada czas słowa proporcjonalnie na fonemy
- * (samogłoski/dyftongi 1.2, spółgłoski 0.8). Litery nieme nie generują własnych wizem —
- * ich czas wchłaniają sąsiednie fonemy (suma duracji słowa = jego długość czasowa z alignmentu).
+ * The ElevenLabs alignment gives LETTER times. This module splits the text into words, fetches
+ * the phonemes (G2P) for each word and distributes the word time proportionally over the phonemes
+ * (vowels/diphthongs 1.2, consonants 0.8). Silent letters do not generate their own visemes —
+ * their time is absorbed by neighbouring phonemes (sum of durations = the word time span from the alignment).
  */
 
 import { CharAlignment } from '../../types/avatar';
@@ -16,7 +16,7 @@ export interface PhonemeSpan {
   durationMs: number;
 }
 
-/** Fonemy o charakterze samogłoskowym — dostają większy udział czasu słowa. */
+/** Vowel-like phonemes — they get a larger share of the word time. */
 const VOWEL_PHONEMES = new Set([
   'AA', 'AH', 'AE', 'AO', 'AW', 'AY', 'EH', 'ER', 'EY', 'IH', 'IY', 'OW', 'OY', 'UH', 'UW',
 ]);
@@ -24,8 +24,8 @@ const VOWEL_PHONEMES = new Set([
 const MIN_SPAN_MS = 35;
 
 /**
- * Rozbija alignment znaków na rozpiętości fonemów (start+duration, w ms względem chunka).
- * Zwraca [] gdy źródłem jest fallback akustyczny (brak tekstu) lub brak słów.
+ * Splits the character alignment into phoneme spans (start+duration, in ms relative to the chunk).
+ * Returns [] when the source is the acoustic fallback (no text) or there are no words.
  */
 export function mergeCharAlignmentToPhonemes(alignment: CharAlignment): PhonemeSpan[] {
   if (alignment.source !== undefined && alignment.source !== 'elevenlabs') {
@@ -42,13 +42,13 @@ export function mergeCharAlignmentToPhonemes(alignment: CharAlignment): PhonemeS
   const n = chars.length;
 
   while (i < n) {
-    // Granica: szukamy początku runu liter
+    // Boundary: look for the start of a run of letters
     if (!/[A-Za-z'’-]/.test(chars[i])) {
       i += 1;
       continue;
     }
 
-    // Zbierz run liter (słowo)
+    // Collect the run of letters (the word)
     let j = i;
     let wordText = '';
     while (j < n && /[A-Za-z'’-]/.test(chars[j])) {
@@ -67,7 +67,7 @@ export function mergeCharAlignmentToPhonemes(alignment: CharAlignment): PhonemeS
     const phonemes = wordToPhonemesSync(wordText);
     if (!phonemes || phonemes.length === 0 || wordSpanMs <= 0) continue;
 
-    // Rozkład wagowy czasu słowa na fonemy
+    // Weighted distribution of the word time over the phonemes
     const weights = phonemes.map((p) => (VOWEL_PHONEMES.has(p) ? 1.2 : 0.8));
     const totalWeight = weights.reduce((a, b) => a + b, 0);
 

@@ -1,12 +1,12 @@
 /**
- * PoseRouter — polityka wyboru źródła animacji per TURA (08-03, kontrakt v2).
+ * PoseRouter — animation source selection policy per TURN (08-03, contract v2).
  *
- * Cienki, czysty moduł (bez DOM/GPU) — testowalny. Zasady (08-CONTEXT):
- * - LIVE tura (WSS, chunki) → ZAWSZE wizemy (A2F-batch łamie TTFB <1,5 s).
- * - Język ≠ EN → wizemy (A2F trenowany na audio EN; PL wróci później równolegle).
- * - Tryb frames wymaga zdrowego źródła (a2fHealthy); gdy nieznany serwer (Faza 8,
- *   demo syntetyczne) — frames dozwolone.
- * W Fazie 9 dochodzi tu health-check /status i degradacja "bez dziury" (09-04).
+ * A thin, pure module (no DOM/GPU) — testable. Rules (08-CONTEXT):
+ * - LIVE turn (WSS, chunks) → ALWAYS visemes (A2F batch breaks TTFB <1.5 s).
+ * - Language ≠ EN → visemes (A2F is trained on EN audio; PL will return later in parallel).
+ * - Frames mode requires a healthy source (a2fHealthy); with an unknown server (Phase 8,
+ *   synthetic demo) — frames are allowed.
+ * Phase 9 adds the /status health check and "no-gap" degradation here (09-04).
  */
 
 import { AnimationMode } from '../types/avatar';
@@ -14,13 +14,13 @@ import { AnimationMode } from '../types/avatar';
 export type AnimationSource = 'viseme' | 'frames';
 
 export interface RouterContext {
-  /** Tryb wybrany przez użytkownika (przełącznik HUD). */
+  /** Mode selected by the user (HUD switch). */
   mode: AnimationMode;
-  /** true = tura LIVE (strumień WSS agenta). */
+  /** true = LIVE turn (the agent's WSS stream). */
   liveTurn: boolean;
-  /** Język wypowiedzi; domyślnie 'en'. */
+  /** Utterance language; default 'en'. */
   language?: 'en' | 'pl' | 'other';
-  /** false = źródło A2F niezdrowe (status); undefined = nieznane/nieużywane (Faza 8). */
+  /** false = A2F source unhealthy (status); undefined = unknown/unused (Phase 8). */
   a2fHealthy?: boolean;
 }
 

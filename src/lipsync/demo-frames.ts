@@ -1,15 +1,15 @@
 /**
- * Syntetyczne ramki demo do trybu frames (08-03) — "suchy bieg" przed realnym A2F.
+ * Synthetic demo frames for the frames mode (08-03) — a "dry run" before the real A2F.
  *
- * Dwa wejścia, JEDEN model czasu (fraza → okna znaków):
- * - buildDemoFrames(...): FramesClip 60 fps imitujący ruch ust (samogłoski otwierają,
- *   M/B/P domykają itd.). Pozy są WYGŁADZANE między znakami (lekkie spline/filtr) —
- *   generator modeluje PŁYNNE wyjście neuronowe A2F; kontroler frames pozostaje bez
- *   wygładzania (kontrakt v2).
- * - synthesizeDemoAudio(...): mowopodobny sygnał (per-fonemowe źródło dźwięczne/szumne,
- *   F0 zmienia się per sylaba) — NIE czysty ton; zsynchronizowany z ramkami.
+ * Two inputs, ONE time model (phrase -> character windows):
+ * - buildDemoFrames(...): a 60 fps FramesClip imitating mouth movement (vowels open,
+ *   M/B/P close, etc.). Poses are SMOOTHED between characters (light spline/filter) —
+ *   the generator models the SMOOTH neural A2F output; the frames controller stays without
+ *   smoothing (contract v2).
+ * - synthesizeDemoAudio(...): speech-like signal (per-phoneme voiced/noise source,
+ *   F0 varies per syllable) — NOT a pure tone; synchronized with the frames.
  *
- * Oba czyste i deterministyczne (bez DOM), testowalne.
+ * Both are pure and deterministic (no DOM), testable.
  */
 
 import { FramesClip, PoseFrame } from '../types/avatar';
@@ -17,18 +17,18 @@ import { FramesClip, PoseFrame } from '../types/avatar';
 const FPS = 60;
 
 const VOWELS = new Set('aeiouyąęó'.split(''));
-const ROUNDED = new Set('ouó'.split('')); // wargi w dzióbek
-const SMILE_VOWELS = new Set('iyę'.split('')); // rozciągnięte kąciki
-const BILABIAL = new Set('mbp'.split('')); // pełne domknięcie
+const ROUNDED = new Set('ouó'.split('')); // lips pursed into a pucker
+const SMILE_VOWELS = new Set('iyę'.split('')); // stretched mouth corners
+const BILABIAL = new Set('mbp'.split('')); // full closure
 const LABIODENTAL = new Set('fv'.split(''));
 const SIBILANT = new Set('szcżźś'.split(''));
 const ROUND_CONSONANTS = new Set('wr'.split(''));
-/** Spółgłoski dźwięczne (rezonans) — niegłośne źródło dźwięczne. */
+/** Voiced consonants (resonant) — a quiet voiced source. */
 const VOICED_CONSONANTS = new Set('mbnwlrgyjdżdźdz'.split(''));
 
 const clamp01 = (v: number): number => (v < 0 ? 0 : v > 1 ? 1 : v);
 
-/** Docelowa poza dla pojedynczej litery (uproszczona, tylko do demo). */
+/** Target pose for a single letter (simplified, for the demo only). */
 function poseForChar(ch: string): Record<string, number> {
   const c = ch.toLowerCase();
   if (c === ' ' || c === ',' || c === '.' || c === '—' || c === '-') return {};
@@ -51,16 +51,16 @@ function poseForChar(ch: string): Record<string, number> {
   }
   if (SIBILANT.has(c)) return { jawOpen: 0.18, mouthSmileLeft: 0.18, mouthSmileRight: 0.18 };
   if (ROUND_CONSONANTS.has(c)) return { jawOpen: 0.18, mouthPucker: 0.45 };
-  // Pozostałe spółgłoski — delikatne otwarcie.
+  // Remaining consonants — a gentle opening.
   return { jawOpen: 0.16 };
 }
 
-/** Płynne przejście między pozami: lekki filtr wygładzający na kanale kształtu
- *  (promień ~3 ramki = ~100 ms) — jak temporally-smooth output neuronowego A2F. */
+/** Smooth transition between poses: a light smoothing filter on the shape channel
+ *  (radius ~3 frames = ~100 ms) — like the temporally smooth output of a neural A2F. */
 function smoothChannel(values: number[], radius = 3): number[] {
   const n = values.length;
   const win: number[] = [];
-  for (let k = -radius; k <= radius; k++) win.push(radius + 1 - Math.abs(k)); // trójkąt 1..r+1..1
+  for (let k = -radius; k <= radius; k++) win.push(radius + 1 - Math.abs(k)); // triangle 1..r+1..1
   const winSum = win.reduce((a, b) => a + b, 0);
   const out = new Array<number>(n).fill(0);
   for (let i = 0; i < n; i++) {
@@ -75,16 +75,16 @@ function smoothChannel(values: number[], radius = 3): number[] {
 }
 
 /**
- * Buduje FramesClip 60 fps z frazy (ramki relatywne, kontrakt v2).
- * Pozy znaków wygładzone — demo ma wyglądać jak płynny strumień neuronowy,
- * a nie skoki "klatka po klatce".
+ * Builds a 60 fps FramesClip from a phrase (relative frames, contract v2).
+ * Character poses are smoothed — the demo should look like a smooth neural stream,
+ * not "frame by frame" jumps.
  */
 export function buildDemoFrames(_sampleRate: number, durationSec: number, phrase = 'Hello and welcome'): FramesClip {
   const n = Math.max(1, Math.round(durationSec * FPS));
   const chars = (phrase.length > 0 ? phrase : ' ').split('');
   const charDur = durationSec / chars.length;
 
-  // Surowa poza per klatka (zero-order w oknie znaku).
+  // Raw pose per frame (zero-order within the character window).
   const rawShapes = new Map<string, number[]>();
   const frames: PoseFrame[] = [];
 
@@ -101,7 +101,7 @@ export function buildDemoFrames(_sampleRate: number, durationSec: number, phrase
     frames.push({ timeSec: t, weights });
   }
 
-  // Wygładzenie każdego kanału w czasie (między pozycjami znaków).
+  // Smooth every channel over time (between character poses).
   const usedShapes = new Set<string>();
   for (const [shape, raw] of rawShapes) {
     if (Math.max(...raw) < 0.001) continue;
@@ -126,9 +126,9 @@ export function buildDemoFrames(_sampleRate: number, durationSec: number, phrase
   };
 }
 
-// --- Synteza mowopodobnego audio (zsynchronizowana z tym samym modelem czasu) ---
+// --- Speech-like audio synthesis (synchronized with the same time model) ---
 
-/** Deterministyczny szum (LCG) — testowalność, brak zależności od Math.random. */
+/** Deterministic noise (LCG) — testability, no dependency on Math.random. */
 function mulberry32(seed: number): () => number {
   let a = seed >>> 0;
   return () => {
@@ -145,10 +145,10 @@ function isVowelChar(c: string): boolean {
 }
 
 /**
- * Generuje mono audio (Float32Array, -1..1) "mowopodobne" dla demo frames.
- * Ta sama fraza i ten sam podział czasu co buildDemoFrames → usta grają z dźwiękiem.
- * Per znak: samogłoski/sonoranty = źródło dźwięczne (F0 per sylaba + formantowe podbicia),
- * syczące/frykatywy = szum, zwarcia = krótki szum; obwiednia sylaby jak w ramkach.
+ * Generates mono audio (Float32Array, -1..1) "speech-like" for the frames demo.
+ * Same phrase and same time split as buildDemoFrames → the mouth plays along with the sound.
+ * Per character: vowels/sonorants = voiced source (F0 per syllable + formant boosts),
+ * sibilants/fricatives = noise, stops = a short burst of noise; syllable envelope as in the frames.
  */
 export function synthesizeDemoAudio(sampleRate: number, durationSec: number, phrase = 'Hello and welcome'): Float32Array {
   const total = Math.max(1, Math.floor(sampleRate * durationSec));
@@ -164,40 +164,40 @@ export function synthesizeDemoAudio(sampleRate: number, durationSec: number, phr
     const charIndex = Math.min(chars.length - 1, Math.floor(t / charDur));
     const ch = chars[charIndex].toLowerCase();
     const tin = t - charIndex * charDur;
-    // Obwiednia sylaby (15% fade) — spójna z ramkami, ale mocniejsza w centrum.
+    // Syllable envelope (15% fade) — consistent with the frames, but stronger at the centre.
     const within = tin / charDur;
     const env = Math.max(0.18, Math.min(1, Math.min(within / 0.12, (1 - within) / 0.12)));
 
-    // F0 per sylaba (deterministyczna, stabilna w obrębie znaku) + lekki jitter.
+    // F0 per syllable (deterministic, stable within a character) + slight jitter.
     const f0 = 105 + ((charIndex * 37) % 85); // 105..190 Hz
     const nz = noise() * 2 - 1;
 
     let s = 0;
     if (isVowelChar(ch) || VOICED_CONSONANTS.has(ch)) {
-      // Źródło dźwięczne: f0 + harmoniki; samogłoski przednie podbijają wyższe formanty.
+      // Voiced source: f0 + harmonics; front vowels boost the higher formants.
       const v = ch;
       const hi = SMILE_VOWELS.has(v) ? 0.45 : ROUNDED.has(v) ? 0.2 : 0.3;
       const h1 = Math.sin(2 * Math.PI * f0 * t);
       const h2 = Math.sin(2 * Math.PI * f0 * 2 * t);
       const h3 = Math.sin(2 * Math.PI * f0 * 3 * t);
       s = 0.6 * h1 + hi * h2 + (SMILE_VOWELS.has(v) ? 0.25 * h3 : 0.12 * h3);
-      if (ch === 'm' || ch === 'n') s = 0.55 * h1 + 0.15 * h2; // nosowa, przygaszona
+      if (ch === 'm' || ch === 'n') s = 0.55 * h1 + 0.15 * h2; // nasal, muted
       s *= env * 0.9;
     } else if (SIBILANT.has(ch)) {
-      s = nz * 0.4 * env; // szum syczący
+      s = nz * 0.4 * env; // hissing noise
     } else if (LABIODENTAL.has(ch) || ch === 'h') {
       s = nz * 0.28 * env;
     } else if ('ptk'.includes(ch)) {
-      // Zwarcie: krótki szum tylko na początku okna znaku.
+      // Stop: a short burst of noise only at the start of the character window.
       s = within < 0.18 ? nz * 0.35 * (1 - within / 0.18) : 0;
     } else if (ch === ' ' || ch === ',' || ch === '.') {
       s = 0;
     } else {
-      // Pozostałe spółgłoski: lekki dźwięczny szmer.
+      // Remaining consonants: a light voiced murmur.
       s = (0.5 * Math.sin(2 * Math.PI * f0 * t) + 0.25 * nz) * 0.25 * env;
     }
 
-    // Łagodne ograniczenie (soft clip) i fade na brzegach.
+    // Gentle limiting (soft clip) and fade at the edges.
     s = Math.tanh(s * 1.3);
     if (i < fadeIn) s *= i / fadeIn;
     if (i > total - fadeOut) s *= (total - i) / fadeOut;

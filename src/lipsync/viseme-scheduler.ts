@@ -9,17 +9,17 @@ export interface VisemeQueueItem {
 }
 
 export interface SchedulerOptions {
-  lambda?: number; // Szybkość reakcji mięśni ust (domyślnie 18 [1/s])
-  blendInSec?: number; // Czas blend-in (domyślnie 35ms)
-  blendOutSec?: number; // Czas blend-out (domyślnie 45ms)
+  lambda?: number; // Reaction speed of the mouth muscles (default 18 [1/s])
+  blendInSec?: number; // Blend-in time (default 35ms)
+  blendOutSec?: number; // Blend-out time (default 45ms)
   calibrationProfile?: Partial<CalibrationProfile>;
 }
 
 /**
- * Silnik harmonogramowania i koartykulacji wizemów mowy (docs/3)
+ * Speech viseme scheduling and coarticulation engine (docs/3)
  */
 
-/** Twardy sufit efektywnego mouthClose — chroni MetaPerson przed deformacją "warga na nos". */
+/** Hard ceiling of the effective mouthClose — protects MetaPerson from the "lip on the nose" deformation. */
 const CLOSE_SAFETY_CAP = 0.85;
 
 /** Effective mouthPress of a full bilabial (M/B/P) under the balanced preset (Phase 11.2 SHOW-06). */
@@ -27,14 +27,14 @@ const PRESS_REF = 0.35;
 
 export class VisemeScheduler {
   private queue: VisemeQueueItem[] = [];
-  /** Baza lambda koartykulacji [1/s] — lustro profile.coarticulationSpeed (LIPS-06);
-   *  pętla wygładzania używa per-grupowych tierów lambdaForShape. */
+  /** Coarticulation lambda base [1/s] — mirrors profile.coarticulationSpeed (LIPS-06);
+   *  the smoothing loop uses the per-group lambdaForShape tiers. */
   private lambda: number;
   private readonly blendInSec: number;
   private readonly blendOutSec: number;
   private profile: CalibrationProfile = { ...DEFAULT_CALIBRATION_PROFILE };
 
-  // Wygładzone wagi bieżącej klatki (shape -> weight)
+  // Smoothed weights of the current frame (shape -> weight)
   private readonly currentWeights: Map<string, number> = new Map();
 
   constructor(options: SchedulerOptions = {}) {
@@ -70,8 +70,8 @@ export class VisemeScheduler {
   }
 
   /**
-   * Główny krok obliczeniowy koartykulacji wywoływany w każdej klatce (dt w sekundach)
-   * Zwraca mapę zaktualizowanych wag wszystkich kluczy mowy.
+   * Main coarticulation step, invoked every frame (dt in seconds)
+   * Returns the map of updated weights for all speech keys.
    */
   public update(
     nowSec: number,
@@ -81,7 +81,7 @@ export class VisemeScheduler {
   ): Map<string, number> {
     const targets = new Map<string, number>();
 
-    // 1. Czyszczenie przedawnionych elementów kolejki
+    // 1. Drop expired queue items
     this.queue = this.queue.filter((item) => {
       if (item.epoch !== activeEpoch) return false;
       return nowSec <= item.startTimeSec + item.durationSec + this.blendOutSec;
@@ -90,7 +90,7 @@ export class VisemeScheduler {
     let activeMouthClose = 0;
     let activePress = 0;
 
-    // 2. Sumowanie wkładów aktywnych wizemów (additive blending z limitem 1.0)
+    // 2. Sum the contributions of active visemes (additive blending capped at 1.0)
     for (const item of this.queue) {
       if (item.epoch !== activeEpoch) continue;
 
@@ -100,9 +100,9 @@ export class VisemeScheduler {
       const weight = this.computeEasing(elapsed, item.durationSec);
 
       for (const [shape, maxVal] of item.shapes.entries()) {
-        // Wartości z tabeli wizemów (docs/3) są wartościami EFEKTYWNYMI (LIPS-06):
-        // scheduler mnoży je DOKŁADNIE RAZ przez mnożnik gustowy profilu kalibracji.
-        // Wszystkie pozostałe kształty (tongueOut itd.) bez dodatkowego tłumienia (1.0).
+        // Viseme table values (docs/3) are EFFECTIVE values (LIPS-06):
+        // the scheduler multiplies them EXACTLY ONCE by the taste multiplier of the calibration profile.
+        // All other shapes (tongueOut etc.) get no extra damping (1.0).
         const contribution = maxVal * this.scaleForShape(shape) * weight;
         const currentTarget = targets.get(shape) ?? 0;
         targets.set(shape, Math.max(currentTarget, contribution));
@@ -115,9 +115,9 @@ export class VisemeScheduler {
       }
     }
 
-    // 3. Priorytetowe domknięcie ust: mouthClose ORAZ docisk warg (press) tłumią jawOpen (LIPS-02).
-    // Bilabiale M/B/P mają niskie mouthClose (MetaPerson), więc samo closeRatio osłabiało by
-    // tłumienie żuchwy po poprzedniej samogłosce — press (Phase 11.2 SHOW-06) je uzupełnia.
+    // 3. Priority mouth closure: mouthClose AND lip press (press) damp jawOpen (LIPS-02).
+    // Bilabials M/B/P have a low mouthClose (MetaPerson), so closeRatio alone would weaken
+    // the jaw damping after the previous vowel — press (Phase 11.2 SHOW-06) complements it.
     if (activeMouthClose > 0.15 || activePress > 0.15) {
       const currentJaw = targets.get('jawOpen') ?? 0;
       const closeRatio = activeMouthClose / this.profile.closeScale;
@@ -126,8 +126,8 @@ export class VisemeScheduler {
       targets.set('jawOpen', currentJaw * Math.max(0, 1 - closure * 0.95));
     }
 
-    // 4. Wygładzanie niezależne od FPS (exponential damping): alpha = 1 - exp(-lambda * dt)
-    // Lambda jest PER GRUPA MIĘŚNI (domknięcia szybkie, smile wolny), baza = coarticulationSpeed.
+    // 4. FPS-independent smoothing (exponential damping): alpha = 1 - exp(-lambda * dt)
+    // Lambda is PER MUSCLE GROUP (closures fast, smile slow), base = coarticulationSpeed.
     const updated = new Map<string, number>();
 
     for (const shape of speechShapes) {
@@ -135,12 +135,12 @@ export class VisemeScheduler {
 
       const alpha = 1 - Math.exp(-this.lambdaForShape(shape) * dt);
 
-      // Reguła fundamentu: brak wkładu -> target = 0.0 (wygaszanie do neutralu)
+      // Foundation rule: no contribution -> target = 0.0 (decay to neutral)
       const target = targets.get(shape) ?? 0.0;
       const current = this.currentWeights.get(shape) ?? 0.0;
       const next = current + (target - current) * alpha;
 
-      // Jeśli waga jest minimalna (< 0.001), zresetuj do twardego 0
+      // If the weight is minimal (< 0.001), reset it to a hard 0
       const finalWeight = next < 0.001 ? 0 : next;
       this.currentWeights.set(shape, finalWeight);
       updated.set(shape, finalWeight);
@@ -150,14 +150,14 @@ export class VisemeScheduler {
   }
 
   /**
-   * Mnożnik gustowy z profilu kalibracji dla pojedynczego kształtu (LIPS-06).
-   * Wartości tabeli wizemów są efektywne; profil to lekka korekta smaku wokół 1.0.
+   * Taste multiplier from the calibration profile for a single shape (LIPS-06).
+   * Viseme table values are effective; the profile is a light taste correction around 1.0.
    */
   private scaleForShape(shape: string): number {
     const p = this.profile;
     if (shape === 'mouthClose' || shape === 'mouthPressLeft' || shape === 'mouthPressRight') {
-      // Bezpieczenstwo MetaPerson: powyzej ~0.85 morph mouthClose ciagnie dolną wargę na nos.
-      // Sufit twardy — niezalezny od suwaka (domyslne presety ustawione nizej).
+      // MetaPerson safety: above ~0.85 the mouthClose morph pulls the lower lip onto the nose.
+      // Hard ceiling — independent of the slider (default presets are set lower).
       return Math.min(p.closeScale, CLOSE_SAFETY_CAP);
     }
     if (shape === 'jawOpen') return p.jawScale;
@@ -166,17 +166,17 @@ export class VisemeScheduler {
     if (shape === 'mouthFunnel') return p.funnelScale;
     if (shape === 'mouthRollLower' || shape.startsWith('mouthShrug')) return p.rollScale;
     if (shape.startsWith('mouthUpperUp') || shape.startsWith('mouthLowerDown')) return p.teethExposureScale;
-    return 1.0; // tongueOut i pozostałe — bez dodatkowego tłumienia
+    return 1.0; // tongueOut and the rest — no extra damping
   }
 
   /**
-   * Lambda wygładzania per grupa mięśni. Baza = this.lambda — lustro
-   * coarticulationSpeed z profilu (konstruktor i setCalibrationProfile
-   * synchronizują oba; domyślnie 18). Krótkie spółgłoski EN (domknięcia 40-80 ms)
-   * muszą zdążyć osiągnąć kształt, a uśmiech mowy ma wracać wolno (docs/3).
+   * Smoothing lambda per muscle group. Base = this.lambda — a mirror of
+   * coarticulationSpeed from the profile (the constructor and setCalibrationProfile
+   * keep both in sync; default 18). Short EN consonants (closures of 40-80 ms)
+   * must have time to reach their shape, while the speech smile should return slowly (docs/3).
    */
   private lambdaForShape(shape: string): number {
-    const cs = this.lambda; // baza = coarticulationSpeed profilu, domyślnie 18
+    const cs = this.lambda; // base = the profile's coarticulationSpeed, default 18
     if (shape === 'mouthClose' || shape === 'mouthPressLeft' || shape === 'mouthPressRight') return cs * 1.7;
     if (shape === 'jawOpen' || shape === 'tongueOut') return cs * 1.55;
     if (shape.startsWith('mouthSmile')) return cs * 0.45;
@@ -184,7 +184,7 @@ export class VisemeScheduler {
   }
 
   /**
-   * Oblicza wagę z cosine blend-in, hold i blend-out
+   * Computes the weight from cosine blend-in, hold and blend-out
    */
   public computeEasing(elapsed: number, duration: number): number {
     if (elapsed < 0) {

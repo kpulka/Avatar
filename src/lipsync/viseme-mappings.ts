@@ -1,14 +1,14 @@
 /**
- * Tabela mapowań znaków i dwuznaków na blendshape'y ARKit wg docs/3.
+ * Mapping table from characters and digraphs to ARKit blendshapes per docs/3.
  */
 
 export interface MappedShapeResult {
   shapes: Map<string, number>;
-  consumedChars: number; // 2 dla dwuznaków, 1 dla pojedynczych znaków
+  consumedChars: number; // 2 for digraphs, 1 for single characters
 }
 
 /**
- * Sprawdza czy para znaków tworzy dwuznak z lookahead
+ * Checks whether a pair of characters forms a digraph, using lookahead
  */
 function tryMapDigraph(c1: string, c2: string): Map<string, number> | null {
   const pair = (c1 + c2).toUpperCase();
@@ -44,7 +44,7 @@ function tryMapDigraph(c1: string, c2: string): Map<string, number> | null {
     case 'NG':
       return new Map([['jawOpen', 0.25]]);
 
-    // Polskie dwuznaki i zmiękczenia
+    // Polish digraphs and softenings
     case 'SZ':
     case 'CZ':
       return new Map([
@@ -89,14 +89,14 @@ function tryMapDigraph(c1: string, c2: string): Map<string, number> | null {
 }
 
 /**
- * Mapuje pojedynczy znak na wagi ARKit
+ * Maps a single character to ARKit weights
  */
 function mapSingleChar(char: string, nextChar?: string): Map<string, number> {
   const upper = char.toUpperCase();
   const nextUpper = (nextChar ?? '').toUpperCase();
 
   switch (upper) {
-    // Samogłoski
+    // Vowels
     case 'A':
       return new Map([
         ['jawOpen', 0.55],
@@ -131,7 +131,7 @@ function mapSingleChar(char: string, nextChar?: string): Map<string, number> {
     case 'W':
       return new Map([['mouthPucker', 0.4]]);
 
-    // Spółgłoski wargowe (PEŁNE DOMKNIĘCIE - LIPS-02)
+    // Bilabial consonants (FULL CLOSURE - LIPS-02)
     case 'M':
     case 'B':
     case 'P':
@@ -141,7 +141,7 @@ function mapSingleChar(char: string, nextChar?: string): Map<string, number> {
         ['mouthPressRight', 0.15],
       ]);
 
-    // Spółgłoski wargowo-zębowe (F / V: górne zęby na dolnej wardze)
+    // Labiodental consonants (F / V: upper teeth on the lower lip)
     case 'F':
     case 'V':
       return new Map([
@@ -152,7 +152,7 @@ function mapSingleChar(char: string, nextChar?: string): Map<string, number> {
         ['mouthShrugLower', 0.18],
       ]);
 
-    // Przedniojęzykowe
+    // Alveolar / dental (tongue-tip)
     case 'L':
       return new Map([
         ['jawOpen', 0.3],
@@ -163,7 +163,7 @@ function mapSingleChar(char: string, nextChar?: string): Map<string, number> {
     case 'N':
       return new Map([['jawOpen', 0.2]]);
 
-    // Syczące
+    // Sibilants
     case 'S':
     case 'Z':
       return new Map([
@@ -172,28 +172,28 @@ function mapSingleChar(char: string, nextChar?: string): Map<string, number> {
         ['mouthSmileRight', 0.15],
       ]);
 
-    // Tylnojęzykowe
+    // Velars
     case 'K':
     case 'G':
       return new Map([['jawOpen', 0.35]]);
 
-    // Heurystyka kontekstowa dla 'C' (docs/3)
+    // Contextual heuristic for 'C' (docs/3)
     case 'C': {
       const isSoft = ['E', 'I', 'Y'].includes(nextUpper);
       if (isSoft) {
-        // Miękka wymowa jak S ("cell", "city")
+        // Soft pronunciation like S ("cell", "city")
         return new Map([
           ['jawOpen', 0.15],
           ['mouthSmileLeft', 0.15],
           ['mouthSmileRight', 0.15],
         ]);
       }
-      // Twarda wymowa jak K ("cat", "cup")
+      // Hard pronunciation like K ("cat", "cup")
       return new Map([['jawOpen', 0.35]]);
     }
 
     case 'X':
-      // Połączenie K + S
+      // K + S combination
       return new Map([
         ['jawOpen', 0.25],
         ['mouthSmileLeft', 0.15],
@@ -216,7 +216,7 @@ function mapSingleChar(char: string, nextChar?: string): Map<string, number> {
         ['mouthSmileRight', 0.15],
       ]);
 
-    // Polskie znaki diakrytyczne
+    // Polish diacritic characters
     case 'Ą':
       return new Map([
         ['jawOpen', 0.4],
@@ -259,7 +259,7 @@ function mapSingleChar(char: string, nextChar?: string): Map<string, number> {
         ['mouthSmileRight', 0.12],
       ]);
 
-    // Spacja i interpunkcja -> naturalny spoczynek (brak wymuszania mouthClose!)
+    // Space and punctuation -> natural rest (do not force mouthClose!)
     case ' ':
     case '.':
     case ',':
@@ -271,19 +271,19 @@ function mapSingleChar(char: string, nextChar?: string): Map<string, number> {
       return new Map();
 
     default:
-      // Nieznane znaki -> delikatna neutralna apertura
+      // Unknown characters -> a gentle neutral aperture
       return new Map([['jawOpen', 0.12]]);
   }
 }
 
 /**
- * Główna funkcja ekstrakcji wizemu z tekstu z uwzględnieniem lookahead dla dwuznaków
+ * Main function extracting a viseme from text, with lookahead for digraphs
  */
 export function mapCharToShapes(chars: string[], index: number): Map<string, number> {
   const currentChar = chars[index] ?? '';
   const nextChar = chars[index + 1];
 
-  // 1. Sprawdź dwuznaki (lookahead)
+  // 1. Check digraphs (lookahead)
   if (nextChar) {
     const digraphShapes = tryMapDigraph(currentChar, nextChar);
     if (digraphShapes) {
@@ -291,20 +291,20 @@ export function mapCharToShapes(chars: string[], index: number): Map<string, num
     }
   }
 
-  // 2. Sprawdź pojedynczy znak
+  // 2. Check a single character
   return mapSingleChar(currentChar, nextChar);
 }
 
-// Dwuznaki rozpoznawane przez mapCharToShapes (EN + PL) — używane przez tokenizer nadpisań.
+// Digraphs recognised by mapCharToShapes (EN + PL) — used by the override tokenizer.
 const KNOWN_DIGRAPH_PAIRS = new Set([
   'SH', 'CH', 'TH', 'PH', 'WH', 'QU', 'NG',
   'SZ', 'CZ', 'RZ', 'DŻ', 'DZ', 'DŹ', 'SI', 'ZI', 'NI', 'CI',
 ]);
 
 /**
- * Zwraca "token" (klucz nadpisań wizemów) dla znaku o danym indeksie:
- * dwuznak gdy rozpoznany (2 znaki), w innym przypadku pojedyncza litera.
- * Zwraca null dla spacji/interpunkcji/nieznanych (brak edycji).
+ * Returns the "token" (viseme override key) for the character at the given index:
+ * a digraph when recognised (2 characters), otherwise a single letter.
+ * Returns null for space/punctuation/unknown (not editable).
  */
 export function charTokenFor(chars: string[], index: number): string | null {
   const currentChar = chars[index];
@@ -317,13 +317,13 @@ export function charTokenFor(chars: string[], index: number): string | null {
   }
 
   const upper = currentChar.toUpperCase();
-  if (!/[A-ZĄĆĘŁŃÓŚŹŻ]/.test(upper)) return null; // spacja, interpunkcja, cyfry...
+  if (!/[A-ZĄĆĘŁŃÓŚŹŻ]/.test(upper)) return null; // space, punctuation, digits...
   return upper;
 }
 
 /**
- * Domyślne kształty dla tokenu ścieżki znakowej (bez kontekstu — dla C brany wariant twardy).
- * Używane przez Edytor Wizemów i podgląd (viseme-overrides).
+ * Default shapes for a character-path token (without context — for C the hard variant is used).
+ * Used by the Viseme Editor and the preview (viseme-overrides).
  */
 export function charDefaultShapesForToken(token: string): Map<string, number> | null {
   if (!token) return null;

@@ -111,15 +111,15 @@ describe('a2f-parser (kontrakt v2)', () => {
   });
 
   it('rzuca czytelny błąd gdy brak frames', () => {
-    expect(() => parseA2fPayload({} as never)).toThrowError('A2F: brak frames');
-    expect(() => parseA2fPayload({ frames: null } as never)).toThrowError('A2F: brak frames');
+    expect(() => parseA2fPayload({} as never)).toThrowError('A2F: missing frames');
+    expect(() => parseA2fPayload({ frames: null } as never)).toThrowError('A2F: missing frames');
   });
 
   it('parseA2fJson: poprawny i niepoprawny JSON', () => {
     const ok = parseA2fJson('{"fps":60,"frames":[{"frame_time":0,"blendshapes":{"JawOpen":0.1}}]}');
     expect(ok.clip.frames).toHaveLength(1);
 
-    expect(() => parseA2fJson('{nie json')).toThrowError('A2F: niepoprawny JSON');
+    expect(() => parseA2fJson('{nie json')).toThrowError('A2F: invalid JSON');
   });
 
   it('inferuje carriesEyes z obecności eyeBlink*/eyeLook* w ramkach', () => {

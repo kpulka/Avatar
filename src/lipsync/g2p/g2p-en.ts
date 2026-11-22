@@ -1,13 +1,13 @@
 /**
- * Warstwa G2P (grapheme-to-phoneme) dla języka angielskiego — docs/3 (v1.1, Faza 7).
+ * G2P (grapheme-to-phoneme) layer for English — docs/3 (v1.1, Phase 7).
  *
- * ElevenLabs zwraca alignment ZNAKÓW (nie fonemów). Angielska ortografia nie jest fonetyczna,
- * więc litery nieme i dwuznaki samogłoskowe produkowały fantomowe ruchy ust. Ten moduł
- * zamienia słowa na fonemy ARPAbet przy użyciu leksykonu CMUdict (pakiet
- * `cmu-pronouncing-dictionary`), ładowanego leniwie (osobny chunk Vite), z regułowym
- * fallbackiem letter-to-sound dla słów spoza leksykonu.
+ * ElevenLabs returns a CHARACTER alignment (not phonemes). English spelling is not phonetic,
+ * so silent letters and vowel digraphs produced phantom mouth movements. This module
+ * turns words into ARPAbet phonemes using the CMUdict lexicon (package
+ * `cmu-pronouncing-dictionary`), loaded lazily (a separate Vite chunk), with a rule-based
+ * letter-to-sound fallback for out-of-lexicon words.
  *
- * Timing NIE jest tu generowany — pochodzi z alignmentu znaków ElevenLabs (phoneme-merge.ts).
+ * Timing is NOT generated here — it comes from the ElevenLabs character alignment (phoneme-merge.ts).
  */
 
 type PhonemeTable = Map<string, string[]>;
@@ -17,9 +17,9 @@ let loadPromise: Promise<void> | null = null;
 let loadFailed = false;
 
 /**
- * Buduje wewnętrzną tablicę fonemów z obiektu słownika CMUdict.
- * Klucze są lowercase (część zaczyna się apostrofem: "'bout"); wartości to stringi ARPAbet
- * z cyframi stresu (0/1/2), które są usuwane z każdego fonemu.
+ * Builds the internal phoneme table from the CMUdict dictionary object.
+ * Keys are lowercase (some start with an apostrophe: "'bout"); values are ARPAbet strings
+ * with stress digits (0/1/2), which are stripped from every phoneme.
  */
 function buildTable(dictionary: Record<string, string>): PhonemeTable {
   const table: PhonemeTable = new Map();
@@ -31,16 +31,16 @@ function buildTable(dictionary: Record<string, string>): PhonemeTable {
 }
 
 /**
- * Leniwy, memoizowany ładunek słownika. Dynamiczny import — Vite wydziela słownik
- * do osobnego chunka (nie blokuje startu aplikacji). Przy trwałym błędzie ustawia
- * loadFailed (g2pAvailable() → false) i ponawia przy kolejnym wywołaniu.
+ * Lazy, memoized dictionary load. Dynamic import — Vite splits the dictionary
+ * into a separate chunk (does not block app startup). On a permanent error it sets
+ * loadFailed (g2pAvailable() → false) and retries on the next call.
  */
 export function ensureG2pLoaded(): Promise<void> {
   if (loadFailed) loadPromise = null;
   if (!loadPromise) {
     loadPromise = import('cmu-pronouncing-dictionary')
       .then((mod) => {
-        // Pakiet eksportuje WYŁĄCZNIE nazwany eksport `dictionary` (brak default).
+        // The package exports ONLY the named export `dictionary` (no default).
         phonemeTable = buildTable((mod as { dictionary: Record<string, string> }).dictionary);
       })
       .catch((err) => {
@@ -52,20 +52,20 @@ export function ensureG2pLoaded(): Promise<void> {
   return loadPromise;
 }
 
-/** Czy słownik został pomyślnie załadowany i jest gotowy do użycia. */
+/** Whether the dictionary has been loaded successfully and is ready to use. */
 export function isG2pReady(): boolean {
   return phonemeTable !== null;
 }
 
-/** Czy warstwa G2P jest w ogóle dostępna (nie zakończyła się trwałym błędem). */
+/** Whether the G2P layer is available at all (did not end in a permanent error). */
 export function g2pAvailable(): boolean {
   return !loadFailed;
 }
 
 /**
- * Regułowy fallback letter-to-sound dla słów spoza leksykonu (OOV).
- * Przetwarza litery od lewej do prawej — najpierw dwuznaki, potem pojedyncze litery.
- * Nie musi być idealny — to siatka bezpieczeństwa dla rzadkich słów/nazw własnych.
+ * Rule-based letter-to-sound fallback for out-of-lexicon (OOV) words.
+ * Processes letters left to right — digraphs first, then single letters.
+ * It does not have to be perfect — it is a safety net for rare words/proper names.
  */
 function rulesFallback(word: string): string[] {
   const w = word.toLowerCase();
@@ -81,9 +81,9 @@ function rulesFallback(word: string): string[] {
     const pair = c + at(1);
     const triple = pair + at(2);
 
-    // Końcówki nieme
+    // Silent endings
     if (i === n - 1 && c === 'e') {
-      // magic-e / nieme końcowe e — pomijane, chyba że jest jedyną samogłoską
+      // magic-e / silent final e — skipped unless it is the only vowel
       const hasOtherVowel = w.slice(0, n - 1).split('').some(isVowelLetter);
       if (hasOtherVowel) {
         i += 1;
@@ -91,12 +91,12 @@ function rulesFallback(word: string): string[] {
       }
     }
     if (i === n - 2 && w.slice(n - 2) === 'ed') {
-      // końcówka -ed po spółgłosce (np. "walked") — pomijana w uproszczeniu
+      // -ed ending after a consonant (e.g. "walked") — skipped for simplicity
       i += 2;
       continue;
     }
 
-    // Dwuznaki spółgłoskowe
+    // Consonant digraphs
     switch (pair) {
       case 'sh': out.push('SH'); i += 2; continue;
       case 'ch': out.push('CH'); i += 2; continue;
@@ -112,14 +112,14 @@ function rulesFallback(word: string): string[] {
       case 'mb': if (i === n - 2) { out.push('M'); i += 2; continue; } break;
       case 'gh':
         if (i === n - 2 || (i > 0 && isVowelLetter(w[i - 1]))) {
-          i += 2; // nieme gh (koniec słowa lub po samogłosce)
+          i += 2; // silent gh (end of word or after a vowel)
           continue;
         }
         out.push('G'); i += 2; continue;
       default: break;
     }
 
-    // Pary samogłoskowe
+    // Vowel pairs
     switch (pair) {
       case 'ee': out.push('IY'); i += 2; continue;
       case 'ea': out.push('IY'); i += 2; continue;
@@ -139,12 +139,12 @@ function rulesFallback(word: string): string[] {
       default: break;
     }
 
-    // Trójznak na początku wyrazu (np. "sch" -> SK)
+    // Trigraph at the start of a word (e.g. "sch" -> SK)
     if (triple === 'sch' && i === 0) {
       out.push('S', 'K'); i += 3; continue;
     }
 
-    // Pojedyncze spółgłoski
+    // Single consonants
     switch (c) {
       case 'b': out.push('B'); i += 1; continue;
       case 'c':
@@ -156,7 +156,7 @@ function rulesFallback(word: string): string[] {
       case 'h':
         if (i === 0) { out.push('HH'); }
         else if (i > 0 && i < n - 1 && isVowelLetter(w[i - 1]) && isVowelLetter(at(1))) {
-          // h między samogłoskami — ciche w wielu przypadkach
+          // h between vowels — silent in many cases
         } else { out.push('HH'); }
         i += 1; continue;
       case 'j': out.push('JH'); i += 1; continue;
@@ -176,7 +176,7 @@ function rulesFallback(word: string): string[] {
       default: break;
     }
 
-    // Pojedyncze samogłoski
+    // Single vowels
     switch (c) {
       case 'a': out.push('AE'); i += 1; continue;
       case 'e': out.push('EH'); i += 1; continue;
@@ -186,7 +186,7 @@ function rulesFallback(word: string): string[] {
       case 'y':
         out.push(i === 0 ? 'Y' : 'IH'); i += 1; continue;
       default:
-        i += 1; continue; // nieznany znak (cyfra/itd.) — pomiń
+        i += 1; continue; // unknown character (digit etc.) — skip
     }
   }
 
@@ -194,16 +194,16 @@ function rulesFallback(word: string): string[] {
 }
 
 /**
- * Zamienia pojedyncze słowo na fonemy ARPAbet (bez cyfr stresu).
- * Kolejność: leksykon → apostrof usunięty → człony po łączniku → reguły.
- * Zwraca null tylko dla pustego/nieliterowego wejścia.
+ * Turns a single word into ARPAbet phonemes (without stress digits).
+ * Order: lexicon → apostrophe removed → hyphenated parts → rules.
+ * Returns null only for empty/non-letter input.
  */
 export function wordToPhonemesSync(word: string): string[] | null {
   const w = word.toLowerCase().replace(/[^a-z'’-]/g, '');
   if (!w) return null;
 
   const table = phonemeTable;
-  if (!table) return null; // G2P niegotowy — wywołujący decyduje o degradacji
+  if (!table) return null; // G2P not ready — the caller decides how to degrade
 
   const lookup = (token: string): string[] | null => {
     const hit = table.get(token);

@@ -1,17 +1,17 @@
 /**
- * Edytor Wizemów (docs/3 v1.1): ręczne nadpisania ułożenia blendshape'ów PER WIZEM.
+ * Viseme Editor (docs/3 v1.1): manual overrides of the blendshape pose PER VISEME.
  *
- * Uzasadnienie: combosy ARKit z tabel to domysły — na konkretnym riggu (MetaPerson) te same
- * wartości potrafią deformować (np. mouthClose ciągnie dolną wargę na nos). Ten moduł pozwala
- * nadpisać ułożenie dla każdego wizemu (klucz = fonem ARPAbet dla ścieżki G2P / token litery
- * lub dwuznaku dla ścieżki znakowej). Nadpisania zapisywane w localStorage; gdy brak nadpisania,
- * obowiązują domysły z tabel (phoneme-visemes.ts / viseme-mappings.ts).
+ * Rationale: the ARKit combos from the tables are guesses — on a concrete rig (MetaPerson) the same
+ * values can deform the face (e.g. mouthClose pulls the lower lip onto the nose). This module lets you
+ * override the pose for every viseme (key = ARPAbet phoneme for the G2P path / letter token
+ * or digraph for the character path). Overrides are stored in localStorage; when there is no override,
+ * the guesses from the tables (phoneme-visemes.ts / viseme-mappings.ts) apply.
  */
 
 import { mapPhonemeToShapes } from './g2p/phoneme-visemes';
 import { charTokenFor, charDefaultShapesForToken } from './viseme-mappings';
 
-/** Kształty aparatu mowy edytowalne w Edytorze Wizemów (bez oczu/brwi). */
+/** Speech-apparatus shapes editable in the Viseme Editor (no eyes/brows). */
 export const EDITOR_SHAPES = [
   'jawOpen',
   'mouthClose',
@@ -30,14 +30,14 @@ export const EDITOR_SHAPES = [
   'tongueOut',
 ] as const;
 
-/** Wizemy silnika G2P (EN) — klucze = fonemy ARPAbet. */
+/** Visemes of the G2P (EN) engine — keys = ARPAbet phonemes. */
 export interface VisemeRef {
   key: string;
   label: string;
 }
 
 export const EN_VISEMES: VisemeRef[] = [
-  // Samogłoski
+  // Vowels
   { key: 'AA', label: 'AA — "father" (wide)' },
   { key: 'AE', label: 'AE — "cat"' },
   { key: 'AH', label: 'AH — "but"' },
@@ -53,7 +53,7 @@ export const EN_VISEMES: VisemeRef[] = [
   { key: 'OY', label: 'OY — "boy / toy"' },
   { key: 'UH', label: 'UH — "book / good"' },
   { key: 'UW', label: 'UW — "too / you" (pucker)' },
-  // Spółgłoski
+  // Consonants
   { key: 'P', label: 'P / B / M — "map" (closure)' },
   { key: 'B', label: 'B (shared with P/M — same pose)' },
   { key: 'M', label: 'M (shared with P/B — same pose)' },
@@ -80,7 +80,7 @@ export const EN_VISEMES: VisemeRef[] = [
   { key: 'HH', label: 'HH — "hi" (aspirated)' },
 ];
 
-/** Wizemy ścieżki znakowej (PL / fallback char) — klucze = tokeny z viseme-mappings. */
+/** Character-path visemes (PL / fallback char) — keys = tokens from viseme-mappings. */
 export const CHAR_VISEMES: VisemeRef[] = [
   { key: 'A', label: 'A / Ą — wide opening' },
   { key: 'E', label: 'E / Ę — mid-open' },
@@ -144,7 +144,7 @@ export type VisemeOverrideMap = Record<string, Record<string, number>>;
 
 const STORAGE_KEY = 'avatar_viseme_overrides_v1';
 
-/** Czyta nadpisania wizemów z localStorage (pusto gdy brak). */
+/** Reads viseme overrides from localStorage (empty when none). */
 export function loadVisemeOverrides(): VisemeOverrideMap {
   if (typeof localStorage === 'undefined') return {};
   try {
@@ -153,22 +153,22 @@ export function loadVisemeOverrides(): VisemeOverrideMap {
     const parsed = JSON.parse(raw) as VisemeOverrideMap;
     return parsed && typeof parsed === 'object' ? parsed : {};
   } catch (e) {
-    console.warn('[VisemeOverrides] Błąd odczytu nadpisań:', e);
+    console.warn('[VisemeOverrides] Error reading overrides:', e);
     return {};
   }
 }
 
-/** Zapisuje całą mapę nadpisań wizemów. */
+/** Saves the whole viseme override map. */
 export function saveVisemeOverrides(overrides: VisemeOverrideMap): void {
   if (typeof localStorage === 'undefined') return;
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(overrides));
   } catch (e) {
-    console.warn('[VisemeOverrides] Błąd zapisu nadpisań:', e);
+    console.warn('[VisemeOverrides] Error saving overrides:', e);
   }
 }
 
-/** Czyści wszystkie nadpisania. */
+/** Clears all overrides. */
 export function clearVisemeOverrides(): void {
   if (typeof localStorage !== 'undefined') {
     try {
@@ -180,8 +180,8 @@ export function clearVisemeOverrides(): void {
 }
 
 /**
- * Domyślne ułożenie kształtów dla danego wizemu (używane przez podgląd i gdy brak nadpisania).
- * Zwraca null dla wizemów bez kształtów (np. spacja) lub nieznanych.
+ * Default shape pose for a given viseme (used by the preview and when there is no override).
+ * Returns null for visemes without shapes (e.g. space) or unknown ones.
  */
 export function defaultVisemeShapes(key: string): Map<string, number> | null {
   const fromPhoneme = mapPhonemeToShapes(key);
@@ -190,7 +190,7 @@ export function defaultVisemeShapes(key: string): Map<string, number> | null {
   return fromChar;
 }
 
-/** Sprawdza czy klucz jest nadpisywalny (ma domyślne kształty). */
+/** Checks whether the key is overridable (has default shapes). */
 export function isEditableViseme(key: string): boolean {
   return defaultVisemeShapes(key) !== null;
 }

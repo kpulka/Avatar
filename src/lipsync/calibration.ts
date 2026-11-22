@@ -1,29 +1,29 @@
 /**
- * Moduł konfiguracji i profili kalibracji fonetycznej (Lip-Sync Calibrator)
+ * Phonetic calibration configuration and profiles module (Lip-Sync Calibrator)
  */
 
 export interface CalibrationProfile {
-  /** Mnożnik gustowy głębokości otwierania żuchwy (jawOpen) [0.5 - 1.3] — wartości tabeli wizemów są efektywne */
+  /** Taste multiplier of jaw-open depth (jawOpen) [0.5 - 1.3] — viseme table values are effective */
   jawScale: number;
-  /** Mnożnik gustowy domykania warg (mouthClose) dla M/B/P [0.5 - 1.2] */
+  /** Taste multiplier of lip closure (mouthClose) for M/B/P [0.5 - 1.2] */
   closeScale: number;
-  /** Mnożnik gustowy zaokrąglenia warg (mouthPucker) dla O/U/W [0.4 - 1.3] */
+  /** Taste multiplier of lip rounding (mouthPucker) for O/U/W [0.4 - 1.3] */
   puckerScale: number;
-  /** Mnożnik gustowy tuby wargowej (mouthFunnel) dla O/SZ/CZ [0.4 - 1.3] */
+  /** Taste multiplier of the lip funnel (mouthFunnel) for O/SZ/CZ [0.4 - 1.3] */
   funnelScale: number;
-  /** Mnożnik gustowy podwinięcia dolnej wargi (mouthRollLower) dla F/V [0.4 - 1.3] */
+  /** Taste multiplier of lower-lip roll (mouthRollLower) for F/V [0.4 - 1.3] */
   rollScale: number;
-  /** Mnożnik gustowy odsłaniania zębów / unoszenia warg (mouthUpperUp + mouthLowerDown) dla F/V i SZ/CZ [0.4 - 1.3] */
+  /** Taste multiplier of teeth exposure / lip raise (mouthUpperUp + mouthLowerDown) for F/V and SZ/CZ [0.4 - 1.3] */
   teethExposureScale: number;
-  /** Mnożnik gustowy rozciągnięcia kącików w uśmiechu mowy (mouthSmile) [0.4 - 1.3] */
+  /** Taste multiplier of mouth-corner stretch in speech smile (mouthSmile) [0.4 - 1.3] */
   smileScale: number;
-  /** Szybkość reakcji mięśni aparatu mowy (lambda koartykulacji) [8 - 35] */
+  /** Reaction speed of the speech-apparatus muscles (coarticulation lambda) [8 - 35] */
   coarticulationSpeed: number;
   /**
-   * Przesunięcie synchronizacji Audio-Wideo w milisekundach [-150ms .. +400ms].
-   * DODATNIE = usta później względem dźwięku (audio prowadzi). Obserwacja live (2026-09-02):
-   * alignment tekstu EL bywa wcześniejszy niż audio → usta wyprzedzają dźwięk, więc typowo
-   * potrzebne są wartości dodatnie (~+100..+250). Zob. docs/3 (rescale/offset AV).
+   * Audio-Video sync offset in milliseconds [-150ms .. +400ms].
+   * POSITIVE = mouth later relative to the sound (audio leads). Live observation (2026-09-02):
+   * the EL text alignment is sometimes earlier than the audio → the mouth leads the sound, so typically
+   * positive values (~+100..+250) are needed. See docs/3 (rescale/AV offset).
    */
   syncOffsetMs: number;
   /**
@@ -40,25 +40,25 @@ export const SYNC_CLOCK_VERSION = 2;
 
 export type CalibrationPresetName = 'subtle' | 'balanced' | 'expressive';
 
-// Presety to MNOŻNIKI GUSTOWE wokół 1.0 — wartości z tabeli wizemów (docs/3) są już
-// wartościami efektywnymi (LIPS-06). balanced (1.0) = dokładnie tabela, bez tłumienia.
+// Presets are TASTE MULTIPLIERS around 1.0 — the viseme table values (docs/3) are already
+// effective values (LIPS-06). balanced (1.0) = exactly the table, no damping.
 export const CALIBRATION_PRESETS: Record<CalibrationPresetName, CalibrationProfile> = {
   subtle: {
     jawScale: 0.85,
-    closeScale: 0.50, // MetaPerson: wysokie mouthClose ciągnie dolną wargę na nos — trzymaj nisko
+    closeScale: 0.50, // MetaPerson: a high mouthClose pulls the lower lip onto the nose — keep it low
     puckerScale: 0.85,
     funnelScale: 0.85,
     rollScale: 0.85,
     teethExposureScale: 0.85,
     smileScale: 0.85,
-    coarticulationSpeed: 30, // ustawienie użytkownika (ostre, wyraźne przejścia)
+    coarticulationSpeed: 30, // user setting (sharp, distinct transitions)
     // Residual A/V offset after audible-clock compensation (Phase 11.2 D-6); was a stand-in for output latency.
     syncOffsetMs: 20,
     clockVersion: SYNC_CLOCK_VERSION,
   },
   balanced: {
     jawScale: 1.00,
-    closeScale: 0.60, // bezpieczne domknięcie M/B/P — bez deformacji "warga na nos"
+    closeScale: 0.60, // safe M/B/P closure — no "lip on the nose" deformation
     puckerScale: 1.00,
     funnelScale: 1.00,
     rollScale: 1.00,
@@ -89,7 +89,7 @@ export const DEFAULT_CALIBRATION_PROFILE: CalibrationProfile = CALIBRATION_PRESE
 const STORAGE_KEY = 'avatar_lip_calibration_profile_v3';
 
 /**
- * Wczytuje zapisany profil kalibracji z localStorage lub zwraca domyślny
+ * Loads the saved calibration profile from localStorage or returns the default
  */
 export function loadCalibrationProfile(): CalibrationProfile {
   if (typeof localStorage !== 'undefined') {
@@ -100,34 +100,34 @@ export function loadCalibrationProfile(): CalibrationProfile {
         return { ...DEFAULT_CALIBRATION_PROFILE, ...parsed };
       }
     } catch (e) {
-      console.warn('[Calibration] Nie udało się odczytać profilu z localStorage:', e);
+      console.warn('[Calibration] Could not read the profile from localStorage:', e);
     }
   }
   return { ...DEFAULT_CALIBRATION_PROFILE };
 }
 
 /**
- * Zapisuje aktywny profil kalibracji do localStorage
+ * Saves the active calibration profile to localStorage
  */
 export function saveCalibrationProfile(profile: CalibrationProfile): void {
   if (typeof localStorage !== 'undefined') {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(profile));
     } catch (e) {
-      console.warn('[Calibration] Błąd zapisu profilu do localStorage:', e);
+      console.warn('[Calibration] Error saving the profile to localStorage:', e);
     }
   }
 }
 
 /**
- * Resetuje zapisany profil w localStorage do wartości fabrycznych
+ * Resets the saved localStorage profile to factory values
  */
 export function resetCalibrationProfile(): CalibrationProfile {
   if (typeof localStorage !== 'undefined') {
     try {
       localStorage.removeItem(STORAGE_KEY);
     } catch (e) {
-      console.warn('[Calibration] Błąd resetu localStorage:', e);
+      console.warn('[Calibration] Error resetting localStorage:', e);
     }
   }
   return { ...DEFAULT_CALIBRATION_PROFILE };
