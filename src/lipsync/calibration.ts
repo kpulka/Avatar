@@ -26,7 +26,17 @@ export interface CalibrationProfile {
    * potrzebne są wartości dodatnie (~+100..+250). Zob. docs/3 (rescale/offset AV).
    */
   syncOffsetMs: number;
+  /**
+   * Version of the A/V sync clock semantics the stored syncOffsetMs refers to.
+   * Absent / < SYNC_CLOCK_VERSION = legacy value tuned against ctx.currentTime (migrated once on load).
+   */
+  clockVersion: number;
 }
+
+/** Legacy hand-tuned preset offsets (stand-in for output latency, pre Phase 11.2 D-6). */
+export const LEGACY_SYNC_OFFSETS = [90, 100, 120] as const;
+/** Current sync-clock semantics: mouth timing follows the audible time (Phase 11.2 D-6). */
+export const SYNC_CLOCK_VERSION = 2;
 
 export type CalibrationPresetName = 'subtle' | 'balanced' | 'expressive';
 
@@ -42,7 +52,9 @@ export const CALIBRATION_PRESETS: Record<CalibrationPresetName, CalibrationProfi
     teethExposureScale: 0.85,
     smileScale: 0.85,
     coarticulationSpeed: 30, // ustawienie użytkownika (ostre, wyraźne przejścia)
-    syncOffsetMs: 90, // usta bywają wcześniejsze niż dźwięk → dodatni offset (audio prowadzi)
+    // Residual A/V offset after audible-clock compensation (Phase 11.2 D-6); was a stand-in for output latency.
+    syncOffsetMs: 20,
+    clockVersion: SYNC_CLOCK_VERSION,
   },
   balanced: {
     jawScale: 1.00,
@@ -53,7 +65,9 @@ export const CALIBRATION_PRESETS: Record<CalibrationPresetName, CalibrationProfi
     teethExposureScale: 1.00,
     smileScale: 1.00,
     coarticulationSpeed: 30,
-    syncOffsetMs: 100, // potwierdzone w UAT (+100 ms)
+    // Residual A/V offset after audible-clock compensation (Phase 11.2 D-6); was a stand-in for output latency.
+    syncOffsetMs: 30,
+    clockVersion: SYNC_CLOCK_VERSION,
   },
   expressive: {
     jawScale: 1.15,
@@ -64,7 +78,9 @@ export const CALIBRATION_PRESETS: Record<CalibrationPresetName, CalibrationProfi
     teethExposureScale: 1.15,
     smileScale: 1.15,
     coarticulationSpeed: 30,
-    syncOffsetMs: 120, // szybsza mowa → krótsze spółgłoski → większy offset
+    // Residual A/V offset after audible-clock compensation (Phase 11.2 D-6); was a stand-in for output latency.
+    syncOffsetMs: 40,
+    clockVersion: SYNC_CLOCK_VERSION,
   },
 };
 

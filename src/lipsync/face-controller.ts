@@ -13,6 +13,7 @@ import {
 import { ProceduralBlink } from './procedural-blink';
 import { EmotionLayer, EmotionType } from '../realism/emotion-layer';
 import { CalibrationProfile } from './calibration';
+import { createAudibleClock } from '../audio/audible-clock';
 
 export type FaceState = 'IDLE' | 'SPEAKING' | 'RELAXING';
 
@@ -29,6 +30,11 @@ interface FrameMeta {
   carriesEmotion: boolean;
 }
 
+export interface FaceControllerOptions {
+  /** Time (AudioContext seconds) currently audible; defaults to the latency-compensated audio clock. */
+  audibleClock?: () => number;
+}
+
 /**
  * FaceController — state machine (IDLE -> SPEAKING -> RELAXING -> IDLE).
  * Jedyny moduł w całym systemie posiadający uprawnienia do pisania wag do FaceDriver (docs/4).
@@ -36,6 +42,7 @@ interface FrameMeta {
 export class FaceController {
   private readonly driver: FaceDriver;
   private readonly engine: AudioEngine;
+  private readonly audibleClock: () => number;
   private readonly scheduler: VisemeScheduler;
   private readonly blinker: ProceduralBlink;
   private readonly emotionLayer: EmotionLayer;
@@ -72,9 +79,11 @@ export class FaceController {
   // mają pierwszeństwo przed domyślnymi tabelami mapowań.
   private readonly visemeOverrides: Map<string, Map<string, number>> = new Map();
 
-  constructor(driver: FaceDriver, engine: AudioEngine) {
+  constructor(driver: FaceDriver, engine: AudioEngine, options: FaceControllerOptions = {}) {
     this.driver = driver;
     this.engine = engine;
+    // Mouth timing follows the time actually HEARD (output latency compensated), not the render position.
+    this.audibleClock = options.audibleClock ?? createAudibleClock(engine.ctx);
     this.scheduler = new VisemeScheduler();
     this.blinker = new ProceduralBlink();
     this.emotionLayer = new EmotionLayer();
@@ -537,7 +546,7 @@ export class FaceController {
    * Główna pętla aktualizacji mimiki wywoływana z pętli animacji renderera Three.js (dt w sekundach)
    */
   public render(dt: number): void {
-    const nowSec = this.engine.ctx.currentTime;
+    const nowSec = this.audibleClock();
 
     // 1. Proceduralne mruganie powiekami — pomijane, gdy aktywny clip niesie własne oczy
     //    (tryb frames + carriesEyes, kontrakt v2). W pozostałych stanach mruganie działa.
