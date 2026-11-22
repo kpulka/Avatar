@@ -25,9 +25,6 @@ class MockFaceDriver implements FaceDriver {
       'eyeBlinkRight',
     ];
   }
-  public relaxToNeutral(): void {
-    this.appliedWeights = {};
-  }
   public getSpeechMeshes(): never[] {
     return [];
   }
@@ -57,7 +54,6 @@ function clipOf(frames: PoseFrame[], extra?: Partial<FramesClip>): FramesClip {
     fps: 60,
     shapes: [...owned],
     carriesEyes: false,
-    carriesEmotion: false,
     ...extra,
   };
 }
@@ -207,11 +203,9 @@ describe('FaceController tryb frames (kontrakt v2)', () => {
     expect(blinkCalls).toBe(1);
   });
 
-  it('nie domieszkuje emocji do wag mowy gdy carriesEmotion (A2E prowadzi ekspresję)', () => {
+  it('nie domieszkuje emocji do ksztaltow nalezacych do klipu (absolutne)', () => {
     controller.setEmotion('happy');
-    const clip = clipOf([{ timeSec: 0.0, weights: { jawOpen: 0.5 } }], {
-      carriesEmotion: true,
-    });
+    const clip = clipOf([{ timeSec: 0.0, weights: { jawOpen: 0.5 } }]);
     engine.ctx.currentTime = 0.0;
     engine.hasPending = true;
     controller.feedFrames(clip, 0.0, 0);
@@ -327,6 +321,5 @@ describe('demo-frames (buildDemoFrames — kontrakt v2)', () => {
     const clip = buildDemoFrames(44100, 2.0, 'Map pop boy');
     expect(clip.shapes).toContain('mouthClose');
     expect(clip.carriesEyes).toBe(false);
-    expect(clip.carriesEmotion).toBe(false);
   });
 });

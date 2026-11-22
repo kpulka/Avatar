@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import * as THREE from 'three';
 import { ArKitBlendshapeDriver } from '../src/avatar/face-driver';
 
@@ -45,5 +45,23 @@ describe('ArKitBlendshapeDriver', () => {
 
     driver.applyWeight('jawOpen', -0.5);
     expect(mesh.morphTargetInfluences[0]).toBe(0.0);
+  });
+
+  it('has no second morph writer: relaxToNeutral is gone and applyTargets delegates to applyWeight', () => {
+    const mesh = new THREE.Mesh(new THREE.BufferGeometry());
+    mesh.morphTargetDictionary = { jawOpen: 0 };
+    mesh.morphTargetInfluences = [0];
+    const driver = new ArKitBlendshapeDriver([mesh], { jawOpen: 0 });
+
+    expect('relaxToNeutral' in driver).toBe(false);
+    // the only methods that can write morphTargetInfluences are applyWeight and its batch wrapper
+    const writers = Object.getOwnPropertyNames(Object.getPrototypeOf(driver)).filter(
+      (name) => name !== 'constructor' && !name.startsWith('get') && !name.startsWith('list') && name !== 'buildTargetMap'
+    );
+    expect(writers.sort()).toEqual(['applyTargets', 'applyWeight']);
+
+    const spy = vi.spyOn(driver, 'applyWeight');
+    driver.applyTargets({ jawOpen: 0.3 });
+    expect(spy).toHaveBeenCalledWith('jawOpen', 0.3);
   });
 });

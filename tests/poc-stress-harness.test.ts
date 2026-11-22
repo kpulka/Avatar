@@ -24,9 +24,6 @@ class MockFaceDriver implements FaceDriver {
       'eyeBlinkRight',
     ];
   }
-  public relaxToNeutral(): void {
-    this.appliedWeights = {};
-  }
   public getSpeechMeshes(): never[] {
     return [];
   }

@@ -15,9 +15,6 @@ class MockFaceDriver implements FaceDriver {
   public listAvailableShapes(): string[] {
     return ['jawOpen', 'mouthClose', 'mouthFunnel', 'mouthPucker', 'mouthSmileLeft', 'mouthSmileRight', 'eyeBlinkLeft', 'eyeBlinkRight'];
   }
-  public relaxToNeutral(): void {
-    this.appliedWeights = {};
-  }
   public getSpeechMeshes(): never[] {
     return [];
   }

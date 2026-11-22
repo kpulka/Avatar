@@ -21,7 +21,6 @@ const CLIP: FramesClip = {
   fps: 30,
   shapes: ['jawOpen'],
   carriesEyes: false,
-  carriesEmotion: false,
 };
 
 function makeEngine() {

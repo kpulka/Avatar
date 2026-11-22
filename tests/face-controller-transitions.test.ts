@@ -18,9 +18,6 @@ class RecordingFaceDriver implements FaceDriver {
   public listAvailableShapes(): string[] {
     return ['jawOpen', 'mouthClose', 'mouthFunnel', 'mouthPucker', 'mouthSmileLeft', 'mouthSmileRight', 'eyeBlinkLeft', 'eyeBlinkRight'];
   }
-  public relaxToNeutral(): void {
-    this.appliedWeights = {};
-  }
   public getSpeechMeshes(): never[] {
     return [];
   }
@@ -49,13 +46,13 @@ const CHUNK = {
 
 const FRAMES: FramesClip = {
   shapes: ['jawOpen'],
+  fps: 60,
   frames: [
     { timeSec: 0, weights: { jawOpen: 0.4 } },
     { timeSec: 0.5, weights: { jawOpen: 0.2 } },
   ],
   carriesEyes: false,
-  carriesEmotion: false,
-} as FramesClip;
+};
 
 describe('FaceController transition matrix (16-CONTEXT §2)', () => {
   let driver: RecordingFaceDriver;

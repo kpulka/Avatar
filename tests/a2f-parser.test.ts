@@ -143,18 +143,12 @@ describe('a2f-parser (kontrakt v2)', () => {
     expect(forced.clip.carriesEyes).toBe(true);
   });
 
-  it('ustawia carriesEmotion=true gdy payload niesie emotions (A2E)', () => {
+  it('nie niesie sciezki emocji A2E (usunieta - brak producenta, 16-02)', () => {
     const { clip } = parseA2fPayload({
       fps: 60,
       frames: [{ frame_time: 0.0, blendshapes: { JawOpen: 0.2 } }],
-      emotions: [{ timeSec: 0.0, weights: { happy: 0.9 } }],
     });
-    expect(clip.carriesEmotion).toBe(true);
-    expect(clip.emotions).toHaveLength(1);
-
-    const noEmo = parseA2fPayload({
-      frames: [{ frame_time: 0.0, blendshapes: { JawOpen: 0.2 } }],
-    });
-    expect(noEmo.clip.carriesEmotion).toBe(false);
+    expect('carriesEmotion' in clip).toBe(false);
+    expect('emotions' in clip).toBe(false);
   });
 });
