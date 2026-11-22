@@ -16,7 +16,7 @@ export default defineConfig({
     },
   }],
   server: {
-    // Port 3000 zajmuje AI Heritage (img2life) — Avatar ma własny, żeby nie kolidować.
+    // Port 3000 is taken by AI Heritage (img2life) — Avatar uses its own, to avoid a clash.
     port: 5310,
     strictPort: true,
     open: false,
@@ -26,16 +26,16 @@ export default defineConfig({
     target: 'esnext',
     rollupOptions: {
       output: {
-        // Vendor chunking: three (~596 kB) osobno od kodu aplikacji (~154 kB), żeby zmiany
-        // w kodzie nie unieważniały cache'u silnika 3D.
-        // UWAGA: największy chunk w projekcie to NIE three, lecz słownik
-        // `cmu-pronouncing-dictionary` (~3,92 MB / 961 kB gzip) — celowo ładowany
-        // dynamicznym importem w `src/lipsync/g2p/g2p-en.ts` (lazy, poza pierwszym renderem).
+        // Vendor chunking: three (~596 kB) separate from the app code (~154 kB), so that changes
+        // in the code do not invalidate the cache of the 3D engine.
+        // NOTE: the largest chunk in the project is NOT three but the dictionary
+        // `cmu-pronouncing-dictionary` (~3.92 MB / 961 kB gzip) — deliberately loaded
+        // via a dynamic import in `src/lipsync/g2p/g2p-en.ts` (lazy, outside the first render).
         manualChunks: (id: string) => (id.includes('node_modules/three') ? 'three' : undefined),
       },
     },
-    // Chunk słownika (`cmu-pronouncing-dictionary`, ~3,92 MB) jest celowy i lazy —
-    // limit 4000 kB wycisza szum, a nadal łapie realny wzrost kodu aplikacji (~750 kB).
+    // The dictionary chunk (`cmu-pronouncing-dictionary`, ~3.92 MB) is deliberate and lazy —
+    // the 4000 kB limit silences the noise, while still catching real growth of the app code (~750 kB).
     chunkSizeWarningLimit: 4000,
   },
 });

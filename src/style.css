@@ -208,7 +208,7 @@ body, html {
 }
 
 /* ==========================================================================
-   2. MODEL & TELEMETRY MINIMAL FLOATER (Górny lewy róg)
+   2. MODEL & TELEMETRY MINIMAL FLOATER (top left corner)
    ========================================================================== */
 .telemetry-pill-card {
   position: fixed;
@@ -302,7 +302,7 @@ body, html {
 .status-ready { color: #10b981; }
 .status-error { color: #ef4444; }
 
-/* Badge źródła alignmentu w HUD dev (LIPS-07): EL zielony vs FALLBACK czerwony */
+/* Alignment source badge in the dev HUD (LIPS-07): EL green vs FALLBACK red */
 .align-badge {
   font-size: 10px;
   font-weight: 600;
@@ -895,7 +895,7 @@ body.theme-light .pill-val {
   color: #0f172a;
 }
 
-/* ===== Edytor Wizem�w ===== */
+/* ===== Viseme editor ===== */
 .viseme-toolbar { display: flex; flex-direction: column; gap: 6px; margin-bottom: 8px; }
 .viseme-group-select {
   background: #1e2330; color: #dfe6f3; border: 1px solid #333b4d; border-radius: 6px;
@@ -923,7 +923,7 @@ body.theme-light .pill-val {
 .viseme-detail-actions { display: flex; gap: 6px; margin-top: 6px; flex-wrap: wrap; }
 .btn-danger { border-color: #a33; color: #f0c; }
 .viseme-hint { margin-top: 8px; font-size: 10px; color: #7d8aa5; line-height: 1.4; }
-/* Inspektor: przelacznik symetrii L/R */
+/* Inspector: L/R symmetry toggle */
 .inspector-mirror-toggle { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; }
 .mirror-hint { font-size: 10px; color: #7d8aa5; }
 

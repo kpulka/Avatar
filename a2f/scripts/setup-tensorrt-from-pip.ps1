@@ -1,9 +1,9 @@
 # setup-tensorrt-from-pip.ps1
-# Buduje kompletny TENSORRT_ROOT_DIR bez logowania na NVIDIA:
-#  - nagłówki: GitHub NVIDIA/TensorRT (release/10.13)
-#  - DLL-e: pip wheel tensorrt-cu12-libs (publiczny indeks pypi.nvidia.com)
-#  - import .lib: generowane z DLL (dumpbin + lib z MSVC)
-# Wynik: $Root z include/ lib/ bin/ (gotowe dla FindTensorRT.cmake + run_sample.bat).
+# Builds a complete TENSORRT_ROOT_DIR without an NVIDIA login:
+#  - headers: GitHub NVIDIA/TensorRT (release/10.13)
+#  - DLLs: pip wheel tensorrt-cu12-libs (public index pypi.nvidia.com)
+#  - import .lib files: generated from the DLLs (dumpbin + lib from MSVC)
+# Result: $Root with include/ lib/ bin/ (ready for FindTensorRT.cmake + run_sample.bat).
 param(
   [string]$Root = "D:\TensorRT-10.13",
   [string]$PipLibs = "D:\tmp\opencode\trt_pip2",
