@@ -153,7 +153,12 @@ const GATE_A_SCOPES: readonly GateAScope[] = [
         'docs/en-visemes.md',
       ].filter((f) => existsSync(join(ROOT, f))),
   },
-  { name: 'docs/all', enforced: false, files: () => listFiles('docs', ['.md']) },
+  {
+    name: 'docs/all',
+    // ON in 12-04: all ten docs/ files are translated (12-02, 12-03, 12-04).
+    enforced: true,
+    files: () => listFiles('docs', ['.md']),
+  },
   { name: 'src', enforced: false, files: () => listFiles('src', ['.ts', '.css']) },
   { name: 'tests', enforced: false, files: () => listFiles('tests', ['.ts']) },
   {
