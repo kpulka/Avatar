@@ -1,16 +1,16 @@
 /**
- * Tabela fonem ARPAbet → wizemy ARKit (docs/3, v1.x, Faza 7).
+ * ARPAbet phoneme → ARKit viseme table (docs/3, v1.x, Phase 7).
  *
- * Wartości to CELE EFEKTYWNE — po zmianie semantyki skal (07-02) scheduler mnoży je
- * dokładnie raz przez scale profilu (domyślnie 1.0). Klucze lustrzane (L/R) symetryczne.
+ * Values are EFFECTIVE TARGETS — after the scale-semantics change (07-02) the scheduler multiplies them
+ * exactly once by the profile scale (default 1.0). Mirrored keys (L/R) are symmetric.
  *
- * v1.3 (2026-09): więcej "mocy" (większe amplitudy żuchwy/uśmiechu/zaokrąglenia) + "smaczek"
- * z dodatkowych blendshape'ów, by wizemy nie były "gołe" 1-2 shape'y:
- *   - otwarte samogłoski (AA/AE/AH/AW): lowerDown → czytelniejsze otwarcie + dolne zęby,
- *   - przednie (EY/IY): upperUp (górne zęby) wzmocnione,
- *   - dzióbki (UW/W): shrugLower podbija wysunięcie warg,
- *   - syczące SZ / tuba SH: więcej odsłoniętych zębów,
- *   - K/G/NG/T/D/N/L: delikatne lowerDown/upperUp, by "neutralne" wizemy nie były puste.
+ * v1.3 (2026-09): more "power" (larger jaw/smile/rounding amplitudes) + "flavour"
+ * from extra blendshapes, so visemes are not "bare" 1-2 shapes:
+ *   - open vowels (AA/AE/AH/AW): lowerDown → clearer opening + lower teeth,
+ *   - front vowels (EY/IY): upperUp (upper teeth) strengthened,
+ *   - puckers (UW/W): shrugLower boosts lip protrusion,
+ *   - sibilants SZ / funnel SH: more exposed teeth,
+ *   - K/G/NG/T/D/N/L: gentle lowerDown/upperUp, so "neutral" visemes are not empty.
  */
 
 export interface LipPose {
@@ -31,7 +31,7 @@ export interface LipPose {
   tongue?: number;
 }
 
-/** Buduje Map<shape, weight> z pozą; klucze lustrzane (L/R) ustawiane symetrycznie. */
+/** Builds a Map<shape, weight> from a pose; mirrored keys (L/R) are set symmetrically. */
 function pose(p: LipPose): Map<string, number> {
   const m = new Map<string, number>();
   const set = (k: string, v?: number) => {
@@ -59,51 +59,51 @@ function pose(p: LipPose): Map<string, number> {
 }
 
 /**
- * Mapuje fonem ARPAbet na docelowe wagi ARKit.
- * Zwraca null dla nieznanego fonemu (kolejkant pomija go bez błędu).
+ * Maps an ARPAbet phoneme to target ARKit weights.
+ * Returns null for an unknown phoneme (the queue consumer skips it without an error).
  */
 export function mapPhonemeToShapes(phoneme: string): Map<string, number> | null {
   switch (phoneme) {
-    // ---- Przednie (drabinka: jaw + smile + zęby; im wyżej, tym więcej "smile mowy") ----
-    case 'IY': // "see" — najjaśniejszy uśmiech mowy + górne zęby
+    // ---- Front vowels (ladder: jaw + smile + teeth; the higher, the more "speech smile") ----
+    case 'IY': // "see" — the brightest speech smile + upper teeth
       return pose({ jaw: 0.25, smile: 0.38, upperUp: 0.12 });
-    case 'IH': // "bit" — luźne, prawie bez uśmiechu
+    case 'IH': // "bit" — relaxed, almost no smile
       return pose({ jaw: 0.26, smile: 0.16 });
-    case 'EY': // "say" — mocny pół-uśmiech + górne zęby
+    case 'EY': // "say" — strong half-smile + upper teeth
       return pose({ jaw: 0.34, smile: 0.34, upperUp: 0.14 });
-    case 'EH': // "bed" — otwarte, lekko pokazane dolne zęby
+    case 'EH': // "bed" — open, lower teeth slightly shown
       return pose({ jaw: 0.42, smile: 0.24, lowerDown: 0.08 });
-    case 'AE': // "cat" — szeroko, dolne zęby widoczne
+    case 'AE': // "cat" — wide, lower teeth visible
       return pose({ jaw: 0.52, smile: 0.18, lowerDown: 0.12 });
-    case 'AA': // "father" — max otwarcie + dolne zęby (moc)
+    case 'AA': // "father" — max opening + lower teeth (power)
       return pose({ jaw: 0.6, smile: 0.1, lowerDown: 0.15 });
-    case 'AH': // "but" — średnio otwarte, neutralne
+    case 'AH': // "but" — mid-open, neutral
       return pose({ jaw: 0.44, lowerDown: 0.08 });
 
-    // ---- Tylne (owal → tuba; UW/W dostają shrug podbijający wysunięcie) ----
-    case 'AO': // "thought" — otwarty owal
+    // ---- Back vowels (oval → funnel; UW/W get a shrug that boosts protrusion) ----
+    case 'AO': // "thought" — open oval
       return pose({ jaw: 0.4, pucker: 0.5, funnel: 0.3, lowerDown: 0.08 });
-    case 'OW': // "go" — zwarte zaokrąglenie (moc)
+    case 'OW': // "go" — tight rounding (power)
       return pose({ jaw: 0.34, pucker: 0.6, funnel: 0.5 });
-    case 'AW': // "how" — szeroko → zaokrąglenie (start otwarty: dolne zęby)
+    case 'AW': // "how" — wide → rounding (open start: lower teeth)
       return pose({ jaw: 0.46, pucker: 0.52, lowerDown: 0.12 });
-    case 'UH': // "book" — lekki dzióbek
+    case 'UH': // "book" — slight pucker
       return pose({ jaw: 0.24, pucker: 0.5, funnel: 0.22 });
-    case 'UW': // "too" — maks dzióbek + uniesienie dolnej wargi (protrusja)
+    case 'UW': // "too" — max pucker + lower lip raise (protrusion)
       return pose({ jaw: 0.2, pucker: 0.7, funnel: 0.45, shrug: 0.08 });
 
-    // ---- R-kolorowane / dyftongi ----
-    case 'ER': // "her" — r-colored z delikatnym zaokrągleniem
+    // ---- R-coloured / diphthongs ----
+    case 'ER': // "her" — r-coloured with gentle rounding
       return pose({ jaw: 0.32, funnel: 0.22, pucker: 0.16 });
-    case 'AY': // "my" — szeroko → uśmiech
+    case 'AY': // "my" — wide → smile
       return pose({ jaw: 0.46, smile: 0.26, lowerDown: 0.08 });
-    case 'OY': // "boy" — zaokrąglenie → uśmiech
+    case 'OY': // "boy" — rounding → smile
       return pose({ jaw: 0.42, pucker: 0.45, smile: 0.1 });
 
-    // ---- Spółgłoski wargowe (MetaPerson: wysokie mouthClose ciągnie dolną wargę na nos) ----
-    // Phase 11.2 SHOW-06 (D-7): zamknięcie z jaw ≈ 0 + docisk warg (press) + podwinięcie (roll),
-    // z NISKIM mouthClose. Wartości tabeli x skala profilu 'balanced' (closeScale 0.60 dotyczy
-    // mouthClose ORAZ mouthPress*; roll/jaw skala 1.0):
+    // ---- Bilabial consonants (MetaPerson: a high mouthClose pulls the lower lip onto the nose) ----
+    // Phase 11.2 SHOW-06 (D-7): closure with jaw ≈ 0 + lip press (press) + roll-in (roll),
+    // with a LOW mouthClose. Table values x the 'balanced' profile scale (closeScale 0.60 applies to
+    // mouthClose AND mouthPress*; roll/jaw scale 1.0):
     //   jawOpen        0.02 x 1.0  = 0.02  (<= 0.03)
     //   mouthClose     0.50 x 0.60 = 0.30  (<= 0.35)
     //   mouthPress L/R 0.58 x 0.60 = 0.35  (0.35 +- 0.05)
@@ -114,30 +114,30 @@ export function mapPhonemeToShapes(phoneme: string): Map<string, number> | null 
     case 'M':
       return pose({ jaw: 0.02, close: 0.5, press: 0.58, rollLower: 0.25, rollUpper: 0.15 });
 
-    // ---- Wargowo-zębowe (dolna warga pod górne zęby; mocny roll) ----
+    // ---- Labiodentals (lower lip under the upper teeth; strong roll) ----
     case 'F':
     case 'V':
       return pose({ jaw: 0.12, roll: 0.7, upperUp: 0.55, shrug: 0.2, lowerDown: 0.05 });
 
-    // ---- Międzyzębowe (widoczny język) ----
+    // ---- Interdentals (visible tongue) ----
     case 'TH':
     case 'DH':
       return pose({ jaw: 0.22, tongue: 0.38 });
 
-    // ---- Zębodołowe / nosowe (lekka obecność zębów, by nie były "puste") ----
+    // ---- Alveolar / nasal (slight teeth presence so they are not "empty") ----
     case 'T':
     case 'D':
     case 'N':
       return pose({ jaw: 0.2, upperUp: 0.06, lowerDown: 0.06 });
-    case 'L': // L = język W GÓRZE; tongueOut tylko symboliczny
+    case 'L': // L = tongue UP; tongueOut only symbolic
       return pose({ jaw: 0.32, tongue: 0.12, lowerDown: 0.08 });
 
-    // ---- Syczące (mocne odsłonięcie zębów) ----
+    // ---- Sibilants (strong teeth exposure) ----
     case 'S':
     case 'Z':
       return pose({ jaw: 0.16, smile: 0.2, upperUp: 0.16, lowerDown: 0.16 });
 
-    // ---- Palatalne / afrykaty (tuba + zęby; CH zwarty start) ----
+    // ---- Palatals / affricates (funnel + teeth; CH has a closed start) ----
     case 'SH':
     case 'ZH':
       return pose({ jaw: 0.22, funnel: 0.55, pucker: 0.16, upperUp: 0.14, lowerDown: 0.14 });
@@ -145,26 +145,26 @@ export function mapPhonemeToShapes(phoneme: string): Map<string, number> | null 
     case 'JH':
       return pose({ jaw: 0.3, funnel: 0.45, pucker: 0.1, lowerDown: 0.1 });
 
-    // ---- Tylnojęzykowe (otwarcie + dolne zęby) ----
+    // ---- Velars (opening + lower teeth) ----
     case 'K':
     case 'G':
       return pose({ jaw: 0.4, lowerDown: 0.12 });
     case 'NG':
       return pose({ jaw: 0.3, lowerDown: 0.06 });
 
-    // ---- Aproksymanty ----
-    case 'R': // /ɹ/ labializowane — zaokrąglenie
+    // ---- Approximants ----
+    case 'R': // /ɹ/ labialized — rounding
       return pose({ jaw: 0.32, funnel: 0.22, pucker: 0.14 });
-    case 'W': // /w/ — mocny dzióbek + uniesienie dolnej wargi
+    case 'W': // /w/ — strong pucker + lower lip raise
       return pose({ jaw: 0.16, pucker: 0.6, funnel: 0.18, shrug: 0.08 });
-    case 'Y': // /j/ — jak krótkie [i]
+    case 'Y': // /j/ — like a short [i]
       return pose({ jaw: 0.26, smile: 0.28 });
 
-    // ---- Przydech (niska amplituda, neutralne) ----
+    // ---- Aspiration (low amplitude, neutral) ----
     case 'HH':
       return pose({ jaw: 0.22 });
 
     default:
-      return null; // nieznany fonem -> brak wizemy
+      return null; // unknown phoneme -> no viseme
   }
 }

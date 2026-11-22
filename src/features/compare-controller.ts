@@ -1,12 +1,12 @@
 /**
- * CompareController (Faza 11, 11-05, Pattern 5): sekwencyjne porównanie A/B na ostatniej turze.
+ * CompareController (Phase 11, 11-05, Pattern 5): sequential A/B comparison on the last turn.
  *
- * Fairness: oba tory odtwarzają DOKŁADNIE ten sam PCM z LastTurnBuffer; tor A2F wysyła
- * ten sam bufor do `/predict` (encodeWav).
+ * Fairness: both tracks play EXACTLY the same PCM from LastTurnBuffer; the A2F track sends
+ * the same buffer to `/predict` (encodeWav).
  *
- * Anulowanie: `speech:interruption` i `transcript:user` przerywają replay ZANIM nowe audio
- * zostanie zaplanowane; `audio:chunk` (nowa tura LIVE) jest pasem bezpieczeństwa — wywołuje
- * `hardStop()`, co może obciąć pierwszy chunk nowej tury (udokumentowany koszt, test pokrywa).
+ * Cancellation: `speech:interruption` and `transcript:user` abort the replay BEFORE new audio
+ * is scheduled; `audio:chunk` (a new LIVE turn) is a safety belt — it calls
+ * `hardStop()`, which may clip the first chunk of the new turn (documented cost, covered by a test).
  */
 import { AudioEngine } from '../audio/audio-engine';
 import { FaceController } from '../lipsync/face-controller';
@@ -16,6 +16,7 @@ import { encodeWav } from '../audio/pcm-to-wav';
 import { LastTurn, LastTurnBuffer } from './last-turn-buffer';
 import { TypedEventBus, Unsub } from '../app/events';
 import { AppEvents, CompareResultEvent } from '../app/app-types';
+import { t } from '../app/copy';
 
 export type CompareState =
   | 'idle'
@@ -32,7 +33,7 @@ export interface CompareControllerDeps {
   getFaceController: () => FaceController | null;
   getA2fUrl: () => string;
   events: TypedEventBus<AppEvents>;
-  /** Wstrzykiwane dla testów (domyślnie setTimeout). */
+  /** Injected for tests (defaults to setTimeout). */
   sleep?: (ms: number) => Promise<void>;
   random?: () => number;
   predict?: typeof predictFrames;
@@ -43,7 +44,7 @@ interface A2fPrepared {
   predictMs: number;
 }
 
-/** Znormalizowana różnica RMS dwóch przebiegów (0 = identyczne). */
+/** Normalized RMS difference of two waveforms (0 = identical). */
 export function rmsDiff(a: Float32Array, b: Float32Array): number {
   const length = Math.min(a.length, b.length);
   if (length === 0) return 0;
@@ -87,7 +88,7 @@ export class CompareController {
   public canCompare(): boolean {
     if (this.state !== 'idle' && this.state !== 'done' && this.state !== 'error') return false;
     const faceController = this.deps.getFaceController();
-    // Bez awatara porównanie nie ma sensu: replay puściłby audio z nieruchomą twarzą (review A1 / P2).
+    // Without an avatar a comparison makes no sense: the replay would play audio with a motionless face (review A1 / P2).
     if (!faceController || faceController.getState() !== 'IDLE') return false;
     if (this.deps.audioEngine.hasPendingAudio()) return false;
     return this.deps.buffer.getLastTurn() !== null;
@@ -168,7 +169,7 @@ export class CompareController {
         this.restoreMode(token);
         this.setState('error');
         this.deps.events.emit('toast', {
-          message: `Porównanie nie powiodło się: ${(error as Error).message}`,
+          message: t('compare.failedToast', { message: (error as Error).message }),
           type: 'error',
         });
       }
@@ -185,7 +186,7 @@ export class CompareController {
     this.deps.audioEngine.hardStop();
     this.restoreMode(token);
     this.setState('idle');
-    console.log(`[CompareController] Anulowano replay (${reason}).`);
+    console.log(`[CompareController] Replay cancelled (${reason}).`);
     this.deps.events.emit('compare:cancelled', undefined);
   }
 
@@ -235,7 +236,7 @@ export class CompareController {
       if (this.isCurrent(token)) {
         this.restoreMode(token);
         this.setState('error');
-        this.deps.events.emit('toast', { message: 'Nothing to compare: the last turn has no audio.', type: 'error' });
+        this.deps.events.emit('toast', { message: t('compare.noAudioToast'), type: 'error' });
       }
       return null;
     }
@@ -244,7 +245,7 @@ export class CompareController {
       const { parsed, predictMs } = await this.predict(this.deps.getA2fUrl(), wav);
       if (!this.isCurrent(token)) return null;
       if (!parsed.clip.frames.length) {
-        throw new Error('puste ramki z /predict');
+        throw new Error('empty frames from /predict');
       }
       return { clip: parsed.clip, predictMs };
     } catch (error) {
@@ -252,7 +253,7 @@ export class CompareController {
         this.restoreMode(token);
         this.setState('error');
         this.deps.events.emit('toast', {
-          message: `A2F niedostępny — sprawdź adres serwisu w Studio → A2F. (${(error as Error).message})`,
+          message: t('compare.a2fDownToast', { message: (error as Error).message }),
           type: 'error',
         });
       }

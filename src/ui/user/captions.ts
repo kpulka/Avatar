@@ -1,28 +1,29 @@
 /**
- * Captions (Faza 11, 11-06): napisy TY/AGENT w warstwie user.
- * Długi tekst zawija się do 3 linii (CSS), pełna treść pozostaje w studiu (Sesja).
+ * Captions (Phase 11, 11-06): YOU/AGENT captions in the user layer.
+ * Long text wraps to 3 lines (CSS); the full content stays in the studio (Session).
  */
 import { PanelContext, PanelDefinition, PanelHandle } from '../studio/panel-registry';
 import { el } from '../shared/dom';
+import { t } from '../../app/copy';
 
 export function createCaptions(): PanelDefinition {
   return {
     id: 'captions',
-    title: 'Napisy',
+    title: t('panel.title.captions'),
     icon: '💬',
     visibleIn: 'user',
     mount(ctx: PanelContext): PanelHandle {
       const { events, container } = ctx;
-      const userText = el('span', { className: 'transcript-text', text: '—' });
-      const agentText = el('span', { className: 'transcript-text', text: '—' });
+      const userText = el('span', { className: 'transcript-text', text: t('captions.empty') });
+      const agentText = el('span', { className: 'transcript-text', text: t('captions.empty') });
       const root = el('div', { className: 'cinema-captions user-captions' }, [
         el('div', { className: 'transcript-box' }, [
           el('div', { className: 'transcript-line user-line' }, [
-            el('span', { className: 'speaker-tag', text: 'TY:' }),
+            el('span', { className: 'speaker-tag', text: t('captions.you') }),
             userText,
           ]),
           el('div', { className: 'transcript-line agent-line' }, [
-            el('span', { className: 'speaker-tag', text: 'AGENT:' }),
+            el('span', { className: 'speaker-tag', text: t('captions.agent') }),
             agentText,
           ]),
         ]),

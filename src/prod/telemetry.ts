@@ -8,7 +8,7 @@ export interface TelemetryReport {
 }
 
 /**
- * Moduł telemetrii i analityki wydajności w czasie rzeczywistym (ROB-02, docs/0)
+ * Real-time telemetry and performance analytics module (ROB-02, docs/0)
  */
 export class TelemetryManager {
   private sessionStartTime: number;
@@ -52,7 +52,7 @@ export class TelemetryManager {
   }
 
   /**
-   * Zlicza chunk audio wg źródła alignmentu ('elevenlabs' vs 'energy-fallback') — LIPS-07
+   * Counts an audio chunk by alignment source ('elevenlabs' vs 'energy-fallback') — LIPS-07
    */
   public recordAlignmentChunk(source: 'elevenlabs' | 'energy-fallback' | string): void {
     if (source === 'energy-fallback') {
@@ -67,7 +67,7 @@ export class TelemetryManager {
   }
 
   /**
-   * Rejestruje predict A2F (09-03/09-04): czas /predict, liczba ramek, źródło.
+   * Records an A2F predict (09-03/09-04): /predict time, number of frames, source.
    */
   public recordA2fRequest(info: { predictMs: number; frames: number; source: 'local' | 'cloud' }): void {
     this.a2fRequests++;

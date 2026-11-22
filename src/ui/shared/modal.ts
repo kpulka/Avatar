@@ -1,5 +1,5 @@
 /**
- * Modal (Faza 11, 11-03): prosty dialog oparty o <dialog> (fallback: atrybut open).
+ * Modal (Phase 11, 11-03): a simple dialog based on <dialog> (fallback: the open attribute).
  */
 import { el } from './dom';
 

@@ -1,10 +1,10 @@
 import { FaceDriver } from '../types/avatar';
 
 export interface GazeOptions {
-  maxAngleRad?: number; // Maksymalny kąt spojrzenia (domyślnie 0.26 rad ~15°)
-  minSaccadeIntervalSec?: number; // Minimalny odstęp między sakadami (domyślnie 0.5s)
-  maxSaccadeIntervalSec?: number; // Maksymalny odstęp między sakadami (domyślnie 2.0s)
-  saccadeMaxAngleRad?: number; // Maksymalny skok sakady (domyślnie 0.087 rad ~5°)
+  maxAngleRad?: number; // Maximum gaze angle (default 0.26 rad ~15°)
+  minSaccadeIntervalSec?: number; // Minimum interval between saccades (default 0.5s)
+  maxSaccadeIntervalSec?: number; // Maximum interval between saccades (default 2.0s)
+  saccadeMaxAngleRad?: number; // Maximum saccade jump (default 0.087 rad ~5°)
 }
 
 export interface EyeGazeWeights {
@@ -19,7 +19,7 @@ export interface EyeGazeWeights {
 }
 
 /**
- * Kontroler spojrzenia i mikrosakad oczu (REAL-02, docs/5)
+ * Gaze and eye micro-saccade controller (REAL-02, docs/5)
  */
 export class GazeSaccades {
   private readonly maxAngle: number;
@@ -27,15 +27,15 @@ export class GazeSaccades {
   private readonly maxInterval: number;
   private readonly saccadeMaxAngle: number;
 
-  // Cel kursora myszy [-1, 1]
+  // Mouse cursor target [-1, 1]
   private targetX = 0;
   private targetY = 0;
 
-  // Bieżące wygładzone położenie oczu
+  // Current smoothed eye position
   private currentX = 0;
   private currentY = 0;
 
-  // Stan sakady
+  // Saccade state
   private nextSaccadeTimeSec = 1.0;
   private saccadeOffsetX = 0;
   private saccadeOffsetY = 0;
@@ -44,29 +44,29 @@ export class GazeSaccades {
   private saccadeDurationSec = 0.04; // 40ms
 
   constructor(options: GazeOptions = {}) {
-    this.maxAngle = options.maxAngleRad ?? 0.26; // 15 stopni
+    this.maxAngle = options.maxAngleRad ?? 0.26; // 15 degrees
     this.minInterval = options.minSaccadeIntervalSec ?? 0.5;
     this.maxInterval = options.maxSaccadeIntervalSec ?? 2.0;
-    this.saccadeMaxAngle = options.saccadeMaxAngleRad ?? 0.087; // 5 stopni
+    this.saccadeMaxAngle = options.saccadeMaxAngleRad ?? 0.087; // 5 degrees
   }
 
   /**
-   * Aktualizuje pozycję kursora w znormalizowanych współrzędnych ekranu [-1, 1]
+   * Updates the cursor position in normalized screen coordinates [-1, 1]
    */
   public setPointer(normX: number, normY: number): void {
-    // Clamp do zakresu [-1, 1]
+    // Clamp to the range [-1, 1]
     this.targetX = Math.max(-1, Math.min(1, normX));
     this.targetY = Math.max(-1, Math.min(1, normY));
   }
 
   /**
-   * Główny krok obliczeniowy spojrzenia
+   * Main gaze computation step
    */
   public compute(currentTimeSec: number, dt: number): EyeGazeWeights {
-    // 1. Sprawdzenie i aktualizacja mikrosakad
+    // 1. Check and update micro-saccades
     this.updateSaccade(currentTimeSec);
 
-    // 2. Wygładzanie spojrzenia (exponential damping: alpha = 1 - exp(-15 * dt))
+    // 2. Gaze smoothing (exponential damping: alpha = 1 - exp(-15 * dt))
     const alpha = 1 - Math.exp(-15 * dt);
     const targetWithSaccadeX = this.targetX + this.saccadeOffsetX;
     const targetWithSaccadeY = this.targetY + this.saccadeOffsetY;
@@ -74,18 +74,18 @@ export class GazeSaccades {
     this.currentX += (targetWithSaccadeX - this.currentX) * alpha;
     this.currentY += (targetWithSaccadeY - this.currentY) * alpha;
 
-    // 3. Przeliczenie na wagi ARKit [0, 1] (z uwzględnieniem maxAngle / limitu 15°)
+    // 3. Convert to ARKit weights [0, 1] (taking maxAngle / the 15° limit into account)
     const lookX = Math.max(-1, Math.min(1, this.currentX));
     const lookY = Math.max(-1, Math.min(1, this.currentY));
 
     return {
-      // Oko lewe (patrząc od przodu: kursor w prawo -> lewe oko na zewnątrz / do ucha)
+      // Left eye (seen from the front: cursor to the right -> left eye outwards / towards the ear)
       eyeLookInLeft: lookX < 0 ? -lookX : 0,
       eyeLookOutLeft: lookX > 0 ? lookX : 0,
       eyeLookUpLeft: lookY > 0 ? lookY : 0,
       eyeLookDownLeft: lookY < 0 ? -lookY : 0,
 
-      // Oko prawe (kursor w prawo -> prawe oko do wewnątrz / do nosa)
+      // Right eye (cursor to the right -> right eye inwards / towards the nose)
       eyeLookInRight: lookX > 0 ? lookX : 0,
       eyeLookOutRight: lookX < 0 ? -lookX : 0,
       eyeLookUpRight: lookY > 0 ? lookY : 0,
@@ -94,7 +94,7 @@ export class GazeSaccades {
   }
 
   /**
-   * Aplikuje wagi spojrzenia do FaceDriver z umiarkowaną wagą, by powieki naturalnie wspierały ruch bez zniekształceń
+   * Applies the gaze weights to FaceDriver with a moderate weight so the eyelids naturally support the movement without distortion
    */
   public applyToDriver(driver: FaceDriver, currentTimeSec: number, dt: number): void {
     const weights = this.compute(currentTimeSec, dt);
@@ -111,7 +111,7 @@ export class GazeSaccades {
   }
 
   /**
-   * Bezpośrednio obraca kości / obiekty gałek ocznych 3D
+   * Directly rotates the eyeball bones / 3D objects
    */
   public applyToEyeObjects(
     leftEye?: { rotation: { x: number; y: number }; isBone?: boolean; type?: string } | null,
@@ -150,7 +150,7 @@ export class GazeSaccades {
         this.saccadeStartTimeSec = currentTimeSec;
         this.saccadeDurationSec = 0.035 + Math.random() * 0.015; // 35 - 50 ms
 
-        // Losowy mikro-skok oka < 5 stopni
+        // Random micro-jump of the eye < 5 degrees
         const angle = Math.random() * Math.PI * 2;
         const mag = (0.2 + Math.random() * 0.8) * (this.saccadeMaxAngle / this.maxAngle);
         this.saccadeOffsetX = Math.cos(angle) * mag;
@@ -163,7 +163,7 @@ export class GazeSaccades {
         this.saccadeOffsetX = 0;
         this.saccadeOffsetY = 0;
 
-        // Zaplanuj następną sakadę za 0.5 - 2.0 s
+        // Schedule the next saccade in 0.5 - 2.0 s
         const nextInterval = this.minInterval + Math.random() * (this.maxInterval - this.minInterval);
         this.nextSaccadeTimeSec = currentTimeSec + nextInterval;
       }

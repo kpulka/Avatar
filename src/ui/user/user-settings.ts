@@ -1,14 +1,15 @@
 /**
- * UserSettings (Faza 11, 11-06): gear w warstwie user — głośność, mikrofon (deviceId),
- * motyw, preset sceny. Zablokowane klucze (studio.locks) są disabled z tooltipem (UI-05).
+ * UserSettings (Phase 11, 11-06): gear in the user layer — volume, microphone (deviceId),
+ * theme, scene preset. Locked keys (studio.locks) are disabled with a tooltip (UI-05).
  */
 import { PanelContext, PanelDefinition, PanelHandle } from '../studio/panel-registry';
 import { el } from '../shared/dom';
+import { t } from '../../app/copy';
 
 export function createUserSettings(): PanelDefinition {
   return {
     id: 'user-settings',
-    title: 'Ustawienia',
+    title: t('panel.title.settings'),
     icon: '⚙️',
     visibleIn: 'user',
     mount(ctx: PanelContext): PanelHandle {
@@ -18,8 +19,8 @@ export function createUserSettings(): PanelDefinition {
         className: 'dock-icon-btn user-settings-btn',
         type: 'button',
         text: '⚙️',
-        ariaLabel: 'Ustawienia',
-        title: 'Ustawienia',
+        ariaLabel: t('settings.title'),
+        title: t('settings.title'),
       });
       container.append(gear);
 
@@ -34,11 +35,11 @@ export function createUserSettings(): PanelDefinition {
       applyLock(volumeSlider, 'volume');
 
       const micSelect = el('select', { className: 'engine-select' }) as HTMLSelectElement;
-      micSelect.append(el('option', { value: '', text: 'Domyślne urządzenie' }));
+      micSelect.append(el('option', { value: '', text: t('settings.defaultDevice') }));
       const refreshDevices = async (): Promise<void> => {
         const devices = await services.conversation.listInputDevices();
         const current = store.getEffective<string | null>('micDeviceId') ?? '';
-        micSelect.replaceChildren(el('option', { value: '', text: 'Domyślne urządzenie' }));
+        micSelect.replaceChildren(el('option', { value: '', text: t('settings.defaultDevice') }));
         for (const device of devices) {
           micSelect.append(el('option', { value: device.id, text: device.label }));
         }
@@ -53,8 +54,8 @@ export function createUserSettings(): PanelDefinition {
 
       const themeSelect = el('select', { className: 'engine-select' }) as HTMLSelectElement;
       themeSelect.append(
-        el('option', { value: 'dark', text: 'Dark (ciemny)' }),
-        el('option', { value: 'light', text: 'Light (jasny)' })
+        el('option', { value: 'dark', text: t('settings.themeDark') }),
+        el('option', { value: 'light', text: t('settings.themeLight') })
       );
       themeSelect.value = store.getEffective<'dark' | 'light'>('theme');
       themeSelect.addEventListener('change', () => {
@@ -82,26 +83,26 @@ export function createUserSettings(): PanelDefinition {
       function applyLock(control: HTMLInputElement | HTMLSelectElement, key: string): void {
         if (store.isLocked(key)) {
           control.disabled = true;
-          control.title = `Zablokowane przez studio (${key})`;
+          control.title = t('settings.lockTooltip', { key });
         }
       }
 
       function buildForm(): HTMLElement {
         return el('div', { className: 'user-settings-form' }, [
           el('div', { className: 'form-group' }, [
-            el('label', {}, [el('span', { text: 'Głośność wyjściowa: ' }), volumeValue]),
+            el('label', {}, [el('span', { text: t('settings.volumeLabel') }), volumeValue]),
             volumeSlider,
           ]),
           el('div', { className: 'form-group' }, [
-            el('label', { text: 'Mikrofon:' }),
+            el('label', { text: t('settings.micLabel') }),
             micSelect,
           ]),
           el('div', { className: 'form-group' }, [
-            el('label', { text: 'Motyw:' }),
+            el('label', { text: t('settings.themeLabel') }),
             themeSelect,
           ]),
           el('div', { className: 'form-group' }, [
-            el('label', { text: 'Preset sceny:' }),
+            el('label', { text: t('settings.presetLabel') }),
             presetSelect,
           ]),
         ]);
@@ -109,7 +110,7 @@ export function createUserSettings(): PanelDefinition {
 
       gear.addEventListener('click', () => {
         void refreshDevices().then(() => {
-          ui.modal.open('Ustawienia', buildForm());
+          ui.modal.open(t('settings.title'), buildForm());
         });
       });
 

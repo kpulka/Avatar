@@ -1,18 +1,18 @@
 /**
- * Konfiguracja integracji z agentem konwersacyjnym ElevenAgents (docs/2)
+ * Integration config for the ElevenAgents conversational agent (docs/2)
  */
 export interface AgentConfig {
-  /** Identyfikator publicznego lub prywatnego agenta */
+  /** Identifier of the public or private agent */
   agentId: string;
-  /** Podstawowy URL endpointu WebSocket */
+  /** Base URL of the WebSocket endpoint */
   wssBaseUrl: string;
-  /** Format audio wejściowego z mikrofonu */
+  /** Audio format of the microphone input */
   inputAudioFormat: 'pcm_16000';
-  /** Format audio wyjściowego z agenta */
+  /** Audio format of the agent output */
   outputAudioFormat: 'pcm_44100';
-  /** Lista subskrybowanych zdarzeń klienta */
+  /** List of subscribed client events */
   clientEvents: string[];
-  /** Nazwa i rola awatara */
+  /** Name and role of the avatar */
   systemRole: string;
 }
 

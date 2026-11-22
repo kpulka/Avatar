@@ -1,7 +1,9 @@
 /**
- * Dane presetów sceny (Faza 11, 11-07): tło, rig świateł, exposure, pedestal, kadr.
- * Wartości 1:1 z tabeli w 11-UI-SPEC (studio-dark = dotychczasowe StudioLighting).
+ * Scene preset data (Phase 11, 11-07): background, light rig, exposure, pedestal, framing.
+ * Values 1:1 from the 11-UI-SPEC table (studio-dark = the original StudioLighting).
  */
+import { t } from '../app/copy';
+
 export interface ScenePreset {
   id: string;
   label: string;
@@ -18,7 +20,7 @@ export interface ScenePreset {
 export const SCENE_PRESETS: ScenePreset[] = [
   {
     id: 'studio-dark',
-    label: 'Studio Dark',
+    label: t('scenePreset.studio-dark'),
     background: { type: 'color', value: 0x0e1117 },
     key: { intensity: 2.2, color: 0xfff2e0 },
     fill: { intensity: 0.7, color: 0xdbe9ff },
@@ -30,7 +32,7 @@ export const SCENE_PRESETS: ScenePreset[] = [
   },
   {
     id: 'studio-soft',
-    label: 'Studio Soft',
+    label: t('scenePreset.studio-soft'),
     background: { type: 'gradient', from: 0x1a2233, to: 0x0b0f17 },
     key: { intensity: 1.8, color: 0xfff6ea },
     fill: { intensity: 1.1, color: 0xdbe9ff },
@@ -42,7 +44,7 @@ export const SCENE_PRESETS: ScenePreset[] = [
   },
   {
     id: 'cinema',
-    label: 'Cinema',
+    label: t('scenePreset.cinema'),
     background: { type: 'color', value: 0x05070c },
     key: { intensity: 2.6, color: 0xffffff },
     fill: { intensity: 0.35, color: 0xbfd4ff },
@@ -54,7 +56,7 @@ export const SCENE_PRESETS: ScenePreset[] = [
   },
   {
     id: 'light',
-    label: 'Light (jasny motyw)',
+    label: t('scenePreset.light'),
     background: { type: 'color', value: 0xe8eef7 },
     key: { intensity: 1.4, color: 0xffffff },
     fill: { intensity: 1.2, color: 0xeaf1ff },

@@ -1,5 +1,5 @@
 /**
- * Moduł cache'owania modeli 3D w IndexedDB z fallbackiem pamięciowym (docs/0, PROD-01)
+ * 3D model caching module in IndexedDB with an in-memory fallback (docs/0, PROD-01)
  */
 export class ModelCache {
   private dbName = 'avatar_3d_cache_db';

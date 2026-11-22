@@ -1,7 +1,7 @@
 /**
- * SceneController (Faza 11, 11-02) — scena, ładowanie awatara, kadr i pętla render (część 3D).
+ * SceneController (Phase 11, 11-02) — scene, avatar loading, framing and render loop (the 3D part).
  *
- * Nie dotyka DOM: emituje `avatar:loaded` z kompletnymi danymi dla UI (model info, shapes).
+ * Does not touch the DOM: emits `avatar:loaded` with complete data for the UI (model info, shapes).
  */
 import * as THREE from 'three';
 import { AppRenderer } from '../core/renderer';
@@ -61,14 +61,14 @@ export class SceneController implements SceneService {
       })
       .then((avatar) => {
         this.onLoaded(avatar, 'MetaPerson Rigged Avatar (avatar.glb)');
-        console.log('[Avatar] Pomyślnie załadowano zrigowany model MetaPerson avatar.glb');
+        console.log('[Avatar] Successfully loaded the rigged MetaPerson avatar.glb model');
       })
       .catch((error) => {
-        console.warn('[Avatar] Brak /models/avatar.glb lub błąd ładowania, używam awatara demo:', error);
+        console.warn('[Avatar] /models/avatar.glb is missing or failed to load, using the demo avatar:', error);
         try {
           this.onLoaded(createTestAvatar(), 'Demo ARKit Avatar (52 shapes)');
         } catch (fallbackError) {
-          console.error('Błąd awatara demo:', fallbackError);
+          console.error('Demo avatar error:', fallbackError);
           this.deps.events.emit('avatar:error', {
             message: 'The 3D avatar could not be loaded. Please reload the page.',
           });
@@ -92,7 +92,7 @@ export class SceneController implements SceneService {
     enhanceAvatarMaterials(avatar.root, this.deps.renderer.instance);
     this.deps.scene.setAvatar(avatar.root);
 
-    // Automatyczne wykadrowanie kamery portretowej na twarzy modelu.
+    // Automatic framing of the portrait camera on the model's face.
     const box = new THREE.Box3().setFromObject(avatar.root);
     const faceY = box.min.y + (box.max.y - box.min.y) * 0.88;
     this.faceY = faceY;

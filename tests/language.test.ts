@@ -84,7 +84,12 @@ const FUNCTIONAL_ALLOWLIST: readonly AllowEntry[] = [
   {
     file: 'src/lipsync/viseme-mappings.ts',
     pattern: /if \(!\/\[A-Z./,
-    why: 'NOT listed in 1.2 (found by 12-01): functional uppercase character class; confirm in 12-06',
+    why: '1.2 class 1 (confirmed in 12-06): functional uppercase character class for the PL letters (not a comment)',
+  },
+  {
+    file: 'src/lipsync/viseme-overrides.ts',
+    pattern: /^\s*\{ key: '[A-Z\u0104\u0106\u0118\u0141\u0143\u00D3\u015A\u0179\u017B]+', label: '[^'\u0105\u0107\u0119\u0142\u0144\u00F3\u015B\u017A\u017C]*'/,
+    why: '1.2 class 1 (added in 12-06): viseme-editor rows keyed by PL letters; English label, uppercase PL letters only',
   },
   {
     file: 'src/lipsync/demo-frames.ts',
@@ -159,7 +164,12 @@ const GATE_A_SCOPES: readonly GateAScope[] = [
     enforced: true,
     files: () => listFiles('docs', ['.md']),
   },
-  { name: 'src', enforced: false, files: () => listFiles('src', ['.ts', '.css']) },
+  {
+    name: 'src',
+    // ON in 12-06: all comments / console / error strings are English; only the functional PL data remains.
+    enforced: true,
+    files: () => listFiles('src', ['.ts', '.css']),
+  },
   { name: 'tests', enforced: false, files: () => listFiles('tests', ['.ts']) },
   {
     name: 'root',

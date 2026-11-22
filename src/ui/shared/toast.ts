@@ -1,5 +1,5 @@
 /**
- * Toast (Faza 11, 11-03): jeden komunikat, auto-hide dla sukcesu, błąd zostaje do zamknięcia
+ * Toast (Phase 11, 11-03): one message at a time, success auto-hides, errors stay until closed
  * (UI-SPEC: Toast/Loader — covered).
  */
 import { el } from './dom';

@@ -30,20 +30,20 @@ export function setSkinSSSEnabled(on: boolean): void {
 }
 
 export interface SkinShaderOptions {
-  wrapAmount?: number; // Współczynnik wrap diffuse [0.0, 1.0] (domyślnie 0.4)
-  subsurfaceColor?: Color; // Odcień rozproszenia podpowierzchniowego (ciepły brzoskwiniowo-czerwony)
-  subsurfaceIntensity?: number; // Intensywność rozproszenia (domyślnie 0.35)
+  wrapAmount?: number; // Wrap diffuse factor [0.0, 1.0] (default 0.4)
+  subsurfaceColor?: Color; // Subsurface scattering tint (warm peach-red)
+  subsurfaceIntensity?: number; // Scattering intensity (default 0.35)
 }
 
 /**
- * Wstrzykuje zaawansowane rozproszenie podpowierzchniowe (Wrap Diffuse SSS) do MeshPhysicalMaterial (docs/5 Stage 2)
+ * Injects advanced subsurface scattering (Wrap Diffuse SSS) into MeshPhysicalMaterial (docs/5 Stage 2)
  */
 export function injectSkinSSS(
   material: MeshPhysicalMaterial,
   options: SkinShaderOptions = {}
 ): MeshPhysicalMaterial {
   const wrap = options.wrapAmount ?? 0.4;
-  const sssColor = options.subsurfaceColor ?? new Color(0.85, 0.32, 0.22); // biologiczny odcień hemoglobiny
+  const sssColor = options.subsurfaceColor ?? new Color(0.85, 0.32, 0.22); // biological haemoglobin tint
   const sssIntensity = options.subsurfaceIntensity ?? 0.35;
 
   material.userData.isSkinShader = true;
@@ -59,7 +59,7 @@ export function injectSkinSSS(
     shader.uniforms.uKeyLightColor = skinLightUniforms.uKeyLightColor;
     shader.uniforms.uSkinSSSEnabled = skinLightUniforms.uSkinSSSEnabled;
 
-    // 1. Definicja uniformów w frag shaderze
+    // 1. Uniform definitions in the fragment shader
     shader.fragmentShader = shader.fragmentShader.replace(
       '#include <common>',
       `
@@ -73,7 +73,7 @@ export function injectSkinSSS(
       `
     );
 
-    // 2. Modyfikacja cieniowania rozproszonego (Wrap Lighting z rozproszeniem hemoglobiny)
+    // 2. Modification of the diffuse shading (Wrap Lighting with haemoglobin scattering)
     shader.fragmentShader = shader.fragmentShader.replace(
       '#include <lights_fragment_begin>',
       `
@@ -96,13 +96,13 @@ export function injectSkinSSS(
 }
 
 /**
- * Konfiguruje materiał rogówki oka z realistyczną wilgotnością i refrakcją (docs/5)
+ * Configures the cornea material with realistic wetness and refraction (docs/5)
  */
 export function configureEyeCornea(material: MeshPhysicalMaterial): void {
   material.clearcoat = 1.0;
   material.clearcoatRoughness = 0.02;
   material.roughness = 0.03;
-  material.ior = 1.376; // Współczynnik załamania ludzkiej rogówki
+  material.ior = 1.376; // Refractive index of the human cornea
   material.metalness = 0.0;
   material.specularIntensity = 1.0;
   material.userData.isEyeMaterial = true;

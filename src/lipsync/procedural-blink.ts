@@ -4,14 +4,14 @@ export interface BlinkWeights {
 }
 
 export interface BlinkOptions {
-  minIntervalSec?: number; // Minimalny odstęp między mrugnięciami (domyślnie 2.5s)
-  maxIntervalSec?: number; // Maksymalny odstęp (domyślnie 6.0s)
-  closeDurationSec?: number; // Czas zamykania powiek (domyślnie 80ms)
-  openDurationSec?: number; // Czas otwierania powiek (domyślnie 200ms)
+  minIntervalSec?: number; // Minimum interval between blinks (default 2.5s)
+  maxIntervalSec?: number; // Maximum interval (default 6.0s)
+  closeDurationSec?: number; // Eyelid closing time (default 80ms)
+  openDurationSec?: number; // Eyelid opening time (default 200ms)
 }
 
 /**
- * Proceduralny generator naturalnego mrugania powiekami (docs/3, docs/6)
+ * Procedural generator of natural eyelid blinking (docs/3, docs/6)
  */
 export class ProceduralBlink {
   private readonly minIntervalSec: number;
@@ -39,12 +39,12 @@ export class ProceduralBlink {
     const range = this.maxIntervalSec - this.minIntervalSec;
     const interval = this.minIntervalSec + Math.random() * range + delayBonus;
     this.nextBlinkTimeSec = currentTimeSec + interval;
-    // 15% szansy na podwójne mrugnięcie (naturalny biologiczny odruch)
+    // 15% chance of a double blink (a natural biological reflex)
     this.isDoubleBlink = Math.random() < 0.15;
   }
 
   /**
-   * Zwraca wagi mrugania [0.0, 1.0] dla bieżącej chwili czasowej
+   * Returns the blink weights [0.0, 1.0] for the current point in time
    */
   public update(currentTimeSec: number): BlinkWeights {
     if (!this.isBlinking) {
@@ -62,7 +62,7 @@ export class ProceduralBlink {
       this.isBlinking = false;
       if (this.isDoubleBlink) {
         this.isDoubleBlink = false;
-        // Drugie mrugnięcie po krótkiej pauzie ~100ms
+        // Second blink after a short pause ~100ms
         this.nextBlinkTimeSec = currentTimeSec + 0.1;
       } else {
         this.scheduleNextBlink(currentTimeSec);
@@ -70,21 +70,21 @@ export class ProceduralBlink {
       return { left: 0, right: 0 };
     }
 
-    // Obliczenie wagi mrugnięcia
+    // Compute the blink weight
     let weight = 0;
     if (elapsed < this.closeDurationSec) {
-      // Faza 1: Szybkie zamykanie (80ms)
+      // Phase 1: fast closing (80ms)
       const t = elapsed / this.closeDurationSec;
       weight = Math.sin((t * Math.PI) / 2); // 0 -> 1
     } else {
-      // Faza 2: Płynne otwieranie (200ms)
+      // Phase 2: smooth opening (200ms)
       const t = (elapsed - this.closeDurationSec) / this.openDurationSec;
       weight = Math.cos((t * Math.PI) / 2); // 1 -> 0
     }
 
     const clamped = Math.max(0, Math.min(1, weight));
 
-    // Subtelna asymetria powiek (~2%) dla wyższego realizmu
+    // Subtle eyelid asymmetry (~2%) for extra realism
     return {
       left: clamped,
       right: Math.max(0, Math.min(1, clamped * 0.98)),

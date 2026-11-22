@@ -1,10 +1,11 @@
 /**
- * StudioShell (Faza 11, 11-03): prawy drawer z tabami z rejestru paneli + lewe drawery
- * dla paneli z `region: 'left'` (Wizemy, Inspektor). Lazy mount aktywnych paneli,
- * per-panel error boundary przez PanelRegistry.
+ * StudioShell (Phase 11, 11-03): right drawer with tabs from the panel registry + left drawers
+ * for panels with `region: 'left'` (Visemes, Inspector). Lazy mount of active panels,
+ * per-panel error boundary via PanelRegistry.
  */
 import { PanelContext, PanelRegistry } from './panel-registry';
 import { el } from '../shared/dom';
+import { t } from '../../app/copy';
 
 export interface StudioShellOptions {
   registry: PanelRegistry;
@@ -27,22 +28,22 @@ export function createStudioShell(options: StudioShellOptions): StudioShell {
   const rightPanels = registry.list('studio').filter((panel) => (panel.region ?? 'right') === 'right');
   const leftPanels = registry.list('studio').filter((panel) => panel.region === 'left');
 
-  // ---- prawy drawer z tabami
+  // ---- right drawer with tabs
   const closeButton = el('button', {
     className: 'btn-drawer-close',
     text: '✕',
     type: 'button',
-    ariaLabel: 'Zamknij studio',
+    ariaLabel: t('studio.closeAria'),
   });
   const drawer = el('aside', { className: 'side-drawer right-drawer hidden' });
-  const tablist = el('div', { className: 'studio-tabs', attrs: { role: 'tablist', 'aria-label': 'Panele studia' } });
+  const tablist = el('div', { className: 'studio-tabs', attrs: { role: 'tablist', 'aria-label': t('studio.tabsAria') } });
   const body = el('div', { className: 'drawer-body studio-tab-body' });
   const header = el('div', { className: 'drawer-header' }, [
     el('div', { className: 'drawer-title-group' }, [
       el('span', { className: 'drawer-header-icon', text: '🛠️' }),
       el('div', {}, [
-        el('h3', { text: 'Studio' }),
-        el('p', { className: 'drawer-subtitle', text: 'Konfiguracja i diagnostyka awatara' }),
+        el('h3', { text: t('studio.title') }),
+        el('p', { className: 'drawer-subtitle', text: t('studio.subtitle') }),
       ]),
     ]),
   ]);
@@ -81,7 +82,7 @@ export function createStudioShell(options: StudioShellOptions): StudioShell {
     tablist.append(button);
   }
 
-  // ---- lewe drawery (Wizemy, Inspektor)
+  // ---- left drawers (Visemes, Inspector)
   const root = el('div', { className: 'studio-shell hidden' });
   const leftColumn = el('div', { className: 'studio-left-toggles' });
   const leftDrawers = new Map<string, { drawer: HTMLElement; mounted: boolean }>();
@@ -93,7 +94,7 @@ export function createStudioShell(options: StudioShellOptions): StudioShell {
       className: 'btn-drawer-close',
       text: '✕',
       type: 'button',
-      ariaLabel: `Zamknij ${panel.title}`,
+      ariaLabel: t('studio.leftCloseAria', { panel: panel.title }),
     });
     const panelHeader = el('div', { className: 'drawer-header' }, [
       el('div', { className: 'drawer-title-group' }, [
@@ -107,7 +108,7 @@ export function createStudioShell(options: StudioShellOptions): StudioShell {
     const toggleButton = el('button', {
       className: 'dock-icon-btn studio-left-toggle',
       type: 'button',
-      ariaLabel: `Otwórz ${panel.title}`,
+      ariaLabel: t('studio.leftOpenAria', { panel: panel.title }),
     }, [
       el('span', { className: 'btn-icon', text: panel.icon }),
       el('span', { className: 'icon-label', text: panel.title }),

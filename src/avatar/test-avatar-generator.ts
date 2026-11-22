@@ -3,7 +3,7 @@ import { LoadedAvatar } from '../types/avatar';
 import { ArKitBlendshapeDriver } from './face-driver';
 
 /**
- * Wszystkie 52 blendshape'y Apple ARKit
+ * All 52 Apple ARKit blendshapes
  */
 export const ARKIT_52_SHAPES = [
   'eyeBlinkLeft', 'eyeLookDownLeft', 'eyeLookInLeft', 'eyeLookOutLeft', 'eyeLookUpLeft', 'eyeSquintLeft', 'eyeWideLeft',
@@ -21,7 +21,7 @@ export const ARKIT_52_SHAPES = [
 ];
 
 /**
- * Generuje realistyczną teksturę ludzkiej gałki ocznej (twardówka, tęczówka, źrenica, blik)
+ * Generates a realistic human eyeball texture (sclera, iris, pupil, specular highlight)
  */
 function createEyeballTexture(): THREE.Texture | null {
   if (typeof document === 'undefined') return null;
@@ -33,7 +33,7 @@ function createEyeballTexture(): THREE.Texture | null {
     const ctx = canvas.getContext('2d');
     if (!ctx) return null;
 
-    // 1. Twardówka (sclera) z miękkim cieniowaniem
+    // 1. Sclera with soft shading
     ctx.fillStyle = '#f8fafc';
     ctx.fillRect(0, 0, 512, 256);
 
@@ -42,7 +42,7 @@ function createEyeballTexture(): THREE.Texture | null {
     const irisRadius = 62;
     const pupilRadius = 24;
 
-    // 2. Ciemny rąbek rogówki (limbal ring)
+    // 2. Dark corneal rim (limbal ring)
     const gradLimbal = ctx.createRadialGradient(cx, cy, irisRadius - 6, cx, cy, irisRadius + 2);
     gradLimbal.addColorStop(0, '#0f172a');
     gradLimbal.addColorStop(1, '#f8fafc');
@@ -51,7 +51,7 @@ function createEyeballTexture(): THREE.Texture | null {
     ctx.arc(cx, cy, irisRadius + 2, 0, Math.PI * 2);
     ctx.fill();
 
-    // 3. Tęczówka (głęboki szafirowy błękit z promienistym gradientem)
+    // 3. Iris (deep sapphire blue with a radial gradient)
     const gradIris = ctx.createRadialGradient(cx, cy, pupilRadius, cx, cy, irisRadius);
     gradIris.addColorStop(0, '#0284c7');
     gradIris.addColorStop(0.4, '#0369a1');
@@ -62,7 +62,7 @@ function createEyeballTexture(): THREE.Texture | null {
     ctx.arc(cx, cy, irisRadius, 0, Math.PI * 2);
     ctx.fill();
 
-    // Włókna tęczówki
+    // Iris fibres
     ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
     ctx.lineWidth = 1.2;
     for (let a = 0; a < Math.PI * 2; a += 0.12) {
@@ -72,13 +72,13 @@ function createEyeballTexture(): THREE.Texture | null {
       ctx.stroke();
     }
 
-    // 4. Źrenica (głęboka czerń)
+    // 4. Pupil (deep black)
     ctx.fillStyle = '#020617';
     ctx.beginPath();
     ctx.arc(cx, cy, pupilRadius, 0, Math.PI * 2);
     ctx.fill();
 
-    // 5. Optyczny blik światła (rogówka)
+    // 5. Optical light highlight (cornea)
     ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
     ctx.beginPath();
     ctx.arc(cx - 14, cy - 14, 7, 0, Math.PI * 2);
@@ -93,21 +93,21 @@ function createEyeballTexture(): THREE.Texture | null {
 }
 
 /**
- * Tworzy kompletny model awatara z popiersiem (głowa, szyja, ramiona),
- * wszystkimi 52 blendshape'ami ARKit oraz w pełni animowalnymi oczami.
+ * Creates a complete avatar model with a bust (head, neck, shoulders),
+ * all 52 ARKit blendshapes and fully animatable eyes.
  */
 export function createTestAvatar(): LoadedAvatar {
   const root = new THREE.Group();
   root.name = 'ProceduralMetaPersonAvatar';
 
-  // 1. Siatka Głowy / Twarzy (Head Skinned Mesh)
+  // 1. Head / Face mesh (Head Skinned Mesh)
   const headGeo = new THREE.SphereGeometry(0.22, 48, 48);
-  headGeo.scale(1.0, 1.25, 1.05); // anatomiczny kształt głowy
+  headGeo.scale(1.0, 1.25, 1.05); // anatomical head shape
 
   const posAttr = headGeo.attributes.position;
   const vertexCount = posAttr.count;
 
-  // Tworzymy morph targets dla wszystkich 52 kształtów ARKit
+  // Create morph targets for all 52 ARKit shapes
   const morphDict: Record<string, number> = {};
   const morphTargets: THREE.BufferAttribute[] = [];
 
@@ -125,7 +125,7 @@ export function createTestAvatar(): LoadedAvatar {
       let dy = 0;
       let dz = 0;
 
-      // Deformacje dla kluczowych stref twarzy
+      // Deformations for the key face regions
       const isMouthArea = y < -0.04 && y > -0.16 && z > 0.08;
       const isLeftEyeArea = y > 0.03 && y < 0.11 && x < -0.04 && z > 0.12;
       const isRightEyeArea = y > 0.03 && y < 0.11 && x > 0.04 && z > 0.12;
@@ -182,7 +182,7 @@ export function createTestAvatar(): LoadedAvatar {
 
   headGeo.morphAttributes.position = morphTargets;
 
-  // Materiał skóry (PBR zgodny z docs/5)
+  // Skin material (PBR per docs/5)
   const skinMaterial = new THREE.MeshPhysicalMaterial({
     color: new THREE.Color(0xdcb097),
     roughness: 0.52,
@@ -203,7 +203,7 @@ export function createTestAvatar(): LoadedAvatar {
   headMesh.frustumCulled = false;
   root.add(headMesh);
 
-  // 2. Sub-mesh: Zęby (Teeth Mesh z synchronizowanym jawOpen)
+  // 2. Sub-mesh: Teeth (Teeth Mesh with a synchronized jawOpen)
   const teethGeo = new THREE.BoxGeometry(0.08, 0.02, 0.02);
   const teethPos = teethGeo.attributes.position;
   const teethMorph: THREE.BufferAttribute[] = [];
@@ -234,7 +234,7 @@ export function createTestAvatar(): LoadedAvatar {
   teethMesh.frustumCulled = false;
   root.add(teethMesh);
 
-  // 3. Sub-mesh: Oczy z realistyczną twardówką i źrenicą
+  // 3. Sub-mesh: Eyes with a realistic sclera and pupil
   const eyeTexture = createEyeballTexture();
   const eyeGeo = new THREE.SphereGeometry(0.024, 32, 32);
   const eyeMat = new THREE.MeshPhysicalMaterial({
@@ -249,7 +249,7 @@ export function createTestAvatar(): LoadedAvatar {
   const leftEye = new THREE.Mesh(eyeGeo, eyeMat);
   leftEye.name = 'Avatar_LeftEye';
   leftEye.position.set(-0.065, 0.055, 0.18);
-  leftEye.rotation.y = -Math.PI / 2; // skierowanie źrenicy do przodu w stronę kamery
+  leftEye.rotation.y = -Math.PI / 2; // turn the pupil forward, towards the camera
   root.add(leftEye);
 
   const rightEye = new THREE.Mesh(eyeGeo, eyeMat);
@@ -258,11 +258,11 @@ export function createTestAvatar(): LoadedAvatar {
   rightEye.rotation.y = -Math.PI / 2;
   root.add(rightEye);
 
-  // Zapisujemy referencje do obiektów oczu w userData, aby kontroler wzroku mógł nimi fizycznie obracać
+  // Store references to the eye objects in userData so the gaze controller can physically rotate them
   root.userData.leftEye = leftEye;
   root.userData.rightEye = rightEye;
 
-  // 4. Szyja (Neck)
+  // 4. Neck
   const neckGeo = new THREE.CylinderGeometry(0.09, 0.11, 0.22, 32);
   const neckMesh = new THREE.Mesh(neckGeo, skinMaterial);
   neckMesh.name = 'Avatar_Neck';
@@ -270,11 +270,11 @@ export function createTestAvatar(): LoadedAvatar {
   neckMesh.receiveShadow = true;
   root.add(neckMesh);
 
-  // 5. Popiersie / Ramiona (Torso / Shoulders)
+  // 5. Bust / Shoulders (Torso / Shoulders)
   const torsoGeo = new THREE.CylinderGeometry(0.24, 0.28, 0.35, 32);
-  torsoGeo.scale(1.35, 1.0, 0.7); // anatomiczny owal ramion
+  torsoGeo.scale(1.35, 1.0, 0.7); // anatomical shoulder oval
   const shirtMaterial = new THREE.MeshStandardMaterial({
-    color: 0x1e293b, // elegancki grafitowy garnitur/koszula
+    color: 0x1e293b, // elegant graphite suit/shirt
     roughness: 0.7,
     metalness: 0.05,
   });
@@ -288,7 +288,7 @@ export function createTestAvatar(): LoadedAvatar {
   root.userData.torso = torsoMesh;
   root.userData.head = headMesh;
 
-  // Pozycja riga głowy na wysokości kamery (~1.45m)
+  // Head rig position at camera height (~1.45m)
   root.position.set(0, 1.45, 0);
 
   const speechMeshes = [headMesh, teethMesh];

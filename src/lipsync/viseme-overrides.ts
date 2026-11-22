@@ -1,17 +1,17 @@
 /**
- * Edytor Wizemów (docs/3 v1.1): ręczne nadpisania ułożenia blendshape'ów PER WIZEM.
+ * Viseme Editor (docs/3 v1.1): manual overrides of the blendshape pose PER VISEME.
  *
- * Uzasadnienie: combosy ARKit z tabel to domysły — na konkretnym riggu (MetaPerson) te same
- * wartości potrafią deformować (np. mouthClose ciągnie dolną wargę na nos). Ten moduł pozwala
- * nadpisać ułożenie dla każdego wizemu (klucz = fonem ARPAbet dla ścieżki G2P / token litery
- * lub dwuznaku dla ścieżki znakowej). Nadpisania zapisywane w localStorage; gdy brak nadpisania,
- * obowiązują domysły z tabel (phoneme-visemes.ts / viseme-mappings.ts).
+ * Rationale: the ARKit combos from the tables are guesses — on a concrete rig (MetaPerson) the same
+ * values can deform the face (e.g. mouthClose pulls the lower lip onto the nose). This module lets you
+ * override the pose for every viseme (key = ARPAbet phoneme for the G2P path / letter token
+ * or digraph for the character path). Overrides are stored in localStorage; when there is no override,
+ * the guesses from the tables (phoneme-visemes.ts / viseme-mappings.ts) apply.
  */
 
 import { mapPhonemeToShapes } from './g2p/phoneme-visemes';
 import { charTokenFor, charDefaultShapesForToken } from './viseme-mappings';
 
-/** Kształty aparatu mowy edytowalne w Edytorze Wizemów (bez oczu/brwi). */
+/** Speech-apparatus shapes editable in the Viseme Editor (no eyes/brows). */
 export const EDITOR_SHAPES = [
   'jawOpen',
   'mouthClose',
@@ -30,18 +30,18 @@ export const EDITOR_SHAPES = [
   'tongueOut',
 ] as const;
 
-/** Wizemy silnika G2P (EN) — klucze = fonemy ARPAbet. */
+/** Visemes of the G2P (EN) engine — keys = ARPAbet phonemes. */
 export interface VisemeRef {
   key: string;
   label: string;
 }
 
 export const EN_VISEMES: VisemeRef[] = [
-  // Samogłoski
-  { key: 'AA', label: 'AA — "father" (szeroko)' },
+  // Vowels
+  { key: 'AA', label: 'AA — "father" (wide)' },
   { key: 'AE', label: 'AE — "cat"' },
   { key: 'AH', label: 'AH — "but"' },
-  { key: 'AO', label: 'AO — "law / thought" (zaokrąglone)' },
+  { key: 'AO', label: 'AO — "law / thought" (rounded)' },
   { key: 'AW', label: 'AW — "cow / how"' },
   { key: 'AY', label: 'AY — "my / time"' },
   { key: 'EH', label: 'EH — "bet / bed"' },
@@ -52,99 +52,99 @@ export const EN_VISEMES: VisemeRef[] = [
   { key: 'OW', label: 'OW — "go / no"' },
   { key: 'OY', label: 'OY — "boy / toy"' },
   { key: 'UH', label: 'UH — "book / good"' },
-  { key: 'UW', label: 'UW — "too / you" (dzióbek)' },
-  // Spółgłoski
-  { key: 'P', label: 'P / B / M — "map" (domknięcie)' },
-  { key: 'B', label: 'B (dzielone z P/M — ta sama poza)' },
-  { key: 'M', label: 'M (dzielone z P/B — ta sama poza)' },
-  { key: 'F', label: 'F / V — "fine" (warga pod zęby)' },
-  { key: 'V', label: 'V (dzielone z F)' },
-  { key: 'TH', label: 'TH — "think" (język między zębami)' },
-  { key: 'DH', label: 'DH — "this" (dzielone z TH)' },
+  { key: 'UW', label: 'UW — "too / you" (pucker)' },
+  // Consonants
+  { key: 'P', label: 'P / B / M — "map" (closure)' },
+  { key: 'B', label: 'B (shared with P/M — same pose)' },
+  { key: 'M', label: 'M (shared with P/B — same pose)' },
+  { key: 'F', label: 'F / V — "fine" (lip under teeth)' },
+  { key: 'V', label: 'V (shared with F)' },
+  { key: 'TH', label: 'TH — "think" (tongue between teeth)' },
+  { key: 'DH', label: 'DH — "this" (shared with TH)' },
   { key: 'T', label: 'T / D / N — "time"' },
-  { key: 'D', label: 'D (dzielone z T/N)' },
-  { key: 'N', label: 'N (dzielone z T/D)' },
+  { key: 'D', label: 'D (shared with T/N)' },
+  { key: 'N', label: 'N (shared with T/D)' },
   { key: 'L', label: 'L — "like"' },
   { key: 'S', label: 'S / Z — "see / zoo"' },
-  { key: 'Z', label: 'Z (dzielone z S)' },
-  { key: 'SH', label: 'SH / ZH — "ship" (tuba)' },
-  { key: 'ZH', label: 'ZH (dzielone z SH)' },
-  { key: 'CH', label: 'CH / JH — "chat" (afrykata)' },
-  { key: 'JH', label: 'JH (dzielone z CH)' },
+  { key: 'Z', label: 'Z (shared with S)' },
+  { key: 'SH', label: 'SH / ZH — "ship" (funnel)' },
+  { key: 'ZH', label: 'ZH (shared with SH)' },
+  { key: 'CH', label: 'CH / JH — "chat" (affricate)' },
+  { key: 'JH', label: 'JH (shared with CH)' },
   { key: 'K', label: 'K / G — "cat / go"' },
-  { key: 'G', label: 'G (dzielone z K)' },
+  { key: 'G', label: 'G (shared with K)' },
   { key: 'NG', label: 'NG — "sing"' },
   { key: 'R', label: 'R — "red"' },
-  { key: 'W', label: 'W — "we" (zaokrąglenie)' },
-  { key: 'Y', label: 'Y — "you" (palatalne)' },
-  { key: 'HH', label: 'HH — "hi" (przydech)' },
+  { key: 'W', label: 'W — "we" (rounding)' },
+  { key: 'Y', label: 'Y — "you" (palatal)' },
+  { key: 'HH', label: 'HH — "hi" (aspirated)' },
 ];
 
-/** Wizemy ścieżki znakowej (PL / fallback char) — klucze = tokeny z viseme-mappings. */
+/** Character-path visemes (PL / fallback char) — keys = tokens from viseme-mappings. */
 export const CHAR_VISEMES: VisemeRef[] = [
-  { key: 'A', label: 'A / Ą — szerokie otwarcie' },
-  { key: 'E', label: 'E / Ę — średnio otwarte' },
-  { key: 'I', label: 'I / Y — wąskie' },
-  { key: 'Y', label: 'Y (samogłoska) — jak I' },
-  { key: 'O', label: 'O / Ó — zaokrąglone' },
-  { key: 'U', label: 'U — mocny dzióbek' },
-  { key: 'W', label: 'W (spółgłoska) — glide' },
-  { key: 'M', label: 'M / B / P — pełne domknięcie' },
-  { key: 'B', label: 'B (dzielone z M/P)' },
-  { key: 'P', label: 'P (dzielone z M/B)' },
-  { key: 'F', label: 'F / V — dolna warga pod zęby' },
-  { key: 'V', label: 'V (dzielone z F)' },
-  { key: 'L', label: 'L — język w górze' },
-  { key: 'T', label: 'T / D / N — zębowe' },
-  { key: 'D', label: 'D (dzielone z T/N)' },
-  { key: 'N', label: 'N (dzielone z T/D)' },
-  { key: 'S', label: 'S / Z — syczące, wąsko' },
-  { key: 'Z', label: 'Z (dzielone z S)' },
-  { key: 'K', label: 'K / G — tylnojęzykowe' },
-  { key: 'G', label: 'G (dzielone z K)' },
-  { key: 'C', label: 'C — kontekst (soft→S / hard→K)' },
+  { key: 'A', label: 'A / Ą — wide opening' },
+  { key: 'E', label: 'E / Ę — mid-open' },
+  { key: 'I', label: 'I / Y — narrow' },
+  { key: 'Y', label: 'Y (vowel) — like I' },
+  { key: 'O', label: 'O / Ó — rounded' },
+  { key: 'U', label: 'U — strong pucker' },
+  { key: 'W', label: 'W (consonant) — glide' },
+  { key: 'M', label: 'M / B / P — full closure' },
+  { key: 'B', label: 'B (shared with M/P)' },
+  { key: 'P', label: 'P (shared with M/B)' },
+  { key: 'F', label: 'F / V — lower lip under teeth' },
+  { key: 'V', label: 'V (shared with F)' },
+  { key: 'L', label: 'L — tongue raised' },
+  { key: 'T', label: 'T / D / N — dental' },
+  { key: 'D', label: 'D (shared with T/N)' },
+  { key: 'N', label: 'N (shared with T/D)' },
+  { key: 'S', label: 'S / Z — sibilant, narrow' },
+  { key: 'Z', label: 'Z (shared with S)' },
+  { key: 'K', label: 'K / G — velar' },
+  { key: 'G', label: 'G (shared with K)' },
+  { key: 'C', label: 'C — context (soft→S / hard→K)' },
   { key: 'X', label: 'X — /ks/' },
-  { key: 'H', label: 'H / CH — przydech' },
-  { key: 'R', label: 'R — aproksymacja' },
-  { key: 'J', label: 'J — palatalne' },
-  { key: 'Ą', label: 'Ą (nosówka)' },
-  { key: 'Ę', label: 'Ę (nosówka)' },
-  { key: 'Ó', label: 'Ó — jak U' },
+  { key: 'H', label: 'H / CH — aspirated' },
+  { key: 'R', label: 'R — approximation' },
+  { key: 'J', label: 'J — palatal' },
+  { key: 'Ą', label: 'Ą (nasal vowel)' },
+  { key: 'Ę', label: 'Ę (nasal vowel)' },
+  { key: 'Ó', label: 'Ó — like U' },
   { key: 'Ł', label: 'Ł — /w/-like' },
-  { key: 'Ś', label: 'Ś / Ć / Ź — zmiękczone syczące' },
-  { key: 'Ć', label: 'Ć (dzielone ze Ś/Ź)' },
-  { key: 'Ź', label: 'Ź (dzielone ze Ś/Ć)' },
-  { key: 'Ż', label: 'Ż / RZ — jak SH' },
-  { key: 'Ń', label: 'Ń — palatalne n' },
-  { key: 'SZ', label: 'SZ / CZ — tunel, zęby widoczne' },
-  { key: 'CZ', label: 'CZ (dzielone z SZ)' },
-  { key: 'RZ', label: 'RZ (dzielone z Ż)' },
-  { key: 'DŻ', label: 'DŻ (dzielone z Ż/RZ)' },
-  { key: 'DZ', label: 'DZ — jak Z + D' },
-  { key: 'DŹ', label: 'DŹ / SI / ZI / NI / CI — zmiękczone' },
-  { key: 'SI', label: 'SI (dzielone z DŹ)' },
-  { key: 'ZI', label: 'ZI (dzielone z DŹ)' },
-  { key: 'NI', label: 'NI (dzielone z DŹ)' },
-  { key: 'CI', label: 'CI (dzielone z DŹ)' },
-  { key: 'SH', label: 'SH (EN dwuznak — jak PL SZ)' },
-  { key: 'CH', label: 'CH (EN dwuznak — jak SH+zwarcie)' },
-  { key: 'TH', label: 'TH — język między zębami' },
-  { key: 'PH', label: 'PH — jak F' },
-  { key: 'WH', label: 'WH — jak W' },
+  { key: 'Ś', label: 'Ś / Ć / Ź — softened sibilants' },
+  { key: 'Ć', label: 'Ć (shared with Ś/Ź)' },
+  { key: 'Ź', label: 'Ź (shared with Ś/Ć)' },
+  { key: 'Ż', label: 'Ż / RZ — like SH' },
+  { key: 'Ń', label: 'Ń — palatal n' },
+  { key: 'SZ', label: 'SZ / CZ — lip tube, teeth visible' },
+  { key: 'CZ', label: 'CZ (shared with SZ)' },
+  { key: 'RZ', label: 'RZ (shared with Ż)' },
+  { key: 'DŻ', label: 'DŻ (shared with Ż/RZ)' },
+  { key: 'DZ', label: 'DZ — like Z + D' },
+  { key: 'DŹ', label: 'DŹ / SI / ZI / NI / CI — softened' },
+  { key: 'SI', label: 'SI (shared with DŹ)' },
+  { key: 'ZI', label: 'ZI (shared with DŹ)' },
+  { key: 'NI', label: 'NI (shared with DŹ)' },
+  { key: 'CI', label: 'CI (shared with DŹ)' },
+  { key: 'SH', label: 'SH (EN digraph — like PL SZ)' },
+  { key: 'CH', label: 'CH (EN digraph — like SH + stop)' },
+  { key: 'TH', label: 'TH — tongue between teeth' },
+  { key: 'PH', label: 'PH — like F' },
+  { key: 'WH', label: 'WH — like W' },
   { key: 'QU', label: 'QU — /kw/' },
-  { key: 'NG', label: 'NG — tylnojęzykowe' },
+  { key: 'NG', label: 'NG — velar' },
 ];
 
 export const VISEME_GROUPS = [
-  { id: 'en', label: 'Silnik EN (fonemy G2P)', visemes: EN_VISEMES },
-  { id: 'char', label: 'Ścieżka znaków (PL / fallback)', visemes: CHAR_VISEMES },
+  { id: 'en', label: 'EN engine (G2P phonemes)', visemes: EN_VISEMES },
+  { id: 'char', label: 'Character path (PL / fallback)', visemes: CHAR_VISEMES },
 ] as const;
 
 export type VisemeOverrideMap = Record<string, Record<string, number>>;
 
 const STORAGE_KEY = 'avatar_viseme_overrides_v1';
 
-/** Czyta nadpisania wizemów z localStorage (pusto gdy brak). */
+/** Reads viseme overrides from localStorage (empty when none). */
 export function loadVisemeOverrides(): VisemeOverrideMap {
   if (typeof localStorage === 'undefined') return {};
   try {
@@ -153,22 +153,22 @@ export function loadVisemeOverrides(): VisemeOverrideMap {
     const parsed = JSON.parse(raw) as VisemeOverrideMap;
     return parsed && typeof parsed === 'object' ? parsed : {};
   } catch (e) {
-    console.warn('[VisemeOverrides] Błąd odczytu nadpisań:', e);
+    console.warn('[VisemeOverrides] Error reading overrides:', e);
     return {};
   }
 }
 
-/** Zapisuje całą mapę nadpisań wizemów. */
+/** Saves the whole viseme override map. */
 export function saveVisemeOverrides(overrides: VisemeOverrideMap): void {
   if (typeof localStorage === 'undefined') return;
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(overrides));
   } catch (e) {
-    console.warn('[VisemeOverrides] Błąd zapisu nadpisań:', e);
+    console.warn('[VisemeOverrides] Error saving overrides:', e);
   }
 }
 
-/** Czyści wszystkie nadpisania. */
+/** Clears all overrides. */
 export function clearVisemeOverrides(): void {
   if (typeof localStorage !== 'undefined') {
     try {
@@ -180,8 +180,8 @@ export function clearVisemeOverrides(): void {
 }
 
 /**
- * Domyślne ułożenie kształtów dla danego wizemu (używane przez podgląd i gdy brak nadpisania).
- * Zwraca null dla wizemów bez kształtów (np. spacja) lub nieznanych.
+ * Default shape pose for a given viseme (used by the preview and when there is no override).
+ * Returns null for visemes without shapes (e.g. space) or unknown ones.
  */
 export function defaultVisemeShapes(key: string): Map<string, number> | null {
   const fromPhoneme = mapPhonemeToShapes(key);
@@ -190,7 +190,7 @@ export function defaultVisemeShapes(key: string): Map<string, number> | null {
   return fromChar;
 }
 
-/** Sprawdza czy klucz jest nadpisywalny (ma domyślne kształty). */
+/** Checks whether the key is overridable (has default shapes). */
 export function isEditableViseme(key: string): boolean {
   return defaultVisemeShapes(key) !== null;
 }

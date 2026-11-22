@@ -5,7 +5,7 @@ import { updateSkinLightUniforms } from './skin-shader';
 const KEY_OFFSET = new THREE.Vector3(1.5, 2.0, 2.0);
 
 /**
- * Konfiguracja 3-punktowego oświetlenia studyjnego PoC wg docs/5
+ * PoC 3-point studio lighting configuration per docs/5
  */
 export class StudioLighting {
   public readonly keyLight: THREE.DirectionalLight;
@@ -18,7 +18,7 @@ export class StudioLighting {
     this.group = new THREE.Group();
     this.group.name = 'StudioLighting';
 
-    // 1. Key Light (Główne ciepłe światło rysujące)
+    // 1. Key Light (the main warm modelling light)
     this.keyLight = new THREE.DirectionalLight(0xfff2e0, 2.2);
     this.keyLight.position.copy(KEY_OFFSET);
     this.keyLight.castShadow = true;
@@ -36,15 +36,15 @@ export class StudioLighting {
     this.keyLight.shadow.camera.top = d;
     this.keyLight.shadow.camera.bottom = -d;
 
-    // 2. Fill Light (Chłodne światło wypełniające cienie)
+    // 2. Fill Light (a cool light filling the shadows)
     this.fillLight = new THREE.DirectionalLight(0xdbe9ff, 0.7);
     this.fillLight.position.set(-2.0, 1.0, 1.5);
 
-    // 3. Rim Light (Światło kontrowe — akcentuje krawędzie głowy i uszu)
+    // 3. Rim Light (a back light — accents the edges of the head and ears)
     this.rimLight = new THREE.DirectionalLight(0xffe8d6, 2.6);
     this.rimLight.position.set(0.0, 2.5, -2.5);
 
-    // 4. Subtelny ambient zapobiegający absolutnej czerni
+    // 4. A subtle ambient preventing absolute black
     this.ambientLight = new THREE.AmbientLight(0xffffff, 0.15);
 
     this.group.add(this.keyLight);

@@ -1,7 +1,7 @@
 import { CharAlignment } from './avatar';
 
 /**
- * Zdarzenia przesyłane z serwera ElevenAgents do klienta (S2C)
+ * Events sent from the ElevenAgents server to the client (S2C)
  */
 export interface AudioEventPayload {
   audio_base_64: string;
@@ -77,7 +77,7 @@ export type ServerToClientMsg =
   | MetadataServerMsg;
 
 /**
- * Zdarzenia przesyłane od klienta do serwera ElevenAgents (C2S)
+ * Events sent from the client to the ElevenAgents server (C2S)
  */
 export interface ClientInitMsg {
   type: 'conversation_initiation_client_data';

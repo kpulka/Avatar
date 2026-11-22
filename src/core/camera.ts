@@ -6,7 +6,7 @@ export class AppCamera {
   public readonly controls: OrbitControls;
 
   constructor(domElement: HTMLElement) {
-    // 35° FOV odpowiada obiektywowi portretowemu (~85mm) — zapobiega zniekształceniom nosa/twarzy
+    // 35° FOV matches a portrait lens (~85mm) — prevents distortion of the nose/face
     this.instance = new THREE.PerspectiveCamera(
       35,
       window.innerWidth / window.innerHeight,
@@ -14,16 +14,16 @@ export class AppCamera {
       100
     );
 
-    // Kadr popiersia/głowy (kamera na wysokości wzroku awatara)
+    // Bust/head framing (camera at the avatar's eye level)
     this.instance.position.set(0, 1.5, 1.3);
 
     this.controls = new OrbitControls(this.instance, domElement);
     this.controls.enableDamping = true;
     this.controls.dampingFactor = 0.05;
-    this.controls.target.set(0, 1.45, 0); // cel: twarz
+    this.controls.target.set(0, 1.45, 0); // target: the face
 
-    // Blokujemy interakcję OrbitControls myszką — kamera portretowa jest sztywno zablokowana na twarzy,
-    // co zapobiega obracaniu sceny, zmianie kąta i przypadkowemu skalowaniu/zoomowi głowy przy ruchach myszką
+    // We block OrbitControls mouse interaction — the portrait camera is rigidly locked on the face,
+    // which prevents rotating the scene, changing the angle and accidentally scaling/zooming the head with mouse moves
     this.controls.enabled = false;
     this.controls.enableZoom = false;
     this.controls.enableRotate = false;
@@ -41,7 +41,7 @@ export class AppCamera {
     this.instance.updateProjectionMatrix();
   }
 
-  /** Kadr portretowy (presety sceny, F11): bust z=1.22, head z=0.9. */
+  /** Portrait framing (scene presets, F11): bust z=1.22, head z=0.9. */
   public setFraming(framing: 'bust' | 'head', faceY?: number): void {
     this.instance.position.z = framing === 'head' ? 0.9 : 1.22;
     if (faceY !== undefined) {

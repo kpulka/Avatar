@@ -1,9 +1,9 @@
 /**
- * AnimationController (Faza 11, 11-02) — wydzielony z `main.ts`.
+ * AnimationController (Phase 11, 11-02) — extracted from `main.ts`.
  *
- * Odpowiada za: cykl życia FaceController (jedyny właściciel morphów), routing źródła
- * animacji per tura, demo mowy i demo A2F (realny /predict + fallback), kalibrację,
- * nadpisania wizemów, testy głosek/fraz oraz render twarzy.
+ * Responsible for: the FaceController lifecycle (the sole owner of the morphs), animation source
+ * routing per turn, the demo speech and A2F demo (real /predict + fallback), calibration,
+ * viseme overrides, phoneme/phrase tests and face rendering.
  */
 import { AudioEngine } from '../audio/audio-engine';
 import { predictFrames } from '../audio/a2f-backend';
@@ -19,6 +19,7 @@ import {
 import { VisemeOverrideMap } from '../lipsync/viseme-overrides';
 import { TypedEventBus, Unsub } from '../app/events';
 import { AnimationService, AppEvents } from '../app/app-types';
+import { t } from '../app/copy';
 import { AnimationMode, FaceDriver, FramesClip } from '../types/avatar';
 import { SettingsStore } from '../app/store/settings-store';
 
@@ -29,7 +30,7 @@ export interface AnimationControllerDeps {
   audioEngine: AudioEngine;
   events: TypedEventBus<AppEvents>;
   store: SettingsStore;
-  /** Port mowy demo (speechBackend.triggerDemoSpeech) — bez zależności od WSS w kontrolerze. */
+  /** Demo speech port (speechBackend.triggerDemoSpeech) — no dependency on WSS in the controller. */
   speak: (text: string) => void;
 }
 
@@ -75,7 +76,7 @@ export class AnimationController implements AnimationService {
   private handleAudioChunk(chunk: { alignment: Parameters<FaceController['onAudioChunk']>[0]; startTime: number; epoch: number }): void {
     const fc = this.faceController;
     if (!fc) return;
-    // Tura LIVE z WSS zawsze wizemy — A2F-batch łamie TTFB (router 08-03).
+    // A LIVE turn from WSS is always visemes — A2F batch breaks TTFB (router 08-03).
     const source = resolveAnimationSource({ mode: this.animMode, liveTurn: true });
     if (fc.getAnimationMode() !== source) {
       fc.setAnimationMode(source);
@@ -105,7 +106,9 @@ export class AnimationController implements AnimationService {
       });
     }
     this.events.emit('toast', {
-      message: `Źródło animacji: ${mode === 'frames' ? 'A2F (frames)' : 'LIVE wizemy'}`,
+      message: t('toast.animationSource', {
+        source: mode === 'frames' ? t('animation.sourceFrames') : t('animation.sourceViseme'),
+      }),
       type: 'success',
     });
   }
@@ -116,7 +119,7 @@ export class AnimationController implements AnimationService {
     this.events.emit('transcript:agent', demoReply);
     this.speak('Hello, it is a wonderful pleasure to talk with you.');
     this.events.emit('toast', {
-      message: 'Odtwarzanie demonstracyjnej mowy z analizą sentymentu (Happy)',
+      message: t('toast.demoSpeech'),
       type: 'success',
     });
   }
@@ -126,7 +129,7 @@ export class AnimationController implements AnimationService {
       lang === 'pl'
         ? 'Dzień dobry! Cieszę się, że mogę z Tobą dzisiaj porozmawiać.'
         : 'Hello! I am delighted to speak with you and assist you today.';
-    this.events.emit('transcript:user', `[Test kalibracji ${lang.toUpperCase()}]`);
+    this.events.emit('transcript:user', t('animation.calibrationLabelPrefix', { lang: lang.toUpperCase() }));
     this.events.emit('transcript:agent', phrase);
     this.faceController?.clearManualOverrides();
     this.speak(phrase);
@@ -192,7 +195,7 @@ export class AnimationController implements AnimationService {
   }
 
   // ---------------------------------------------------------------------------
-  // Demo A2F (09-03) — przeniesione 1:1 z main.ts
+  // A2F demo (09-03) — moved 1:1 from main.ts
   // ---------------------------------------------------------------------------
 
   private async fetchDemoVoiceBytes(): Promise<ArrayBuffer | null> {
@@ -246,7 +249,7 @@ export class AnimationController implements AnimationService {
       const baseSec = this.scheduleDecodedAudio(audio);
       return { baseSec, durationSec: audio.duration, phrase: DEMO_PHRASE, source: 'voice' };
     } catch (error) {
-      console.warn('[Demo A2F] Niepoprawne nagranie demo-speech.wav — syntetyka:', error);
+      console.warn('[Demo A2F] Invalid demo-speech.wav recording — synthetic fallback:', error);
       return null;
     }
   }
@@ -270,7 +273,7 @@ export class AnimationController implements AnimationService {
       const baseSec = this.scheduleDecodedAudio(audio);
       return { clip: parsed.clip, baseSec, durationSec: audio.duration, predictMs };
     } catch (error) {
-      console.warn('[A2F lokalny] predict niedostępny — fallback do wizem demo/syntetyki:', error);
+      console.warn('[Local A2F] predict unavailable — falling back to demo/synthetic visemes:', error);
       return null;
     }
   }
@@ -291,11 +294,11 @@ export class AnimationController implements AnimationService {
   public async runA2fDemo(): Promise<void> {
     const faceController = this.faceController;
     if (!faceController) {
-      this.events.emit('toast', { message: 'Najpierw załaduj awatara (Demo/Load).', type: 'error' });
+      this.events.emit('toast', { message: t('toast.loadAvatarFirst'), type: 'error' });
       return;
     }
 
-    // Wymuś tryb frames (dev-switch) — niezależnie od wyścigu z odroczoną zmianą trybu.
+    // Force frames mode (dev-switch) — regardless of the race with the deferred mode change.
     if (faceController.getAnimationMode() !== 'frames') {
       this.animMode = 'frames';
       this.store.setUser('animationSource', 'frames');
@@ -304,11 +307,11 @@ export class AnimationController implements AnimationService {
     }
 
     const sampleRate = 44100;
-    // Świeża tura (epoka++): kasuje ewentualną bieżącą mowę/demo.
+    // Fresh turn (epoch++): cancels any current speech/demo.
     this.audioEngine.hardStop();
     faceController.onInterruption();
 
-    // 1) REALNY A2F (09-03): lokalny wrapper /predict (jeśli dostępny) → neuronowe ramki.
+    // 1) REAL A2F (09-03): local /predict wrapper (if available) → neural frames.
     const real = await this.tryRealA2fDemo(this.store.getEffective<string>('a2fUrl'));
     if (real) {
       faceController.feedFrames(real.clip, real.baseSec, this.audioEngine.getEpoch());
@@ -321,25 +324,26 @@ export class AnimationController implements AnimationService {
         rtf,
       });
       this.events.emit('toast', {
-        message:
-          `A2F lokalny: ${real.clip.frames.length} ramek @ ${real.clip.fps}fps, ` +
-          `predict ${real.predictMs} ms (RTF ${rtf.toFixed(2)})`,
+        message: t('toast.a2fLocalResult', {
+          frames: real.clip.frames.length,
+          fps: real.clip.fps,
+          ms: real.predictMs,
+          rtf: rtf.toFixed(2),
+        }),
         type: 'success',
       });
       return;
     }
 
-    // 2) Fallback: nagranie demo-speech.wav z ramkami demo LUB syntetyka (bez wrappera).
+    // 2) Fallback: the demo-speech.wav recording with demo frames OR synthetic (no wrapper).
     const { baseSec, durationSec, phrase, source } = await this.scheduleDemoAudio(sampleRate);
     const clip = buildDemoFrames(sampleRate, durationSec, phrase);
     faceController.feedFrames(clip, baseSec, this.audioEngine.getEpoch());
     this.events.emit('a2f:stats', { source, frames: clip.frames.length, fps: clip.fps });
     this.events.emit('toast', {
       message:
-        `Demo A2F (frames): ${clip.frames.length} ramek @ ${clip.fps}fps, base=${baseSec.toFixed(3)}s` +
-        (source === 'voice'
-          ? ' — nagranie demo-speech.wav'
-          : ' — syntetyka (dodaj public/demo/demo-speech.wav)'),
+        t('toast.a2fDemoResult', { frames: clip.frames.length, fps: clip.fps, base: baseSec.toFixed(3) }) +
+        (source === 'voice' ? t('toast.a2fDemoVoice') : t('toast.a2fDemoSynthetic')),
       type: 'success',
     });
   }

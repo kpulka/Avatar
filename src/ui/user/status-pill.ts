@@ -1,20 +1,21 @@
 /**
- * StatusPill (Faza 11, 11-06): brand + status rozmowy (zamknięty zbiór stanów, UI-SPEC).
+ * StatusPill (Phase 11, 11-06): brand + conversation status (closed set of states, UI-SPEC).
  */
 import { PanelContext, PanelDefinition, PanelHandle } from '../studio/panel-registry';
 import { el } from '../shared/dom';
+import { t } from '../../app/copy';
 
 const LABELS: Record<string, string> = {
-  idle: 'Gotowy',
-  listening: 'Słucham…',
-  speaking: 'Mówię…',
-  thinking: 'Myślę…',
+  idle: t('status.idle'),
+  listening: t('status.listening'),
+  speaking: t('status.speaking'),
+  thinking: t('status.thinking'),
 };
 
 export function createStatusPill(): PanelDefinition {
   return {
     id: 'status-pill',
-    title: 'Status',
+    title: t('panel.title.status'),
     icon: '🟢',
     visibleIn: 'user',
     mount(ctx: PanelContext): PanelHandle {
@@ -22,7 +23,7 @@ export function createStatusPill(): PanelDefinition {
       const state = el('span', { className: 'status-pill voice-idle', text: LABELS.idle });
       const root = el('div', { className: 'user-status' }, [
         el('span', { className: 'pulse-dot' }),
-        el('span', { className: 'brand-title', text: 'AVATAR AI' }),
+        el('span', { className: 'brand-title', text: t('brand.title') }),
         state,
       ]);
       container.append(root);

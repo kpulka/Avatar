@@ -48,7 +48,7 @@ export class EmbedBridge {
     this.setupMessageListener();
   }
 
-  /** Normalizuje URL/parametr do samego originu; zwraca '' gdy nieparsowalny. */
+  /** Normalizes a URL/parameter down to the origin only; returns '' when it cannot be parsed. */
   private static normalizeOrigin(value: string): string {
     try {
       const origin = new URL(value).origin;
@@ -152,7 +152,7 @@ export class EmbedBridge {
   }
 
   /**
-   * Wysyła zdarzenie do okna nadrzędnego (parent iframe)
+   * Sends an event to the parent window (parent iframe)
    */
   public emit(action: string, payload?: unknown): void {
     if (typeof window !== 'undefined' && window.parent) {

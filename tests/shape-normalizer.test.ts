@@ -32,7 +32,7 @@ describe('ShapeNormalizer', () => {
     expect(result.missing).toContain('mouthSmileLeft');
 
     expect(() => assertRequiredShapes(incompleteSet)).toThrowError(
-      /Model nie posiada blendshape'ów:.*mouthClose/
+      /Model is missing blendshapes:.*mouthClose/
     );
   });
 });
