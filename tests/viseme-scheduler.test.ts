@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { VisemeScheduler } from '../src/lipsync/viseme-scheduler';
+import { mapPhonemeToShapes } from '../src/lipsync/g2p/phoneme-visemes';
 
 describe('VisemeScheduler & Coarticulation', () => {
   it('computes cosine easing correctly across blend-in, hold and blend-out phases', () => {
@@ -74,6 +75,36 @@ describe('VisemeScheduler & Coarticulation', () => {
     // jawOpen powinno być mocno wytłumione przez obecność mouthClose: 1.0.
     expect(updated.get('mouthClose')).toBeGreaterThan(0.8);
     expect(updated.get('jawOpen')).toBeLessThan(0.15);
+  });
+
+  it('bilabial press suppresses jaw left over from the previous vowel (SHOW-06)', () => {
+    const scheduler = new VisemeScheduler(); // balanced
+    const shapes = ['jawOpen', 'mouthClose', 'mouthPressLeft', 'mouthPressRight'];
+    // "A" (jawOpen 0.4) is still sounding (overlaps) while "M" (low close + press, jaw ~0) holds.
+    scheduler.enqueue({
+      epoch: 0,
+      char: 'A',
+      shapes: new Map([['jawOpen', 0.4]]),
+      startTimeSec: 1.0,
+      durationSec: 1.0,
+    });
+    scheduler.enqueue({
+      epoch: 0,
+      char: 'M',
+      shapes: mapPhonemeToShapes('M')!,
+      startTimeSec: 1.2,
+      durationSec: 0.6,
+    });
+
+    // Vowel holds first: jaw opens.
+    let updated = new Map<string, number>();
+    for (let i = 0; i < 10; i++) updated = scheduler.update(1.1, 0.016, 0, shapes);
+    expect(updated.get('jawOpen')!).toBeGreaterThan(0.3);
+
+    // M in its hold while the vowel is still active: jaw must be pushed shut by the press.
+    for (let i = 0; i < 20; i++) updated = scheduler.update(1.5, 0.016, 0, shapes);
+    expect(updated.get('jawOpen')!).toBeLessThan(0.05);
+    expect(updated.get('mouthPressLeft')!).toBeGreaterThan(0.3);
   });
 
   it('applies single attenuation only: A (jawOpen 0.55) reaches > 0.5 in hold (LIPS-06)', () => {
