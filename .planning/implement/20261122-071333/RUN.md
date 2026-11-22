@@ -34,3 +34,7 @@ Skipped per user; plans stop at checkpoint:human-* and are recorded as PARTIAL/B
 - B started: 12-01 [haiku].
 - B/12-01 merged a8c8dc1 DONE [haiku]. Gate: build OK, 51 files / 281 tests. Docs renamed (8). Drift B1 recorded.
 - B/12-02 merged DONE [haiku]: 3 core docs EN, docs/core Gate A scope ON. Gate 51/282. Drift: none downstream (docs-only; 'Etap'→'Stage' glossary candidate).
+- B/12-03 DONE, 12-04 PARTIAL merged a385f24 [haiku]. Gate 51/283. docs/ 10/10 EN, Gate A docs/all ON.
+  - CCR C (STATE/REQUIREMENTS old doc names) applied by orchestrator.
+  - CCR A (a2f/README.md:4,46 → a2f-local-setup.md, then empty Gate B skip-list + mechanics test expects []) → hand to 12-06 follow-up / 12-07 (a2f/README.md is in 12-06 lock).
+  - CCR B (TODO_humanInTheLoop.md:75,76,100 filename fixes) → 12-07 (in its files_modified).
