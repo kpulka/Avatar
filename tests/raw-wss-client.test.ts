@@ -65,7 +65,7 @@ describe('RawWssClient', () => {
     // Otwarcie socketu
     mockWs.open();
 
-    // Powinno wysłać conversation_initiation_client_data
+    // Should send conversation_initiation_client_data
     expect(mockWs.sentData).toHaveLength(1);
     const sent = JSON.parse(mockWs.sentData[0]);
     expect(sent.type).toBe('conversation_initiation_client_data');

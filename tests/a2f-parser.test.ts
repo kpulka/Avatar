@@ -6,7 +6,7 @@ import {
   ARKIT_52,
 } from '../src/lipsync/a2f-parser';
 
-/** Oczekiwane pary PascalCase → camelCase dla pełnych 52 kształtów ARKit. */
+/** Expected PascalCase → camelCase pairs for all 52 ARKit shapes. */
 const PASCAL_52: Array<[string, string]> = [
   ['JawOpen', 'jawOpen'], ['JawForward', 'jawForward'], ['JawLeft', 'jawLeft'], ['JawRight', 'jawRight'],
   ['MouthClose', 'mouthClose'], ['MouthFunnel', 'mouthFunnel'], ['MouthPucker', 'mouthPucker'],
@@ -35,25 +35,25 @@ const PASCAL_52: Array<[string, string]> = [
 ];
 
 describe('a2f-parser (kontrakt v2)', () => {
-  it('dekapitalizuje pełne 52 nazwy ARKit PascalCase → camelCase', () => {
+  it('decapitalizes all 52 ARKit PascalCase names → camelCase', () => {
     expect(PASCAL_52).toHaveLength(52);
     for (const [pascal, camel] of PASCAL_52) {
       expect(decapitalizeArKit(pascal)).toBe(camel);
     }
-    // Wejście już camelCase zostaje bez zmian.
+    // Input already in camelCase stays unchanged.
     expect(decapitalizeArKit('jawOpen')).toBe('jawOpen');
     expect(decapitalizeArKit('mouthSmileLeft')).toBe('mouthSmileLeft');
     expect(decapitalizeArKit('')).toBe('');
   });
 
-  it('ARKIT_52 zawiera wszystkie oczekiwane camelCase (whitelist spójny)', () => {
+  it('ARKIT_52 contains all expected camelCase names (consistent whitelist)', () => {
     expect(ARKIT_52).toHaveLength(52);
     for (const [, camel] of PASCAL_52) {
       expect(ARKIT_52).toContain(camel);
     }
   });
 
-  it('mapuje wszystkie 52 PascalCase na camelCase bez strat', () => {
+  it('maps all 52 PascalCase names to camelCase without loss', () => {
     const blends: Record<string, number> = {};
     for (const [pascal] of PASCAL_52) blends[pascal] = 0.01;
 
@@ -65,7 +65,7 @@ describe('a2f-parser (kontrakt v2)', () => {
     expect(clip.shapes.sort()).toEqual(expected);
   });
 
-  it('przekazuje frame_time jako RELATYWNY timeSec (bez audioStart)', () => {
+  it('passes frame_time as a RELATIVE timeSec (without audioStart)', () => {
     const { clip } = parseA2fPayload({
       fps: 30,
       frames: [
@@ -78,7 +78,7 @@ describe('a2f-parser (kontrakt v2)', () => {
     expect(clip.fps).toBe(30);
   });
 
-  it('sortuje ramki po timeSec mimo niestałego kroku (30 fps / 60 fps mix)', () => {
+  it('sorts frames by timeSec despite a non-constant step (30 fps / 60 fps mix)', () => {
     const { clip } = parseA2fPayload({
       frames: [
         { frame_time: 0.1, blendshapes: { JawOpen: 0.3 } },
@@ -89,7 +89,7 @@ describe('a2f-parser (kontrakt v2)', () => {
     expect(clip.frames.map((f) => f.timeSec)).toEqual([0.0, 0.033, 0.1]);
   });
 
-  it('clampuje wartości do 0..1', () => {
+  it('clamps values to 0..1', () => {
     const { clip } = parseA2fPayload({
       frames: [{ frame_time: 0.0, blendshapes: { JawOpen: 1.5, MouthClose: -0.2, MouthPucker: 0.4 } }],
     });
@@ -98,7 +98,7 @@ describe('a2f-parser (kontrakt v2)', () => {
     expect(clip.frames[0].weights['mouthPucker']).toBe(0.4);
   });
 
-  it('pomija nieznane kształty i raportuje je w unknownShapes (deduplikacja)', () => {
+  it('skips unknown shapes and reports them in unknownShapes (deduplicated)', () => {
     const { clip, unknownShapes } = parseA2fPayload({
       frames: [
         { frame_time: 0.0, blendshapes: { JawOpen: 0.5, FooBar: 0.9 } },
@@ -110,26 +110,26 @@ describe('a2f-parser (kontrakt v2)', () => {
     expect(clip.shapes).toEqual(['jawOpen']);
   });
 
-  it('rzuca czytelny błąd gdy brak frames', () => {
+  it('throws a readable error when frames are missing', () => {
     expect(() => parseA2fPayload({} as never)).toThrowError('A2F: missing frames');
     expect(() => parseA2fPayload({ frames: null } as never)).toThrowError('A2F: missing frames');
   });
 
-  it('parseA2fJson: poprawny i niepoprawny JSON', () => {
+  it('parseA2fJson: valid and invalid JSON', () => {
     const ok = parseA2fJson('{"fps":60,"frames":[{"frame_time":0,"blendshapes":{"JawOpen":0.1}}]}');
     expect(ok.clip.frames).toHaveLength(1);
 
-    expect(() => parseA2fJson('{nie json')).toThrowError('A2F: invalid JSON');
+    expect(() => parseA2fJson('{not json')).toThrowError('A2F: invalid JSON');
   });
 
-  it('inferuje carriesEyes z obecności eyeBlink*/eyeLook* w ramkach', () => {
+  it('infers carriesEyes from the presence of eyeBlink*/eyeLook* in the frames', () => {
     const { clip } = parseA2fPayload({
       frames: [{ frame_time: 0.0, blendshapes: { JawOpen: 0.2, EyeBlinkLeft: 0.0, EyeLookUpRight: 0.1 } }],
     });
     expect(clip.carriesEyes).toBe(true);
   });
 
-  it('jawny carriesEyes ma pierwszeństwo przed inferencją', () => {
+  it('an explicit carriesEyes takes precedence over inference', () => {
     const noInfer = parseA2fPayload({
       frames: [{ frame_time: 0.0, blendshapes: { JawOpen: 0.2, EyeBlinkLeft: 0.0 } }],
       carriesEyes: false,
@@ -143,7 +143,7 @@ describe('a2f-parser (kontrakt v2)', () => {
     expect(forced.clip.carriesEyes).toBe(true);
   });
 
-  it('ustawia carriesEmotion=true gdy payload niesie emotions (A2E)', () => {
+  it('sets carriesEmotion=true when the payload carries emotions (A2E)', () => {
     const { clip } = parseA2fPayload({
       fps: 60,
       frames: [{ frame_time: 0.0, blendshapes: { JawOpen: 0.2 } }],

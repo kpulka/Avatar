@@ -70,7 +70,7 @@ describe('FaceController State Machine', () => {
   });
 
   it('rejects chunks with outdated epoch', () => {
-    engine.epoch = 2; // Serwer/silnik jest na epoce 2
+    engine.epoch = 2; // Server/engine is on epoch 2
 
     controller.onAudioChunk(
       {
@@ -79,7 +79,7 @@ describe('FaceController State Machine', () => {
         char_durations_ms: [50, 50, 50],
       },
       0.0,
-      1 // Przestarzały chunk z epoki 1
+      1 // Stale chunk from epoch 1
     );
 
     expect(controller.getState()).toBe('IDLE');
@@ -105,8 +105,8 @@ describe('FaceController State Machine', () => {
     expect(controller.getQueueLength()).toBe(0);
   });
 
-  it('energy-fallback porusza wyłącznie żuchwą (jawOpen > 0, reszta 0)', () => {
-    // Chunk z fallbacku akustycznego: energia w 1. oknie, cisza w 2.
+  it('energy-fallback moves only the jaw (jawOpen > 0, rest 0)', () => {
+    // Chunk from the acoustic fallback: energy in window 1, silence in window 2.
     controller.onAudioChunk(
       {
         chars: [' ', ' '],
@@ -115,15 +115,15 @@ describe('FaceController State Machine', () => {
         source: 'energy-fallback',
         energies: [0.5, 0.0],
       },
-      -0.12, // kompensuje domyślny syncOffset +100ms, by okno było aktywne przy render(0)
+      -0.12, // compensates the default syncOffset +100ms so the window is active at render(0)
       0
     );
 
     expect(controller.getState()).toBe('SPEAKING');
-    // Tylko okno z energią > 0.02 trafia do kolejki
+    // Only the window with energy > 0.02 enters the queue
     expect(controller.getQueueLength()).toBe(1);
 
-    // Render w czasie startu okna: jawOpen aktywny, pozostałe kształty mowy = 0
+    // Render at window start: jawOpen active, other speech shapes = 0
     controller.render(0.016);
 
     expect(driver.appliedWeights['jawOpen']).toBeGreaterThan(0);

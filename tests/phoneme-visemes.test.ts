@@ -58,14 +58,14 @@ describe('mapPhonemeToShapes (ARPAbet → ARKit)', () => {
     }
   });
 
-  it('F/V: wyraźna podwinięta dolna warga (odróżnialne od M)', () => {
+  it('F/V: clear tucked-under lower lip (distinguishable from M)', () => {
     for (const p of ['F', 'V']) {
       const m = mapPhonemeToShapes(p)!;
       expect(m.get('mouthRollLower')).toBeGreaterThan(0.5);
     }
   });
 
-  it('OW ma zaokrąglenie (pucker); AA ma szerokie otwarcie bez pucker (odróżnialne)', () => {
+  it('OW has rounding (pucker); AA has a wide opening without pucker (distinguishable)', () => {
     expect(mapPhonemeToShapes('OW')!.has('mouthPucker')).toBe(true);
     const aa = mapPhonemeToShapes('AA')!;
     expect(aa.get('jawOpen')).toBeGreaterThan(0.4);
@@ -82,7 +82,7 @@ describe('mapPhonemeToShapes (ARPAbet → ARKit)', () => {
     expect(e.get('mouthSmileRight')).toBe(0.24);
   });
 
-  it('rozróżnienie "bliźniaków" + "smaczek" (v1.3): EY ma zęby > EH; AA/SZ mają dolne zęby', () => {
+  it('distinguishing the "twins" and "little detail" cases (v1.3): EY has teeth > EH; AA/SZ have lower teeth', () => {
     const ey = mapPhonemeToShapes('EY')!;
     const eh = mapPhonemeToShapes('EH')!;
     expect(ey.get('mouthUpperUpLeft')).toBe(0.14);
@@ -97,7 +97,7 @@ describe('mapPhonemeToShapes (ARPAbet → ARKit)', () => {
     expect(sz.get('mouthLowerDownRight')).toBe(0.16);
   });
 
-  it('nieznany fonem -> null', () => {
+  it('unknown phoneme -> null', () => {
     expect(mapPhonemeToShapes('XYZ')).toBeNull();
     expect(mapPhonemeToShapes('')).toBeNull();
   });

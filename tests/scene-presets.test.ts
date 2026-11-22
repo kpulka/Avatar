@@ -75,7 +75,7 @@ describe('SCENE_PRESETS (dane)', () => {
     expect(ids).toEqual(expect.arrayContaining(['studio-dark', 'studio-soft', 'cinema', 'light']));
   });
 
-  it('wartości presetów są w sensownych zakresach', () => {
+  it('preset values are within sensible ranges', () => {
     for (const preset of SCENE_PRESETS) {
       expect(preset.key.intensity).toBeGreaterThan(0);
       expect(preset.key.intensity).toBeLessThan(5);
@@ -87,7 +87,7 @@ describe('SCENE_PRESETS (dane)', () => {
 });
 
 describe('ScenePresetController', () => {
-  it('apply + tween kończy w wartościach docelowych (cinema)', () => {
+  it('apply + tween ends at the target values (cinema)', () => {
     const { controller, host } = makeController({ reduced: false });
     controller.apply('cinema');
     for (let i = 0; i < 40; i += 1) controller.update(0.016);
@@ -102,7 +102,7 @@ describe('ScenePresetController', () => {
     expect(host.backgrounds).toContain(`color:${(0x05070c).toString(16)}`);
   });
 
-  it('reduced-motion stosuje wartości natychmiast', () => {
+  it('reduced-motion applies the values immediately', () => {
     const { controller, host } = makeController({ reduced: true });
     controller.apply('light');
     expect(host.key.intensity).toBeCloseTo(1.4, 3);
@@ -110,7 +110,7 @@ describe('ScenePresetController', () => {
     expect(host.backgrounds).toContain(`color:${(0xe8eef7).toString(16)}`);
   });
 
-  it('wymiana tekstury gradientu dispose-uje poprzednią', () => {
+  it('replacing the gradient texture disposes the previous one', () => {
     let created = 0;
     const disposers: Array<ReturnType<typeof vi.fn>> = [];
     const createGradient = (): THREE.Texture => {
@@ -135,7 +135,7 @@ describe('ScenePresetController', () => {
     expect(disposers[1]).toHaveBeenCalledTimes(1);
   });
 
-  it('sync motywu działa tylko bez ręcznego wyboru presetu', () => {
+  it('theme sync works only without a manual preset choice', () => {
     const { controller, store } = makeController({ reduced: true });
 
     controller.onThemeChange('light');
@@ -146,7 +146,7 @@ describe('ScenePresetController', () => {
     controller.onThemeChange('light');
     expect(controller.getCurrentId()).toBe('studio-dark');
 
-    // dark przywraca studio-dark tylko gdy aktualnie light
+    // dark restores studio-dark only when the current theme is light
     store.setUser('scenePresetManual', false);
     controller.onThemeChange('light');
     expect(controller.getCurrentId()).toBe('light');

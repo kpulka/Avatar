@@ -115,7 +115,7 @@ function makeHarness(options: HarnessOptions = {}) {
 }
 
 describe('AnimationSourceRegistry', () => {
-  it('rejestruje wbudowane źródła i przyjmuje a2f-cloud jako dane (F10)', () => {
+  it('registers the built-in sources and accepts a2f-cloud as data (F10)', () => {
     const registry = createDefaultAnimationSources();
     expect(registry.list().map((spec) => spec.id)).toEqual(['viseme', 'a2f-local']);
 
@@ -147,7 +147,7 @@ describe('LastTurnBuffer sample rate', () => {
 });
 
 describe('CompareController', () => {
-  it('blokuje porównanie, gdy brak awatara (review A1 / P2)', () => {
+  it('blocks the comparison when there is no avatar (review A1 / P2)', () => {
     const events = new TypedEventBus<AppEvents>();
     const buffer = new LastTurnBuffer({ events });
     events.emit('audio:chunk', {
@@ -173,7 +173,7 @@ describe('CompareController', () => {
     expect(controller.canCompare()).toBe(false);
   });
 
-  it('odtwarza tę samą turę w obu torach, w tej samej kolejności bajtów', async () => {
+  it('plays the same turn in both lanes, in the same byte order', async () => {
     const harness = makeHarness();
     const ok = await harness.controller.run();
 
@@ -198,7 +198,7 @@ describe('CompareController', () => {
     expect(harness.results[0].a2f.frames).toBe(2);
   });
 
-  it('blind losuje prezentację, ale raport zachowuje mapowanie torów', async () => {
+  it('blind randomizes the presentation, but the report keeps the lane mapping', async () => {
     const harness = makeHarness({ random: () => 0.9 });
     await harness.controller.run({ blind: true });
 
@@ -207,7 +207,7 @@ describe('CompareController', () => {
     expect(harness.faceController.feedFrames).toHaveBeenCalledTimes(1);
   });
 
-  it('interruption przerywa replay zanim predict wystartuje', async () => {
+  it('an interruption cancels the replay before predict starts', async () => {
     let release: (() => void) | null = null;
     const harness = makeHarness({
       sleep: () =>
@@ -232,7 +232,7 @@ describe('CompareController', () => {
     expect(harness.engine.hardStop.mock.calls.length).toBe(hardStops);
   });
 
-  it('nowy audio:chunk (tura LIVE) anuluje replay — hardStop pas bezpieczeństwa', async () => {
+  it('a new audio:chunk (LIVE turn) cancels the replay — hardStop is the safety net', async () => {
     let release: (() => void) | null = null;
     const harness = makeHarness({
       sleep: () =>
@@ -261,7 +261,7 @@ describe('CompareController', () => {
     expect(harness.faceController.feedFrames).not.toHaveBeenCalled();
   });
 
-  it('predict offline → stan error, brak zapisu do FaceDriver w torze B', async () => {
+  it('predict offline → error state, no write to FaceDriver in lane B', async () => {
     const failingPredict = vi.fn(async () => {
       throw new Error('ECONNREFUSED');
     });
@@ -374,7 +374,7 @@ describe('CompareController', () => {
     expect(harness.faceController.mode).toBe('frames');
   });
 
-  it('nie startuje, gdy trwa audio lub nie ma tury', async () => {
+  it('does not start while audio is playing or when there is no turn', async () => {
     const pending = makeHarness({ pendingAudio: true });
     expect(await pending.controller.run()).toBe(false);
     expect(pending.engine.playChunk).not.toHaveBeenCalled();
@@ -383,7 +383,7 @@ describe('CompareController', () => {
     expect(await empty.controller.run()).toBe(false);
   });
 
-  it('rmsDiff: identyczne ścieżki = 0, różne > 0 (fairness RMS < 1%)', () => {
+  it('rmsDiff: identical tracks = 0, different > 0 (RMS fairness < 1%)', () => {
     const a = new Float32Array([0.1, -0.2, 0.3, -0.4]);
     const b = new Float32Array([0.1, -0.2, 0.3, -0.4]);
     const c = new Float32Array([0.2, -0.1, 0.25, -0.35]);

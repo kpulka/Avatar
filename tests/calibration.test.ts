@@ -38,7 +38,7 @@ describe('Lip-Sync Calibration Module', () => {
   });
 
   it('ignores legacy v1 localStorage profile (v2 key isolation -> automatic reset to DEFAULT)', () => {
-    // Stary zapis pod kluczem v1 (semantyka 0.3-0.65 tłumików) nie może zatruć v2:
+    // An old record under the v1 key (0.3-0.65 attenuation semantics) must not poison v2:
     const legacyV1: CalibrationProfile = {
       jawScale: 0.55,
       closeScale: 0.30,
@@ -110,7 +110,7 @@ describe('Lip-Sync Calibration Module', () => {
     expect(activeProfile.jawScale).toBe(0.30);
     expect(activeProfile.coarticulationSpeed).toBe(25);
 
-    // Sprawdź wkład fonemu 'a' z mniejszym jawScale
+    // Check the contribution of phoneme 'a' with a smaller jawScale
     scheduler.enqueue({
       epoch: 0,
       char: 'a',
@@ -121,7 +121,7 @@ describe('Lip-Sync Calibration Module', () => {
 
     const updated = scheduler.update(1.05, 0.016, 0, ['jawOpen']);
     const jawWeight = updated.get('jawOpen') ?? 0;
-    // Przy maxVal 0.55 i jawScale 0.30 target wynosi 0.55 * 0.30 = 0.165
+    // With maxVal 0.55 and jawScale 0.30 the target is 0.55 * 0.30 = 0.165
     expect(jawWeight).toBeLessThan(0.25);
     expect(jawWeight).toBeGreaterThan(0.05);
   });

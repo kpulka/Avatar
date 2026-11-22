@@ -14,19 +14,19 @@ describe('EmotionLayer (REAL-03)', () => {
   it('smoothly cross-fades emotional weights and decays back to neutral', () => {
     const layer = new EmotionLayer();
 
-    // Aktywuj emocję 'happy'
+    // Activate the 'happy' emotion
     layer.setEmotion('happy');
 
-    // W połowie cross-fade (200ms)
+    // Halfway through the cross-fade (200ms)
     layer.update(0.2);
     expect(layer.getWeight('mouthSmileLeft')).toBeGreaterThan(0.05);
 
-    // Po pełnym cross-fade (kolejne 250ms)
+    // After the full cross-fade (another 250ms)
     layer.update(0.25);
     expect(layer.getWeight('mouthSmileLeft')).toBeCloseTo(0.22, 2);
     expect(layer.getCurrentEmotion()).toBe('happy');
 
-    // Powrót do neutralnego
+    // Back to neutral
     layer.setEmotion('neutral');
     layer.update(0.2);
     layer.update(0.25);

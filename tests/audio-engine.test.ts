@@ -79,7 +79,7 @@ describe('AudioEngine', () => {
   });
 
   it('schedules audio chunk gapless with prebuffer', () => {
-    // 4410 próbek = 0.1s przy 44.1kHz (Int16 to 8820 bajtów)
+    // 4410 samples = 0.1 s at 44.1 kHz (Int16 = 8820 bytes)
     const pcmBytes = new Uint8Array(8820);
     const scheduledStart = engine.playChunk(pcmBytes, 44100);
 
@@ -97,7 +97,7 @@ describe('AudioEngine', () => {
     const start2 = engine.playChunk(chunk2, 44100);
 
     expect(start1).toBeCloseTo(1.08);
-    // start drugiego chunka powinien zaczynać się DOKŁADNIE tam gdzie kończy pierwszy
+    // the second chunk should start EXACTLY where the first one ends
     expect(start2).toBeCloseTo(1.18);
     expect(engine.getTailTime()).toBeCloseTo(1.28);
     expect(engine.getActiveNodesCount()).toBe(2);
@@ -123,7 +123,7 @@ describe('AudioEngine', () => {
     const chunk = new Uint8Array(8820);
     const scheduled = engine.playChunk(chunk, 44100, staleEpoch);
 
-    // Powinno zostać zignorowane
+    // Should be ignored
     expect(scheduled).toBe(0);
     expect(engine.getActiveNodesCount()).toBe(0);
   });
