@@ -1,92 +1,92 @@
-# 2. Integracja ElevenLabs: ElevenAgents (Tryb A) i TTS WebSocket (Tryb B)
+# 2. ElevenLabs integration: ElevenAgents (Mode A) and TTS WebSocket (Mode B)
 
-ElevenLabs oferuje dwa sposoby zasilania awatara mową. Oba dostarczają **alignment znaków** potrzebny do lip-syncu.
+ElevenLabs offers two ways to power the avatar's speech. Both deliver the **character alignment** needed for lip-sync.
 
-| | Tryb A — ElevenAgents | Tryb B — własny pipeline (TTS WSS) |
+| | Mode A — ElevenAgents | Mode B — own pipeline (TTS WSS) |
 | :--- | :--- | :--- |
-| Co robi serwer | STT + LLM + TTS + turn-taking + **detekcja barge-in** + VAD | tylko TTS (tekst → audio + alignment) |
-| Co piszemy my | render, audio playback, lip-sync, UI | wszystko z Trybu A **plus** STT, VAD, LLM, logika przerwań |
-| Kiedy | **PoC i MVP** | Faza 2 (pełna kontrola: własny LLM, narzędzia, koszty) |
+| What the server does | STT + LLM + TTS + turn-taking + **barge-in detection** + VAD | TTS only (text → audio + alignment) |
+| What we write | rendering, audio playback, lip-sync, UI | everything from Mode A **plus** STT, VAD, LLM, interruption logic |
+| When | **PoC and MVP** | Phase 2 (full control: own LLM, tools, costs) |
 
 ---
 
-## 🅰️ Tryb A — ElevenAgents
+## 🅰️ Mode A — ElevenAgents
 
-### Co robi agent za nas
+### What the agent does for us
 
-Agent to kompletna pętla konwersacji po stronie ElevenLabs: rozpoznaje mowę użytkownika (ASR), generuje odpowiedź (LLM w konfiguracji), syntetyzuje głos (TTS), decyduje kiedy mówić (**turn-taking**), i **sam wykrywa, że użytkownik wszedł w słowo** — przerywa generację i wysyła event `interruption`. Klient nie implementuje żadnego AI.
+The agent is a complete conversation loop on the ElevenLabs side: it recognizes the user's speech (ASR), generates a response (the LLM from the configuration), synthesizes the voice (TTS), decides when to speak (**turn-taking**), and **itself detects when the user talks over it** — it stops the generation and sends an `interruption` event. The client implements no AI at all.
 
-### Konfiguracja (dashboard / CLI)
+### Configuration (dashboard / CLI)
 
-W dashboardzie ElevenLabs (sekcja Agents) konfigurujemy:
-* **Prompt systemowy** (osobowość, styl, język),
-* **Głos** (5k+ głosów; dla PL — głos wielojęzyczny),
-* **Model LLM** (wbudowane modele lub custom LLM endpoint),
-* **Advanced → client_events**: włączyć eventy używane przez klienta (m.in. `agent_response_metadata` jeśli chcemy emocje — [docs/6](6-analiza-opensource-i-rozwoj.md)).
+In the ElevenLabs dashboard (Agents section) we configure:
+* **System prompt** (personality, style, language),
+* **Voice** (5k+ voices; for Polish — a multilingual voice),
+* **LLM model** (built-in models or a custom LLM endpoint),
+* **Advanced → client_events**: enable the events used by the client (including `agent_response_metadata` if we want emotions — [docs/6](6-opensource-analysis-and-future.md)).
 
-W MVP: konfiguracja agenta jako kod (ElevenLabs CLI) wersjonowana w repo — prompt zmienia się przez PR, nie przez klikanie.
+In the MVP: agent configuration as code (ElevenLabs CLI), versioned in the repo — the prompt changes through a PR, not by clicking.
 
-### Endpoint i autoryzacja
+### Endpoint and authorization
 
 ```
 wss://api.elevenlabs.io/v1/convai/conversation?agent_id={agent_id}
 ```
 
-* **Agent publiczny (PoC)**: wystarczy `agent_id` w URL — zero sekretów w przeglądarce.
-* **Agent prywatny (MVP)**: klient pobiera z **naszego backendu** signed URL:
+* **Public agent (PoC)**: an `agent_id` in the URL is enough — zero secrets in the browser.
+* **Private agent (MVP)**: the client fetches a signed URL from **our backend**:
   ```
   GET https://api.elevenlabs.io/v1/convai/conversation/get-signed-url?agent_id={agent_id}
-  Header: xi-api-key: <klucz — tylko na serwerze>
+  Header: xi-api-key: <key — server only>
   → { "signed_url": "wss://...&token=..." }
   ```
-  Klucz API **nigdy** nie trafia do przeglądarki. Backend może w tym samym miejscu dodać własną autoryzację użytkownika.
+  The API key **never** reaches the browser. The backend can add its own user authorization in the same place.
 
-### SDK vs surowy WSS — ważna decyzja
+### SDK vs raw WSS — an important decision
 
-| | SDK (`@elevenlabs/client`) | Surowy WebSocket |
+| | SDK (`@elevenlabs/client`) | Raw WebSocket |
 | :--- | :--- | :--- |
-| Mic, ping/pong, reconnect | za darmo | piszemy (~50 linii) |
-| Odtwarzanie audio | **SDK gra sam** (WebRTC domyślnie) | **my planujemy** na `AudioContext.currentTime` |
-| Lip-sync | callback `onAudioAlignment` (zegar ścienny — możliwy dryf) | alignment + audio z **tego samego eventu** na jednej osi czasu — **idealna synchronizacja** |
+| Mic, ping/pong, reconnect | free | we write it (~50 lines) |
+| Audio playback | **the SDK plays it itself** (WebRTC by default) | **we schedule it** on `AudioContext.currentTime` |
+| Lip-sync | `onAudioAlignment` callback (wall clock — drift possible) | alignment + audio from the **same event** on one time axis — **ideal synchronization** |
 
-**Decyzja dla awatara: surowy WSS.** Synchronizacja ust z dźwiękiem jest core feature — audio i wizemy muszą dzielić oś czasu. SDK używamy do testowania agenta i jako punkt odniesienia.
+**Decision for the avatar: raw WSS.** Lip-sync with the sound is a core feature — audio and visemes must share one time axis. We use the SDK for testing the agent and as a reference point.
 
-### Protokół — klient → serwer
+### Protocol — client → server
 
 ```jsonc
-// 1. Start rozmowy (dowolny moment po otwarciu WSS)
+// 1. Start the conversation (any moment after the WSS opens)
 { "type": "conversation_initiation_client_data",
-  "custom_config": { /* np. dynamic_variables z kontekstu usera */ },
+  "custom_config": { /* e.g. dynamic_variables from the user's context */ },
   "contextual_update": { "text": "User opened the avatar demo page" } }
 
-// 2. Ciągłe strumienie mikrofonu (base64 PCM 16 kHz mono)
+// 2. Continuous microphone streams (base64 PCM 16 kHz mono)
 { "user_audio_chunk": "<base64>" }
 
-// 3. Odpowiedź na ping (utrzymanie połączenia)
+// 3. Reply to a ping (keeps the connection alive)
 { "type": "pong", "event_id": 123 }
 
-// 4. Kontekst bez przerwania agenta (opcjonalny)
+// 4. Context without interrupting the agent (optional)
 { "type": "contextual_update", "text": "User switched to pricing tab" }
 
-// 5. Wynik client tool (patrz docs/6 — emocje)
+// 5. Client tool result (see docs/6 — emotions)
 { "type": "client_tool_result", "tool_call_id": "...", "result": "ok", "is_error": false }
 ```
 
-### Protokół — serwer → klient (eventy, które nas interesują)
+### Protocol — server → client (events we care about)
 
-| Event | Payload | Zastosowanie u nas |
+| Event | Payload | How we use it |
 | :--- | :--- | :--- |
-| `conversation_initiation_metadata` | m.in. `agent_output_audio_format: "pcm_44100"`, `user_input_audio_format: "pcm_16000"` | ustalamy formaty audio przy starcie (nie hardkodować!) |
-| `audio` | `audio_base_64` (PCM 44.1 kHz) + **`alignment`**: `chars[]`, `char_start_times_ms[]`, `char_durations_ms[]` | **rdzeń**: odtwarzanie + scheduler wizemów |
-| `interruption` | `reason` | stop audio, relaks twarzy, cancel kolejki ([docs/4](4-audio-i-obsluga-przerwan.md)) |
-| `agent_response_correction` | skrócony tekst po przerwaniu | aktualizacja transkrypcji w UI |
-| `user_transcript` / `agent_response` | transkrypcje | UI/subtitles, telemetria TTFB |
-| `vad_score` | 0–1 | wskaźnik "user mówi" w UI |
-| `client_tool_call` | `tool_name`, `parameters` | emocje/procedury ([docs/6](6-analiza-opensource-i-rozwoj.md)) |
-| `ping` | `ping_ms` | odpowiadać `pong` (utrzymanie WSS) |
+| `conversation_initiation_metadata` | including `agent_output_audio_format: "pcm_44100"`, `user_input_audio_format: "pcm_16000"` | we set the audio formats at startup (do not hardcode!) |
+| `audio` | `audio_base_64` (PCM 44.1 kHz) + **`alignment`**: `chars[]`, `char_start_times_ms[]`, `char_durations_ms[]` | **core**: playback + viseme scheduler |
+| `interruption` | `reason` | stop audio, face relaxation, cancel the queue ([docs/4](4-audio-and-barge-in.md)) |
+| `agent_response_correction` | shortened text after an interruption | update the transcript in the UI |
+| `user_transcript` / `agent_response` | transcripts | UI/subtitles, TTFB telemetry |
+| `vad_score` | 0–1 | "user is speaking" indicator in the UI |
+| `client_tool_call` | `tool_name`, `parameters` | emotions/procedures ([docs/6](6-opensource-analysis-and-future.md)) |
+| `ping` | `ping_ms` | reply with `pong` (keeps the WSS alive) |
 
 ```jsonc
-// Przykład event audio (skrócony)
+// Example audio event (abridged)
 { "type": "audio",
   "audio_event": {
     "audio_base_64": "SUQz//...",
@@ -98,16 +98,16 @@ wss://api.elevenlabs.io/v1/convai/conversation?agent_id={agent_id}
     } } }
 ```
 
-**Uwaga:** alignment odnosi się do **znormalizowanego tekstu** (liczby → słowa, skróty rozwinięte). `chars` może nie pokrywać się 1:1 z promptem agenta — mapowanie robimy wyłącznie na znakach z alignmentu, nigdy na oryginalnym tekście.
+**Note:** the alignment refers to the **normalized text** (numbers → words, abbreviations expanded). `chars` may not match the agent's prompt 1:1 — we map only on the characters from the alignment, never on the original text.
 
-### Klient: minimalny szkielet obsługi
+### Client: minimal handling skeleton
 
 ```javascript
-const ws = new WebSocket(signedUrl); // lub ?agent_id=... dla agenta publicznego
-let epoch = 0; // unieważnia zaplanowane audio/wizemy po przerwaniu — patrz docs/4
+const ws = new WebSocket(signedUrl); // or ?agent_id=... for a public agent
+let epoch = 0; // invalidates scheduled audio/visemes after an interruption — see docs/4
 
 ws.onopen = () => ws.send(JSON.stringify({ type: 'conversation_initiation_client_data' }));
-// + start AudioWorklet: mic → 16 kHz → base64 → { user_audio_chunk }
+// + start the AudioWorklet: mic → 16 kHz → base64 → { user_audio_chunk }
 
 ws.onmessage = (e) => {
   const msg = JSON.parse(e.data);
@@ -131,44 +131,44 @@ ws.onmessage = (e) => {
 
 ---
 
-## 🅱️ Tryb B — TTS WebSocket `stream-input` (Faza 2)
+## 🅱️ Mode B — TTS WebSocket `stream-input` (Phase 2)
 
-Endpoint do samodzielnego TTS w czasie rzeczywistym (np. gdy mózgrem jest własny LLM):
+Endpoint for standalone real-time TTS (e.g. when the brain is our own LLM):
 
 ```
 wss://api.elevenlabs.io/v1/text-to-speech/{voice_id}/stream-input?model_id=eleven_flash_v2_5
 ```
 
-* **Model**: `eleven_flash_v2_5` (zalecany dla niskiego TTFB) lub `eleven_multilingual_v2` (jakość). **Uwaga:** ten endpoint **nie wspiera `eleven_v3`** — dla v3 istnieje osobny Text-to-Dialogue WSS.
-* **Auth**: `xi-api-key` w nagłówku lub w pierwszej wiadomości (BOS). W przeglądarce = wystawienie klucza → **tylko przez własny proxy** na produkcji.
+* **Model**: `eleven_flash_v2_5` (recommended for low TTFB) or `eleven_multilingual_v2` (quality). **Note:** this endpoint **does not support `eleven_v3`** — for v3 there is a separate Text-to-Dialogue WSS.
+* **Auth**: `xi-api-key` in the header or in the first message (BOS). In the browser = exposing the key → **only through our own proxy** in production.
 
-### Wiadomości
+### Messages
 
 ```jsonc
-// BOS — parametry generowania
+// BOS — generation parameters
 { "text": " ",
   "voice_settings": { "stability": 0.5, "similarity_boost": 0.8 },
   "generation_config": { "chunk_length_schedule": [120, 160, 250, 290] } }
 
-// Fragmenty tekstu (np. streaming z LLM)
+// Text fragments (e.g. streaming from an LLM)
 { "text": "Hello world, how can I help you today? " }
-{ "text": "Last sentence.", "flush": true }   // flush=true wymusza generację reszty bufora
+{ "text": "Last sentence.", "flush": true }   // flush=true forces generation of the rest of the buffer
 
-// EOS — zamknięcie strumienia
+// EOS — close the stream
 { "text": "" }
 ```
 
-* `chunk_length_schedule`: liczby znaków bufurowanych przed generacją kolejnej paczki. Małe pierwsze wartości = szybszy TTFB, duże późniejsze = lepsza prozodia. Domyślne `[120,160,250,290]` jest sensowne; przy końcu tury **zawsze `flush: true`**.
-* **Keep-alive**: bezczynność 20 s zamyka połączenie; wysyłanie `" "` (pojedyncza spacja) utrzymuje je. `""` zamyka.
-* **Odpowiedź**: JSON-y z `audio` (base64; domyślnie mp3 — dla gapless ustaw `output_format=pcm_44100` w URL), `isFinal` i `normalizedAlignment` (`char_start_times_ms`, `chars_durations_ms`, `chars`) — ten sam kształt danych co w Trybie A, więc scheduler wizemów jest wspólny.
+* `chunk_length_schedule`: number of characters buffered before the next batch is generated. Small first values = faster TTFB, larger later ones = better prosody. The default `[120,160,250,290]` makes sense; at the end of a turn **always `flush: true`**.
+* **Keep-alive**: 20 s of inactivity closes the connection; sending `" "` (a single space) keeps it open. `""` closes it.
+* **Response**: JSON messages with `audio` (base64; mp3 by default — for gapless set `output_format=pcm_44100` in the URL), `isFinal` and `normalizedAlignment` (`char_start_times_ms`, `chars_durations_ms`, `chars`) — the same data shape as in Mode A, so the viseme scheduler is shared.
 
-### Tryb B oznacza też (poza zakresem tego dokumentu)
+### Mode B also means (outside the scope of this document)
 
-Własne: przechwytywanie i resampling mikrofonu, STT (np. ElevenLabs Scribe realtime), VAD (np. Silero WASM), LLM z tool-callingiem, detekcja i obsługa przerwań. Frameworki pomocnicze: **Speech Engine (ElevenLabs)**, Multi-Context WSS, Pipecat, LiveKit Agents. To jest świadoma rezerwa na Fazę 2 — Tryb A dostarcza te wszystkie elementy gotowe.
+Our own: microphone capture and resampling, STT (e.g. ElevenLabs Scribe realtime), VAD (e.g. Silero WASM), an LLM with tool calling, interruption detection and handling. Helper frameworks: **Speech Engine (ElevenLabs)**, Multi-Context WSS, Pipecat, LiveKit Agents. This is a deliberate reserve for Phase 2 — Mode A delivers all of these elements ready-made.
 
 ---
 
-## 🔗 Pipeliny po stronie klienta (wspólne dla trybów)
+## 🔗 Client-side pipelines (shared by both modes)
 
 ```
         WSS message (audio + alignment)
@@ -176,11 +176,11 @@ Własne: przechwytywanie i resampling mikrofonu, STT (np. ElevenLabs Scribe real
        ┌─────────────┴─────────────┐
        ▼                           ▼
 [ PCM → AudioBuffer ]     [ alignment → Viseme Scheduler ]
- AudioEngine               (mapowanie znaków → ARKit, docs/3)
- (kolejka na ctx.time)                │
+ AudioEngine               (char → ARKit mapping, docs/3)
+ (queue on ctx.time)                │
        │                              ▼
        └──────────► FaceController ◄───────┘
-              (jedyny właściciel morph targetów, docs/4)
+              (sole owner of morph targets, docs/4)
 ```
 
-Oba potoki **muszą** planować na tej samej osi czasu (`AudioContext.currentTime`) i honorować ten sam `epoch` — inaczej przerwania rozsynchronizują dźwięk i mimikę (szczegóły i pułapki: [docs/4](4-audio-i-obsluga-przerwan.md)).
+Both pipelines **must** schedule on the same time axis (`AudioContext.currentTime`) and honor the same `epoch` — otherwise interruptions will desynchronize the sound and the facial expression (details and pitfalls: [docs/4](4-audio-and-barge-in.md)).

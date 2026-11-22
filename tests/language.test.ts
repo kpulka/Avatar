@@ -134,9 +134,20 @@ function listFiles(relDir: string, exts: readonly string[]): string[] {
 const GATE_A_SCOPES: readonly GateAScope[] = [
   {
     name: 'docs/renamed',
-    // OFF in 12-01: the renamed docs still contain Polish prose (content is translated in 12-02).
+    // OFF: six of the eight renamed docs still contain Polish prose (translated in 12-03..12-04).
     enforced: false,
     files: () => RENAME_MAP.map(([, next]) => `docs/${next}`).filter((f) => existsSync(join(ROOT, f))),
+  },
+  {
+    name: 'docs/core',
+    // ON in 12-02: the three core docs (0-roadmap, 1-architecture, 2-elevenlabs) are translated.
+    enforced: true,
+    files: () =>
+      [
+        'docs/0-roadmap-poc-mvp.md',
+        'docs/1-architecture-and-3d-models.md',
+        'docs/2-elevenlabs-wss-integration.md',
+      ].filter((f) => existsSync(join(ROOT, f))),
   },
   { name: 'docs/all', enforced: false, files: () => listFiles('docs', ['.md']) },
   { name: 'src', enforced: false, files: () => listFiles('src', ['.ts', '.css']) },
