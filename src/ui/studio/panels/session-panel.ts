@@ -50,10 +50,10 @@ export function createSessionPanel(): PanelDefinition {
       // --- Telemetry
       const telemetryFields = {
         fps: el('strong', { text: '--' }),
-        ttfb: el('strong', { text: '-- ms' }),
+        ttfb: el('strong', { text: t('session.ttfbIdle') }),
         bargeIn: el('strong', { text: '0' }),
         session: el('strong', { text: '00:00' }),
-        align: el('strong', { text: 'ALIGN: —' }),
+        align: el('strong', { text: t('session.alignIdle') }),
       };
       const telemetryGrid = el('div', { className: 'telemetry-grid' }, [
         el('span', {}, [el('span', { text: t('session.fpsLabel') }), telemetryFields.fps]),
@@ -65,7 +65,7 @@ export function createSessionPanel(): PanelDefinition {
       const telemetryTimer = window.setInterval(() => {
         const sample = services.telemetry.sample();
         telemetryFields.fps.textContent = String(sample.fps);
-        telemetryFields.ttfb.textContent = sample.ttfbMs !== null ? `${sample.ttfbMs} ms` : '-- ms';
+        telemetryFields.ttfb.textContent = sample.ttfbMs !== null ? t('session.ttfbValue', { ms: sample.ttfbMs }) : t('session.ttfbIdle');
         telemetryFields.bargeIn.textContent = String(sample.bargeInCount);
         telemetryFields.session.textContent = sample.session;
         telemetryFields.align.textContent =

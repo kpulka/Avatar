@@ -32,6 +32,8 @@ export function handleWebGLFailure(): void {
       ])
     );
     fallbackElement.classList.remove('hidden');
+    // S9: the dead canvas must not sit visible behind the overlay card.
+    document.getElementById('avatar-canvas')?.classList.add('hidden');
   }
   console.warn('[WebGL Fallback] WebGL is not supported in this browser. Graceful degradation activated.');
 }
