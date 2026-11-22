@@ -153,6 +153,13 @@ export function createApp(canvas: HTMLCanvasElement): AppHandle {
   });
   const telemetryController = new TelemetryController(telemetryManager, events);
 
+  // Gaze: the scene computes the weights, FaceController applies them (single morph writer);
+  // an A2F clip that carries its own eyes switches off the procedural eyes (morphs AND bones).
+  animationController.setGazeProvider(() => sceneController.getGazeWeights());
+  sceneController.setProceduralEyesGate(
+    () => animationController.getFaceController()?.areProceduralEyesActive() ?? true
+  );
+
   // ---- A/B comparison (F11): last-turn buffer + source registry
   const lastTurnBuffer = new LastTurnBuffer({ events });
   const animationSources = createDefaultAnimationSources();
@@ -304,8 +311,9 @@ export function createApp(canvas: HTMLCanvasElement): AppHandle {
     lastTimestamp = timestamp;
     const dt = Math.min(0.1, deltaMs / 1000);
 
-    sceneController.update(dt, timestamp);
+    // Face morphs first, so renderer.render (inside sceneController.update) draws this frame's pose.
     animationController.update(dt);
+    sceneController.update(dt, timestamp);
     scenePresetController.update(dt);
 
     // FPS for telemetry — 500 ms window.
