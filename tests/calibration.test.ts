@@ -34,7 +34,7 @@ describe('Lip-Sync Calibration Module', () => {
     expect(profile).toEqual(DEFAULT_CALIBRATION_PROFILE);
     expect(profile.jawScale).toBe(1.0);
     expect(profile.closeScale).toBe(0.6);
-    expect(profile.syncOffsetMs).toBe(100);
+    expect(profile.syncOffsetMs).toBe(30); // residual after audible-clock compensation (11.2 D-6)
   });
 
   it('ignores legacy v1 localStorage profile (v2 key isolation -> automatic reset to DEFAULT)', () => {
@@ -56,7 +56,7 @@ describe('Lip-Sync Calibration Module', () => {
     expect(profile).toEqual(DEFAULT_CALIBRATION_PROFILE);
     expect(profile.jawScale).toBe(1.0);
     expect(profile.closeScale).toBe(0.6);
-    expect(profile.syncOffsetMs).toBe(100);
+    expect(profile.syncOffsetMs).toBe(30); // residual after audible-clock compensation (11.2 D-6)
   });
 
   it('saves and reloads custom calibration profile from localStorage', () => {
@@ -70,6 +70,7 @@ describe('Lip-Sync Calibration Module', () => {
       smileScale: 0.40,
       coarticulationSpeed: 20,
       syncOffsetMs: -15,
+      clockVersion: 2,
     };
 
     saveCalibrationProfile(custom);

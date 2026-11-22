@@ -40,8 +40,8 @@ describe('Edytor Wizemów — nadpisania (viseme-overrides)', () => {
     expect(loadVisemeOverrides()).toEqual({});
   });
 
-  it('defaultVisemeShapes: fonem M -> mouthClose 0.8; char A -> jawOpen 0.55', () => {
-    expect(defaultVisemeShapes('M')?.get('mouthClose')).toBe(0.8);
+  it('defaultVisemeShapes: fonem M -> mouthClose 0.5 (11.2 SHOW-06); char A -> jawOpen 0.55', () => {
+    expect(defaultVisemeShapes('M')?.get('mouthClose')).toBe(0.5);
     expect(defaultVisemeShapes('A')?.get('jawOpen')).toBeCloseTo(0.55);
   });
 

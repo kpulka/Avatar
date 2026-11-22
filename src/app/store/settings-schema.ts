@@ -8,7 +8,12 @@
  *   prototype pollution i DoS przez import (ASVS L1, T-11-01/T-11-02),
  * - brak martwego pola czułości mikrofonu (usunięte w F11, UI-05).
  */
-import { CalibrationProfile, DEFAULT_CALIBRATION_PROFILE } from '../../lipsync/calibration';
+import {
+  CalibrationProfile,
+  DEFAULT_CALIBRATION_PROFILE,
+  LEGACY_SYNC_OFFSETS,
+  SYNC_CLOCK_VERSION,
+} from '../../lipsync/calibration';
 import { VisemeOverrideMap } from '../../lipsync/viseme-overrides';
 import { DEFAULT_AGENT_CONFIG } from '../../audio/agent-config';
 
@@ -113,6 +118,29 @@ function sanitizeCalibration(value: unknown): CalibrationProfile {
       profile[key] = raw;
     }
   }
+  return migrateSyncClock(profile, value);
+}
+
+const LEGACY_SYNC_OFFSET_MAP: Readonly<Record<number, number>> = { 90: 20, 100: 30, 120: 40 };
+
+/**
+ * One-time migration (Phase 11.2 D-6): offsets saved before the audible clock compensated for
+ * ctx.currentTime. Preset values map to the new residuals; custom values lose the ~70 ms typical latency.
+ */
+function migrateSyncClock(profile: CalibrationProfile, stored: Record<string, unknown>): CalibrationProfile {
+  if (stored.clockVersion === SYNC_CLOCK_VERSION) {
+    profile.clockVersion = SYNC_CLOCK_VERSION;
+    return profile;
+  }
+  const storedOffset = stored.syncOffsetMs;
+  if (typeof storedOffset === 'number' && Number.isFinite(storedOffset)) {
+    if ((LEGACY_SYNC_OFFSETS as readonly number[]).includes(storedOffset)) {
+      profile.syncOffsetMs = LEGACY_SYNC_OFFSET_MAP[storedOffset] ?? profile.syncOffsetMs;
+    } else {
+      profile.syncOffsetMs = Math.max(-150, Math.min(400, storedOffset - 70));
+    }
+  }
+  profile.clockVersion = SYNC_CLOCK_VERSION;
   return profile;
 }
 

@@ -63,6 +63,38 @@ describe('validateSettings (schema)', () => {
   });
 });
 
+describe('calibration sync-clock migration (Phase 11.2 D-6)', () => {
+  const calibrationOf = (calibration: Record<string, unknown>) => {
+    const result = validateSettings({ schemaVersion: 1, studio: { calibration } });
+    if (!result.ok) throw new Error('validateSettings failed');
+    return result.value.studio.calibration;
+  };
+
+  it('maps legacy preset offsets to the new residuals (100 -> 30)', () => {
+    const migrated = calibrationOf({ ...DEFAULT_CALIBRATION_PROFILE, syncOffsetMs: 100, clockVersion: undefined });
+    expect(migrated.syncOffsetMs).toBe(30);
+    expect(migrated.clockVersion).toBe(2);
+    expect(calibrationOf({ syncOffsetMs: 90 }).syncOffsetMs).toBe(20);
+    expect(calibrationOf({ syncOffsetMs: 120 }).syncOffsetMs).toBe(40);
+  });
+
+  it('shifts custom legacy offsets by -70 ms and clamps (180 -> 110)', () => {
+    expect(calibrationOf({ syncOffsetMs: 180 }).syncOffsetMs).toBe(110);
+    expect(calibrationOf({ syncOffsetMs: -140 }).syncOffsetMs).toBe(-150);
+  });
+
+  it('leaves already-migrated (clockVersion 2) values untouched and is idempotent', () => {
+    const v2 = calibrationOf({ ...DEFAULT_CALIBRATION_PROFILE, syncOffsetMs: 100, clockVersion: 2 });
+    expect(v2.syncOffsetMs).toBe(100);
+    const again = calibrationOf({ ...calibrationOf({ syncOffsetMs: 180 }) });
+    expect(again.syncOffsetMs).toBe(110);
+  });
+
+  it('keeps the default offset when no offset was stored', () => {
+    expect(calibrationOf({ jawScale: 1.1 }).syncOffsetMs).toBe(DEFAULT_CALIBRATION_PROFILE.syncOffsetMs);
+  });
+});
+
 describe('migrateLegacy', () => {
   const fullProfile = CALIBRATION_PRESETS.expressive;
 

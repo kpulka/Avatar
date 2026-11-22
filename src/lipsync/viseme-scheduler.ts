@@ -22,6 +22,9 @@ export interface SchedulerOptions {
 /** Twardy sufit efektywnego mouthClose — chroni MetaPerson przed deformacją "warga na nos". */
 const CLOSE_SAFETY_CAP = 0.85;
 
+/** Effective mouthPress of a full bilabial (M/B/P) under the balanced preset (Phase 11.2 SHOW-06). */
+const PRESS_REF = 0.35;
+
 export class VisemeScheduler {
   private queue: VisemeQueueItem[] = [];
   /** Baza lambda koartykulacji [1/s] — lustro profile.coarticulationSpeed (LIPS-06);
@@ -85,6 +88,7 @@ export class VisemeScheduler {
     });
 
     let activeMouthClose = 0;
+    let activePress = 0;
 
     // 2. Sumowanie wkładów aktywnych wizemów (additive blending z limitem 1.0)
     for (const item of this.queue) {
@@ -105,14 +109,21 @@ export class VisemeScheduler {
 
         if (shape === 'mouthClose') {
           activeMouthClose = Math.max(activeMouthClose, targets.get(shape)!);
+        } else if (shape === 'mouthPressLeft') {
+          activePress = Math.max(activePress, targets.get(shape)!);
         }
       }
     }
 
-    // 3. Priorytetowe domknięcie ust: mouthClose tłumi jawOpen (LIPS-02)
-    if (activeMouthClose > 0.15) {
+    // 3. Priorytetowe domknięcie ust: mouthClose ORAZ docisk warg (press) tłumią jawOpen (LIPS-02).
+    // Bilabiale M/B/P mają niskie mouthClose (MetaPerson), więc samo closeRatio osłabiało by
+    // tłumienie żuchwy po poprzedniej samogłosce — press (Phase 11.2 SHOW-06) je uzupełnia.
+    if (activeMouthClose > 0.15 || activePress > 0.15) {
       const currentJaw = targets.get('jawOpen') ?? 0;
-      targets.set('jawOpen', currentJaw * Math.max(0, 1 - (activeMouthClose / this.profile.closeScale) * 0.95));
+      const closeRatio = activeMouthClose / this.profile.closeScale;
+      const pressRatio = activePress / PRESS_REF;
+      const closure = Math.min(1, Math.max(closeRatio, pressRatio));
+      targets.set('jawOpen', currentJaw * Math.max(0, 1 - closure * 0.95));
     }
 
     // 4. Wygładzanie niezależne od FPS (exponential damping): alpha = 1 - exp(-lambda * dt)
