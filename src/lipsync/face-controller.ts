@@ -62,16 +62,31 @@ interface FrameMeta {
 export interface FaceControllerOptions {
   /** Time (AudioContext seconds) currently audible; defaults to the latency-compensated audio clock. */
   audibleClock?: () => number;
+  /** Wall clock in milliseconds for RELAXING / turn boundaries; defaults to performance.now. */
+  nowMs?: () => number;
 }
 
 /**
-  * FaceController — state machine (IDLE -> SPEAKING -> RELAXING -> IDLE).
-  * The only module in the whole system allowed to write weights to FaceDriver (docs/4).
+ * FaceController — state machine (IDLE -> SPEAKING -> RELAXING -> IDLE).
+ * The only module in the whole system allowed to write weights to FaceDriver (docs/4).
+ *
+ * TIMEBASE CONTRACT — one clock per concern, no arithmetic across clocks:
+ *   - AUDIO clock (`audibleClock`, AudioContext seconds compensated for output latency) owns
+ *     everything that must agree with what is heard: viseme scheduling, frames playback
+ *     (baseSec + timeSec), the end-of-turn test (`hasPendingAudio`). Blink uses the raw
+ *     `ctx.currentTime` on purpose (it is not lip-synced, only needs a monotonic time).
+ *   - WALL clock (`nowMs`, default performance.now) owns RELAXING and the turn-boundary
+ *     re-anchoring: the 150 ms ease-out is a UI-time ramp, not an audio event, so it must not
+ *     stall when the audio context is suspended. Injectable so tests drive it by hand.
+ *   - rAF timestamp / `dt` (seconds, capped at 0.1 s by the render loop) owns damping
+ *     (`1 - exp(-lambda * dt)`, FPS independent), emotion cross-fade and gaze/saccade scheduling.
+ *     The dt cap makes integrators run in deliberate slow motion under very long frames.
  */
 export class FaceController {
   private readonly driver: FaceDriver;
   private readonly engine: AudioEngine;
   private readonly audibleClock: () => number;
+  private readonly nowMs: () => number;
   private readonly scheduler: VisemeScheduler;
   private readonly blinker: ProceduralBlink;
   private readonly emotionLayer: EmotionLayer;
@@ -117,6 +132,7 @@ export class FaceController {
     this.engine = engine;
     // Mouth timing follows the time actually HEARD (output latency compensated), not the render position.
     this.audibleClock = options.audibleClock ?? createAudibleClock(engine.ctx);
+    this.nowMs = options.nowMs ?? (() => performance.now());
     this.scheduler = new VisemeScheduler();
     this.speechShapeList = driver.listAvailableShapes().filter(isSpeechShape);
     this.blinker = new ProceduralBlink();
@@ -186,7 +202,7 @@ export class FaceController {
     }
     this.clearManualOverrideMap();
     this.state = 'RELAXING';
-    this.relaxStartedAt = performance.now();
+    this.relaxStartedAt = this.nowMs();
     console.log(`[FaceController] Animation mode → ${mode} (turn boundary, RELAXING)`);
   }
 
@@ -444,7 +460,7 @@ export class FaceController {
 
     if (phonemeKey === 'neutral') {
       this.state = 'RELAXING';
-      this.relaxStartedAt = performance.now();
+      this.relaxStartedAt = this.nowMs();
       return;
     }
 
@@ -523,12 +539,12 @@ export class FaceController {
     // IDLE stays IDLE (nothing to relax from); RELAXING re-anchors its timer; SPEAKING relaxes.
     if (this.state === 'IDLE') return;
     this.state = 'RELAXING';
-    this.relaxStartedAt = performance.now();
+    this.relaxStartedAt = this.nowMs();
     console.log('[FaceController] Facial interruption -> RELAXING state');
   }
 
   /**
-   * Frames track — applies absolute frames (contract v2) on the ctx.currentTime axis.
+   * Frames track — applies absolute frames (contract v2) on the audible audio-clock axis.
    * Zero-order hold: keep the last frame with baseSec+timeSec <= now; no smoothing,
    * no addition. Safety: clamp 0..1 + mouthClose cap (FRAME_CLOSE_CAP). Stores
    * currentWeights so RELAXING starts from the last pose. Emotions: only the shapes NOT
@@ -543,7 +559,7 @@ export class FaceController {
       if (!this.engine.hasPendingAudio()) {
         if (this.commitPendingMode()) return;
         this.state = 'RELAXING';
-        this.relaxStartedAt = performance.now();
+        this.relaxStartedAt = this.nowMs();
       }
     };
 
@@ -683,13 +699,13 @@ export class FaceController {
         if (this.scheduler.getQueueLength() === 0 && !this.engine.hasPendingAudio()) {
           if (this.commitPendingMode()) break;
           this.state = 'RELAXING';
-          this.relaxStartedAt = performance.now();
+          this.relaxStartedAt = this.nowMs();
         }
         break;
       }
 
       case 'RELAXING': {
-        const elapsedMs = performance.now() - this.relaxStartedAt;
+        const elapsedMs = this.nowMs() - this.relaxStartedAt;
         const progress = Math.min(1, elapsedMs / this.relaxDurationMs);
         // Cosine ease of the return to neutral
         const relaxFactor = 1 - Math.sin((progress * Math.PI) / 2);
