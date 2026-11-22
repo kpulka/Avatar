@@ -39,3 +39,4 @@ Skipped per user; plans stop at checkpoint:human-* and are recorded as PARTIAL/B
   - CCR A (a2f/README.md:4,46 → a2f-local-setup.md, then empty Gate B skip-list + mechanics test expects []) → hand to 12-06 follow-up / 12-07 (a2f/README.md is in 12-06 lock).
   - CCR B (TODO_humanInTheLoop.md:75,76,100 filename fixes) → 12-07 (in its files_modified).
 - B/12-05 DONE, 12-06 DONE merged 98802f5 [sonnet]. Conflict in tests/language.test.ts (scope flags docs/all vs src) resolved by orchestrator: both ON. Gate 52/291. copy.ts created by 12-05 (15-02 must adapt). a2f/README link fixed (CCR A part 1).
+- B/12-07 DONE merged 3638304 [haiku]. Gate 52/293. Gate A all scopes ON (README exception until 13), Gate B skip-list empty. Phase 12: 7/7 automated PASS, manual UAT pending. ROADMAP/REQUIREMENTS updated by orchestrator. Wave C started (15 ∥ 16) from baba904 — 12-07 tests/** translation merged after their base: expect conflicts in tests/.

@@ -304,7 +304,7 @@ Uzasadnienie: 12 przed 13/14/15/16/17 (tłumaczenie komentarzy przed refaktorami
 | 11. UI dual-persona | 6/7 | Executed — kod 7/7, automated PASS; UAT manualny pending (11-VERIFICATION §3) | - |
 | 11.1. Hardening & bugfix pack (INSERTED) | 5/5 | 11.1 automated gates passed. Manual UAT pending. Next: 11.2 wave 1. | - |
 | 11.2. Showcase wow pack (INSERTED) | 2/9 | Wave 1 verified; Listen asset gate next | - |
-| 12. English language (i18n) | 0/7 | Planned — CONTEXT + plany + glossary + VERIFICATION gotowe | - |
+| 12. English language (i18n) | 7/7 | Executed; automated PASS; manual UAT pending (12-VERIFICATION §3) | - |
 | 13. README recruiter showcase | 0/4 | Planned — CONTEXT + DRAFT-README + VERIFICATION gotowe | - |
 | 14. Architecture guards | 0/6 | Planned — CONTEXT + DRAFT-ARCHITECTURE + VERIFICATION gotowe | - |
 | 15. Web UI refactor | 0/7 | Planned — CONTEXT + plany + DRAFT-ui-spec + VERIFICATION gotowe | - |

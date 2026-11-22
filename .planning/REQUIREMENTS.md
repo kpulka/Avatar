@@ -66,7 +66,7 @@ Decyzja kierunkowa (2026-09, potwierdzona po review-unifikacji 2026-09-02): zach
 - [ ] **A2F-01**: Parser/normalizer wyjścia A2F (JSON ramek, ARKit PascalCase 52 shape'y → camelCase przez dekapitalizer parsera) → `FramesClip` (ramki relatywne, meta shapes/carriesEyes/carriesEmotion); nieznane shape'y pomijane + zliczane (docs/7 §5)
 - [ ] **A2F-02**: Lokalny Audio2Face-3D SDK (MIT; wagi HF NVIDIA Open Model License) na RTX 3090 + solver blendshape na rigu ARKit-52 z naszego `avatar.glb` + REST wrapper `/predict` (wav → JSON ramek, gzip, bez capu) — docs/a2f-local-setup.md
 - [ ] **A2F-03**: E2E offline w aplikacji: audio + ramki zsynchronizowane (playback gapless trybem `frames`), przełącznik A/B `LIVE / A2F` w HUD z degradacją bez dziury (EN-only dla A2F)
-- [ ] **A2F-04**: Porównanie jakości na zdaniach kontrolnych EN (docs/EN-visemes §6) + barge-in w trybie A2F (stop <50 ms, neutral <300 ms) + rozstrzygnięcie v3.0/v2.3; go/no-go do chmury (09-VERIFICATION.md)
+- [ ] **A2F-04**: Porównanie jakości na zdaniach kontrolnych EN (docs/en-visemes §6) + barge-in w trybie A2F (stop <50 ms, neutral <300 ms) + rozstrzygnięcie v3.0/v2.3; go/no-go do chmury (09-VERIFICATION.md)
 - [ ] **A2F-05**: (MVP cloud, po go/no-go) Wrapper na Cloud Run GPU L4 **wyłącznie scale-to-zero (płacimy tylko za przetworzenie; min-instances=0 bez wyjątków; no-gpu-zonal-redundancy)**, autoryzacja, asynchroniczny front na cold start, alarm budżetowy; przełącznik `A2F (cloud)`; jeśli cold start wymagałby warm instancji → NO-GO (docs/7)
 
 ### v1.2 — UI dual-persona i modularny frontend (Faza 11)
@@ -112,14 +112,14 @@ Milestone v1.1 (2026-11): publiczne repo jako produkt rekruterski — język ang
 
 ### English-ization (I18N, Faza 12)
 
-- [ ] **I18N-01**: Kanoniczne angielskie nazwy plików docs/ — 8 rename'ów przez `git mv` (rename-only commit, historia zachowana, `git log --follow` sięga sprzed rename)
-- [ ] **I18N-02**: 10/10 plików docs/ przetłumaczone na EN (proza, nagłówki, tabele, komentarze w blokach kodu; struktura i numeracja sekcji zachowana; terminologia wg 12-DRAFT-glossary; polskie dane fonetyczne zostają z glossami)
-- [ ] **I18N-03**: Integralność linków — każde odwołanie do ścieżki docs w egzekwowanym zakresie resolnowało; archiwa 01–11 wyłączone polityką, resolwowane przez rename-map w `.planning/README.md`
+- [x] **I18N-01**: Kanoniczne angielskie nazwy plików docs/ — 8 rename'ów przez `git mv` (rename-only commit, historia zachowana, `git log --follow` sięga sprzed rename)
+- [x] **I18N-02**: 10/10 plików docs/ przetłumaczone na EN (proza, nagłówki, tabele, komentarze w blokach kodu; struktura i numeracja sekcji zachowana; terminologia wg 12-DRAFT-glossary; polskie dane fonetyczne zostają z glossami)
+- [x] **I18N-03**: Integralność linków — każde odwołanie do ścieżki docs w egzekwowanym zakresie resolnowało; archiwa 01–11 wyłączone polityką, resolwowane przez rename-map w `.planning/README.md`
 - [ ] **I18N-04**: Stringi UI po angielsku — wszystkie etykiety, przyciski, captions, status pill, aria-labels, toasty, loader/modale, panele, `lang="en"` w index.html; mapa dokładnych zastąpień w 12-05-PLAN
 - [ ] **I18N-05**: Stringi deweloperskie po angielsku — console/Error/validate; tokeny techniczne nietknięte (testy zielone)
-- [ ] **I18N-06**: Komentarze kodu EN w src/, style.css, vite.config.ts, index.html, nie-vendored a2f/; dane funkcjonalne (wizemy PL, keywords, test phrase) nietknięte
-- [ ] **I18N-07**: Suite testowy EN — wszystkie describe/it i komentarze; fixture'e fonetyczne PL zachowane; 204+ testów zielonych
-- [ ] **I18N-08**: Gate językowy `tests/language.test.ts` (diakrytyki z allowlistą + linki) w `npm test`; angielskie `.planning/README.md` (proces GSD, mapa faz, polityka językowa, rename-map); TODO_humanInTheLoop przetłumaczone in-place
+- [x] **I18N-06**: Komentarze kodu EN w src/, style.css, vite.config.ts, index.html, nie-vendored a2f/; dane funkcjonalne (wizemy PL, keywords, test phrase) nietknięte
+- [x] **I18N-07**: Suite testowy EN — wszystkie describe/it i komentarze; fixture'e fonetyczne PL zachowane; 204+ testów zielonych
+- [x] **I18N-08**: Gate językowy `tests/language.test.ts` (diakrytyki z allowlistą + linki) w `npm test`; angielskie `.planning/README.md` (proces GSD, mapa faz, polityka językowa, rename-map); TODO_humanInTheLoop przetłumaczone in-place
 
 ### README showcase (READ, Faza 13)
 
@@ -241,7 +241,7 @@ Milestone v1.1 (2026-11): publiczne repo jako produkt rekruterski — język ang
 | UI-05 | Phase 11 | Not Started |
 | HARD-01..07 | Phase 11.1 | Verified by automated tests and drift reviews; manual UAT pending |
 | SHOW-01..10 | Phase 11.2 | In progress; SHOW-02 and SHOW-09 passed wave 1 |
-| I18N-01..08 | Phase 12 | Not Started (planned; CONTEXT+plany gotowe) |
+| I18N-01..08 | Phase 12 | 01-03,06-08 Complete; 04-05 automated-complete, manual UI/console UAT pending |
 | READ-01..06 | Phase 13 | Not Started (planned; DRAFT-README gotowy) |
 | ARCH-01..08 | Phase 14 | Not Started (planned; DRAFT-ARCHITECTURE gotowy) |
 | UIX-01..11 | Phase 15 | Not Started (planned; DRAFT-ui-spec gotowy) |
