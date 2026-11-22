@@ -75,4 +75,52 @@ describe('Scene Lighting & Materials', () => {
     expect(phys.metalness).toBe(0.0);
     expect(phys.roughness).toBeCloseTo(0.52);
   });
+
+  describe('eye / lash / hair materials (SHOW-07)', () => {
+    const mockRenderer = {
+      capabilities: { getMaxAnisotropy: () => 16 },
+    } as unknown as THREE.WebGLRenderer;
+
+    const meshWith = (name: string, material: THREE.Material): THREE.Mesh => {
+      const mesh = new THREE.Mesh(new THREE.BufferGeometry(), material);
+      mesh.name = name;
+      return mesh;
+    };
+
+    it('renders lashes with alpha-to-coverage on the opaque pass', () => {
+      const lashes = meshWith('AvatarEyelashes', new THREE.MeshStandardMaterial());
+      enhanceAvatarMaterials(lashes, mockRenderer);
+      const mat = lashes.material as THREE.MeshStandardMaterial;
+      expect(mat.alphaToCoverage).toBe(true);
+      expect(mat.transparent).toBe(false);
+    });
+
+    it('renders hair with alpha-to-coverage and depth write', () => {
+      const hair = meshWith('haircut_generated', new THREE.MeshStandardMaterial({ transparent: true }));
+      enhanceAvatarMaterials(hair, mockRenderer);
+      const mat = hair.material as THREE.MeshStandardMaterial;
+      expect(mat.alphaToCoverage).toBe(true);
+      expect(mat.transparent).toBe(false);
+      expect(mat.depthWrite).toBe(true);
+    });
+
+    it('keeps the GLB normal and roughness maps on the eyeball', () => {
+      const normalMap = new THREE.Texture();
+      const roughnessMap = new THREE.Texture();
+      const eye = meshWith('AvatarLeftEyeball', new THREE.MeshStandardMaterial({ normalMap, roughnessMap }));
+      enhanceAvatarMaterials(eye, mockRenderer);
+      const mat = eye.material as THREE.MeshPhysicalMaterial;
+      expect(mat.normalMap).toBe(normalMap);
+      expect(mat.roughnessMap).toBe(roughnessMap);
+      expect(mat.userData.isEyeMaterial).toBe(true);
+    });
+
+    it('hides the cornea shell and leaves its material untouched', () => {
+      const original = new THREE.MeshStandardMaterial();
+      const cornea = meshWith('AvatarLeftCornea', original);
+      enhanceAvatarMaterials(cornea, mockRenderer);
+      expect(cornea.visible).toBe(false);
+      expect(cornea.material).toBe(original);
+    });
+  });
 });
