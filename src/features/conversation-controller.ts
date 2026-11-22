@@ -1,8 +1,8 @@
 /**
- * ConversationController (Faza 11, 11-02) — wydzielony z `main.ts`.
+ * ConversationController (Phase 11, 11-02) — extracted from `main.ts`.
  *
- * Odpowiada za: start/stop rozmowy, mute, barge-in, demo speech, stress PoC oraz
- * mostek embed (postMessage). Emituje wyłącznie zdarzenia STANU na bus; nie dotyka DOM.
+ * Responsible for: conversation start/stop, mute, barge-in, demo speech, the PoC stress test and
+ * the embed bridge (postMessage). Emits only STATE events on the bus; does not touch the DOM.
  */
 import { ElevenAgentsSpeechBackend, MicAccessError } from '../audio/speech-backend';
 import { AudioEngine } from '../audio/audio-engine';

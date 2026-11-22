@@ -1,11 +1,11 @@
 /**
- * ScenePresetController (Faza 11, 11-07, Pattern 6): apply/Tween presetów sceny.
+ * ScenePresetController (Phase 11, 11-07, Pattern 6): apply/tween of scene presets.
  *
- * - światła + ambient + exposure: tween 280 ms w `update(dt)` (reduced-motion → instant),
- * - tło: color albo gradient (CanvasTexture po stronie sceny; przy wstrzykniętym
- *   `createGradient` kontroler sam dba o `dispose()` poprzedniej tekstury),
- * - pedestal i kadr: natychmiast,
- * - sync z motywem: theme → preset tylko gdy user nie wybrał presetu ręcznie (Open Q2).
+ * - lights + ambient + exposure: 280 ms tween in `update(dt)` (reduced-motion → instant),
+ * - background: color or gradient (CanvasTexture on the scene side; with an injected
+ *   `createGradient` the controller itself handles `dispose()` of the previous texture),
+ * - pedestal and framing: immediate,
+ * - theme sync: theme → preset only when the user has not picked a preset manually (Open Q2).
  */
 import * as THREE from 'three';
 import { SettingsStore } from '../app/store/settings-store';
@@ -101,7 +101,7 @@ export class ScenePresetController {
     const preset = getScenePreset(id);
     this.currentId = preset.id;
 
-    // Tło natychmiast (color / gradient z własnym dispose).
+    // Background immediately (color / gradient with its own dispose).
     if (preset.background.type === 'color') {
       this.host.setBackgroundColor(preset.background.value);
       this.disposeGradient();
@@ -115,11 +115,11 @@ export class ScenePresetController {
       this.disposeGradient();
     }
 
-    // Pedestal i kadr natychmiast.
+    // Pedestal and framing immediately.
     this.host.setPedestal(preset.pedestal);
     this.host.setFraming(preset.framing);
 
-    // Światła: tween (albo instant przy reduced-motion).
+    // Lights: tween (or instant with reduced-motion).
     this.from = this.snapshot();
     this.target = preset;
     this.progress = this.reducedMotion() ? 1 : 0;
@@ -146,7 +146,7 @@ export class ScenePresetController {
     }
   }
 
-  /** Sync motywu: sugeruje preset tylko, gdy user nie wybrał presetu ręcznie (Open Q2). */
+  /** Theme sync: suggests a preset only when the user has not picked one manually (Open Q2). */
   public onThemeChange(theme: 'dark' | 'light'): void {
     if (this.store.getEffective<boolean>('scenePresetManual') === true) return;
     const want = theme === 'light' ? 'light' : this.currentId === 'light' ? 'studio-dark' : this.currentId;

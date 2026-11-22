@@ -1,10 +1,10 @@
 /**
- * Typowany event bus aplikacji (Faza 11, Pattern 2).
+ * Typed application event bus (Phase 11, Pattern 2).
  *
- * Zasady:
- * - `on` zwraca `Unsub` (idempotentny) — komponenty MUSZĄ odpinać w `destroy()`,
- * - `emit` iteruje po kopii zbioru — odpinanie w trakcie emisji nie gubi subskrybentów,
- * - błąd jednego handlera nie przerywa emisji.
+ * Rules:
+ * - `on` returns an `Unsub` (idempotent) — components MUST unsubscribe in `destroy()`,
+ * - `emit` iterates over a copy of the set — unsubscribing during emission does not lose subscribers,
+ * - an error in one handler does not interrupt the emission.
  */
 export type Unsub = () => void;
 
@@ -39,7 +39,7 @@ export class TypedEventBus<Events extends Record<string, unknown>> {
       try {
         (handler as EventHandler<Events[K]>)(payload);
       } catch (error) {
-        console.warn(`[EventBus] Błąd handlera dla '${String(type)}':`, error);
+        console.warn(`[EventBus] Handler error for '${String(type)}':`, error);
       }
     }
   }
@@ -49,7 +49,7 @@ export class TypedEventBus<Events extends Record<string, unknown>> {
   }
 }
 
-/** Zbieracz subskrypcji — jedno miejsce na `dispose()`. */
+/** Subscription collector — a single place for `dispose()`. */
 export function disposables(): { add(unsub: Unsub): void; dispose(): void; size(): number } {
   const collected: Unsub[] = [];
   return {

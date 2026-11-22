@@ -1,9 +1,9 @@
 /**
- * Kontrakty komunikacji aplikacji (Faza 11, 11-02).
+ * Application communication contracts (Phase 11, 11-02).
  *
- * Podział:
- * - `AppEvents` — zdarzenia STANU na `TypedEventBus` (kontrolery → UI),
- * - `AppServices` — KOMENDY (UI → kontrolery) przez referencje serwisów.
+ * Split:
+ * - `AppEvents` — STATE events on the `TypedEventBus` (controllers → UI),
+ * - `AppServices` — COMMANDS (UI → controllers) via service references.
  */
 import type * as THREE from 'three';
 import { AnimationMode, CharAlignment, FaceDriver, FramesClip } from '../types/avatar';
@@ -14,13 +14,13 @@ import type { AnimationSourceRegistry } from '../lipsync/animation-sources';
 export type VoiceState = 'listening' | 'speaking' | 'thinking' | 'idle';
 
 export interface AudioChunkEvent {
-  /** Surowy PCM 16-bit LE mono (widok na bufor; konsumenci kopiują jeśli przechowują). */
+  /** Raw 16-bit LE mono PCM (a view on the buffer; consumers copy if they keep it). */
   bytes: Uint8Array;
   alignment: CharAlignment;
   epoch: number;
-  /** Zaplanowany start odtwarzania na osi AudioContext (s). */
+  /** Scheduled start of playback on the AudioContext timeline (s). */
   startTime: number;
-  /** Rzeczywisty sampleRate wyjścia agenta (per sesja; NIE hardcode). */
+  /** Actual sampleRate of the agent output (per session; NOT hardcoded). */
   sampleRate: number;
 }
 

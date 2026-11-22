@@ -1,8 +1,8 @@
 /**
- * Legacy bridge (Faza 11, etap przejściowy): write-through store → stare klucze localStorage.
+ * Legacy bridge (Phase 11, transitional stage): write-through store → old localStorage keys.
  *
- * Powód: w okresie przejściowym fazy 11 stare moduły czytały klucze
- * legacy. Bridge utrzymuje je spójnymi z blobem, żeby nie było split-brain.
+ * Reason: during the transitional period of phase 11 the old modules read the legacy
+ * keys. The bridge keeps them consistent with the blob so there is no split-brain.
  */
 import { SettingsStore } from './settings-store';
 import { LEGACY_KEYS } from './migrate';
@@ -21,11 +21,11 @@ export function attachLegacyBridge(store: SettingsStore, storage: StorageLike): 
       storage.setItem(LEGACY_KEYS.volume, String(state.user.volume));
       storage.setItem(LEGACY_KEYS.a2fUrl, state.studio.a2fUrl);
     } catch (error) {
-      console.warn('[LegacyBridge] Nie udało się zsynchronizować kluczy legacy:', error);
+      console.warn('[LegacyBridge] Could not synchronize the legacy keys:', error);
     }
   };
 
-  // Mirror stanu po migracji — stare moduły widzą świeże wartości od pierwszego odczytu.
+  // Mirror the state after migration — old modules see fresh values from the first read.
   sync(store.getState());
   return store.subscribe(sync);
 }

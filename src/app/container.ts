@@ -1,6 +1,6 @@
 /**
- * Composition root (Faza 11, 11-04): scena, audio, kontrolery, bus, shared UI,
- * rejestr paneli i StudioShell. `main.ts` pozostaje cienkim bootstrapem.
+ * Composition root (Phase 11, 11-04): scene, audio, controllers, bus, shared UI,
+ * panel registry and StudioShell. `main.ts` remains a thin bootstrap.
  */
 import { AppRenderer } from '../core/renderer';
 import { AdaptiveResolution } from '../core/adaptive-resolution';
@@ -58,7 +58,7 @@ export interface AppHandle {
 }
 
 export function createApp(canvas: HTMLCanvasElement): AppHandle {
-  // ---- Core 3D + światło/środowisko (docs/5)
+  // ---- Core 3D + lighting/environment (docs/5)
   const renderer = new AppRenderer({ canvas });
   const camera = new AppCamera(canvas);
   const scene = new AppScene();
@@ -70,7 +70,7 @@ export function createApp(canvas: HTMLCanvasElement): AppHandle {
   const headMicro = new HeadMicroMovements();
   const gaze = new GazeSaccades();
 
-  // ---- Audio + mowa
+  // ---- Audio + speech
   const audioEngine = new AudioEngine();
   const embedBridge = new EmbedBridge();
 
@@ -84,7 +84,7 @@ export function createApp(canvas: HTMLCanvasElement): AppHandle {
   const uiMode = createUiMode(store, { search: window.location.search, body: document.body });
   const unsubUiModeShortcut = uiMode.attachShortcut(window);
 
-  // Motyw i głośność z profilu — również przy zmianach ze store (panel Sesja, import).
+  // Theme and volume from the profile — also on store changes (Session panel, import).
   const applyAppearance = (): void => {
     document.body.classList.toggle('theme-light', store.getEffective<'dark' | 'light'>('theme') === 'light');
     audioEngine.masterGain.gain.setValueAtTime(
@@ -95,7 +95,7 @@ export function createApp(canvas: HTMLCanvasElement): AppHandle {
   applyAppearance();
   const unsubStore = store.subscribe(() => applyAppearance());
 
-  // ---- Bus + telemetria + shared UI
+  // ---- Bus + telemetry + shared UI
   const events = new TypedEventBus<AppEvents>();
   const telemetryManager = new TelemetryManager();
 
@@ -105,9 +105,9 @@ export function createApp(canvas: HTMLCanvasElement): AppHandle {
   const loaderUi = createLoader(hostRoot);
   const modal = createModal(hostRoot);
   const unsubToast = events.on('toast', (payload) => toast.show(payload.message, payload.type));
-  // Loader znika, gdy awatar jest gotowy — również w ścieżce fallbacku (demo avatar),
-  // bo `loadDefaultAvatar()` emituje `avatar:loaded` w obu przypadkach.
-  // Bez tego `hide()` nie był wołany nigdzie i pływający wskaźnik wisiał na ekranie na zawsze.
+  // The loader disappears when the avatar is ready — also on the fallback path (demo avatar),
+  // because `loadDefaultAvatar()` emits `avatar:loaded` in both cases.
+  // Without this `hide()` was never called and the floating indicator stayed on screen forever.
   let avatarReady = false;
   const unsubAvatarLoaded = events.on('avatar:loaded', () => {
     avatarReady = true;
@@ -127,7 +127,7 @@ export function createApp(canvas: HTMLCanvasElement): AppHandle {
 
   const ui: PanelUi = { toast, loader: loaderUi, modal };
 
-  // ---- Kontrolery
+  // ---- Controllers
   const sceneController = new SceneController({
     renderer,
     camera,
@@ -153,7 +153,7 @@ export function createApp(canvas: HTMLCanvasElement): AppHandle {
   });
   const telemetryController = new TelemetryController(telemetryManager, events);
 
-  // ---- Porównywarka A/B (F11): bufor ostatniej tury + rejestr źródeł
+  // ---- A/B comparison (F11): last-turn buffer + source registry
   const lastTurnBuffer = new LastTurnBuffer({ events });
   const animationSources = createDefaultAnimationSources();
   const compareController = new CompareController({
@@ -164,7 +164,7 @@ export function createApp(canvas: HTMLCanvasElement): AppHandle {
     events,
   });
 
-  // ---- Presety sceny (F11): host mutuje światła/scenę/renderer/kamerę
+  // ---- Scene presets (F11): the host mutates lights/scene/renderer/camera
   const scenePresetHost: ScenePresetHost = {
     key: lighting.keyLight,
     fill: lighting.fillLight,
@@ -200,7 +200,7 @@ export function createApp(canvas: HTMLCanvasElement): AppHandle {
     },
   };
 
-  // Urządzenie mikrofonu z profilu (F11) — stosowane przy starcie capture i przy zmianie.
+  // Microphone device from the profile (F11) — applied at capture start and on change.
   const applyInputDevice = (): void => {
     conversationController.setInputDevice(store.getEffective<string | null>('micDeviceId'));
   };
@@ -210,12 +210,12 @@ export function createApp(canvas: HTMLCanvasElement): AppHandle {
   const unsubSceneAttr = events.on('scene:preset', (id) => {
     document.body.setAttribute('data-scene', id);
   });
-  // Po załadowaniu awatara ponownie zastosuj kadr presetu (SceneController ustawia własny bust).
+  // After the avatar loads, re-apply the preset framing (SceneController sets its own bust).
   const unsubSceneReload = events.on('avatar:loaded', () => {
     scenePresetController.apply(scenePresetController.getCurrentId());
   });
 
-  // ---- Panele studia (rejestr + shell)
+  // ---- Studio panels (registry + shell)
   const registry = new PanelRegistry();
   registry.register(createAnimationPanel());
   registry.register(createVisemesPanel());
@@ -232,7 +232,7 @@ export function createApp(canvas: HTMLCanvasElement): AppHandle {
     container: panelContainer,
   });
 
-  // ---- Panele warstwy user (zawsze zamontowane) + studio shell
+  // ---- User-layer panels (always mounted) + studio shell
   const userHost = el('div', { className: 'user-layer' });
   hostRoot.append(userHost);
   registry.register(createStatusPill());
@@ -246,12 +246,12 @@ export function createApp(canvas: HTMLCanvasElement): AppHandle {
 
   const shell = createStudioShell({ registry, contextFactory, host: hostRoot });
 
-  // Studio otwiera się automatycznie w trybie studio (odświeżane przy starcie).
+  // The studio opens automatically in studio mode (refreshed at start).
   if (uiMode.getMode() === 'studio') {
     shell.open();
   }
 
-  // ---- Globalne listenery (tylko composition root)
+  // ---- Global listeners (composition root only)
   const onPointerMove = (event: PointerEvent): void => {
     const normX = (event.clientX / window.innerWidth) * 2 - 1;
     const normY = -((event.clientY / window.innerHeight) * 2 - 1);
@@ -265,7 +265,7 @@ export function createApp(canvas: HTMLCanvasElement): AppHandle {
   };
   window.addEventListener('resize', onResize);
 
-  // ---- Tryb prezentacji (H/Esc) — jeden globalny handler klawiatury w src/app
+  // ---- Presentation mode (H/Esc) — a single global keyboard handler in src/app
   const exitPresentation = el('button', {
     className: 'btn-exit-presentation hidden',
     type: 'button',
@@ -292,7 +292,7 @@ export function createApp(canvas: HTMLCanvasElement): AppHandle {
   };
   window.addEventListener('keydown', onKeydown);
 
-  // ---- Pętla render
+  // ---- Render loop
   let lastTimestamp = performance.now();
   let rafId = 0;
   let frameCount = 0;
@@ -308,7 +308,7 @@ export function createApp(canvas: HTMLCanvasElement): AppHandle {
     animationController.update(dt);
     scenePresetController.update(dt);
 
-    // FPS dla telemetrii — okno 500 ms.
+    // FPS for telemetry — 500 ms window.
     frameCount += 1;
     const elapsed = timestamp - fpsWindowStart;
     if (elapsed >= 500) {
@@ -335,7 +335,7 @@ export function createApp(canvas: HTMLCanvasElement): AppHandle {
       sceneController.loadDefaultAvatar();
       rafId = requestAnimationFrame(animate);
       embedBridge.notifyReady();
-      console.log('Aplikacja Avatar zainicjalizowana pomyślnie.');
+      console.log('Avatar application initialized successfully.');
     },
     dispose(): void {
       cancelAnimationFrame(rafId);
@@ -368,5 +368,5 @@ export function createApp(canvas: HTMLCanvasElement): AppHandle {
   };
 }
 
-/** Re-eksport dla komponentów (11-06). */
+/** Re-export for components (11-06). */
 export type { AppEvents, AppServices } from './app-types';

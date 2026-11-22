@@ -1,8 +1,8 @@
 /**
- * Tryb UI: `user` (domyślny) i `studio` (narzędzia) — Faza 11.
+ * UI mode: `user` (default) and `studio` (tools) — Phase 11.
  *
- * Dostęp do studia: `?studio=1` albo skrót Ctrl+Shift+D; wybór persystuje w `user.uiMode`.
- * Efekt: `body[data-mode]` (widoczność warstw przez CSS). Lock `uiMode` respektowany.
+ * Studio access: `?studio=1` or the Ctrl+Shift+D shortcut; the choice persists in `user.uiMode`.
+ * Effect: `body[data-mode]` (layer visibility via CSS). The `uiMode` lock is respected.
  */
 import { SettingsStore } from './store/settings-store';
 import { UiMode } from './store/settings-schema';
@@ -11,9 +11,9 @@ import { Unsub } from './events';
 export type { UiMode };
 
 export interface UiModeEnv {
-  /** Query string (np. window.location.search) — wstrzykiwany dla testów. */
+  /** Query string (e.g. window.location.search) — injected for tests. */
   search: string;
-  /** Element, na którym ustawiamy data-mode (zwykle document.body). */
+  /** Element on which we set data-mode (usually document.body). */
   body: { setAttribute(name: string, value: string): void };
 }
 
@@ -60,7 +60,7 @@ export function createUiMode(store: SettingsStore, env: UiModeEnv): UiModeContro
       return;
     }
     if (store.isLocked('uiMode')) {
-      console.warn('[UiMode] Przełączanie trybu zablokowane przez studio — ignoruję.');
+      console.warn('[UiMode] Mode switching is locked by the studio — ignoring.');
       return;
     }
     mode = next;

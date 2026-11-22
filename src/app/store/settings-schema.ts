@@ -1,12 +1,12 @@
 /**
- * Schemat i walidacja ustawień aplikacji (Faza 11 — SettingsStore v1).
+ * Application settings schema and validation (Phase 11 — SettingsStore v1).
  *
- * Zasady:
- * - jedno źródło prawdy dla kluczy localStorage (blob `avatar_settings_v1`),
- * - odczyt traktowany jako UNTRUSTED: whitelist kluczy, clampy, limity map, odrzucanie
- *   kluczy zarezerwowanych (`__proto__`/`constructor`/`prototype`) — ochrona przed
- *   prototype pollution i DoS przez import (ASVS L1, T-11-01/T-11-02),
- * - brak martwego pola czułości mikrofonu (usunięte w F11, UI-05).
+ * Rules:
+ * - a single source of truth for the localStorage keys (the `avatar_settings_v1` blob),
+ * - reads are treated as UNTRUSTED: key whitelist, clamps, map limits, rejection of
+ *   reserved keys (`__proto__`/`constructor`/`prototype`) — protection against
+ *   prototype pollution and DoS via import (ASVS L1, T-11-01/T-11-02),
+ * - no dead microphone-sensitivity field (removed in F11, UI-05).
  */
 import {
   CalibrationProfile,
@@ -17,10 +17,10 @@ import {
 import { VisemeOverrideMap } from '../../lipsync/viseme-overrides';
 import { DEFAULT_AGENT_CONFIG } from '../../audio/agent-config';
 
-/** Domyślny adres lokalnego wrappera A2F (docelowo także cloud w Fazie 10). */
+/** Default address of the local A2F wrapper (eventually cloud too, in Phase 10). */
 export const DEFAULT_A2F_URL = 'http://127.0.0.1:8000';
 
-/** Maksymalna liczba wpisów nadpisań wizemów (ochrona przed DoS, T-11-02). */
+/** Maximum number of viseme override entries (DoS protection, T-11-02). */
 export const MAX_VISEME_OVERRIDES = 512;
 
 const RESERVED_KEYS = new Set(['__proto__', 'constructor', 'prototype']);
@@ -45,7 +45,7 @@ export interface StudioSettings {
   lipSyncEngine: LipSyncEngine;
   calibration: CalibrationProfile;
   visemeOverrides: VisemeOverrideMap;
-  /** Klucz = ścieżka ustawienia (np. 'volume'); true = user nie może zmienić. */
+  /** Key = setting path (e.g. 'volume'); true = the user cannot change it. */
   locks: Record<string, boolean>;
 }
 
@@ -55,7 +55,7 @@ export interface SettingsStateV1 {
   studio: StudioSettings;
 }
 
-/** Interfejs kompatybilny z localStorage (wstrzykiwany — testy w env node). */
+/** localStorage-compatible interface (injected — tests run in a node env). */
 export interface StorageLike {
   getItem(key: string): string | null;
   setItem(key: string, value: string): void;
@@ -175,9 +175,9 @@ function sanitizeLocks(value: unknown): Record<string, boolean> {
 }
 
 /**
- * Waliduje nieznany obiekt do pełnego stanu v1 (merge z defaultami, clampy, whitelist).
- * Zwraca błąd tylko gdy wejście nie jest obiektem lub schemaVersion jest nieobsługiwana
- * albo wykryto klucze zarezerwowane na najwyższym poziomie.
+ * Validates an unknown object into a full v1 state (merge with defaults, clamps, whitelist).
+ * Returns an error only when the input is not an object or the schemaVersion is unsupported
+ * or reserved keys are detected at the top level.
  */
 export function validateSettings(raw: unknown): { ok: true; value: SettingsStateV1 } | { ok: false; error: string } {
   if (!isRecord(raw)) {

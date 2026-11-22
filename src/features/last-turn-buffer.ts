@@ -1,9 +1,9 @@
 /**
- * LastTurnBuffer (Faza 11, 11-05): bufor ostatniej tury agenta — JEDNO źródło PCM dla obu
- * torów porównywarki (fairness konstrukcyjna: tor LIVE odtwarza te same bajty, które tor A2F
- * wysyła do `/predict`).
+ * LastTurnBuffer (Phase 11, 11-05): buffer of the agent's last turn — a SINGLE PCM source for both
+ * comparison tracks (fairness by construction: the LIVE track plays the same bytes that the A2F track
+ * sends to `/predict`).
  *
- * Kontrakt wejścia: `audio:chunk` z `{ bytes, alignment, startTime, epoch, sampleRate }` (11-02).
+ * Input contract: `audio:chunk` with `{ bytes, alignment, startTime, epoch, sampleRate }` (11-02).
  */
 import { CharAlignment } from '../types/avatar';
 import { TypedEventBus, Unsub } from '../app/events';
@@ -23,7 +23,7 @@ export interface LastTurn {
 
 export interface LastTurnBufferDeps {
   events: TypedEventBus<AppEvents>;
-  /** Limit długości bufora w sekundach (domyślnie 60). */
+  /** Buffer length limit in seconds (default 60). */
   maxSeconds?: number;
 }
 
@@ -45,7 +45,7 @@ export class LastTurnBuffer {
         if (!chunk.bytes.length || chunk.sampleRate <= 0) return;
         const chunkSec = chunk.bytes.byteLength / 2 / chunk.sampleRate;
         if (this.durationSec + chunkSec > this.maxSeconds) {
-          console.warn('[LastTurnBuffer] Limit długości tury — czyszczę bufor.');
+          console.warn('[LastTurnBuffer] Turn length limit reached — clearing the buffer.');
           this.clear();
         }
         this.chunks.push({
