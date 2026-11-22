@@ -141,12 +141,16 @@ const GATE_A_SCOPES: readonly GateAScope[] = [
   {
     name: 'docs/core',
     // ON in 12-02: the three core docs (0-roadmap, 1-architecture, 2-elevenlabs) are translated.
+    // Extended in 12-03: the lip-sync trio (3-lip-sync, 4-audio, en-visemes) is translated too.
     enforced: true,
     files: () =>
       [
         'docs/0-roadmap-poc-mvp.md',
         'docs/1-architecture-and-3d-models.md',
         'docs/2-elevenlabs-wss-integration.md',
+        'docs/3-lip-sync-and-coarticulation.md',
+        'docs/4-audio-and-barge-in.md',
+        'docs/en-visemes.md',
       ].filter((f) => existsSync(join(ROOT, f))),
   },
   { name: 'docs/all', enforced: false, files: () => listFiles('docs', ['.md']) },
