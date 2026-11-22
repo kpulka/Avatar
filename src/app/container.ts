@@ -64,7 +64,7 @@ export function createApp(canvas: HTMLCanvasElement): AppHandle {
   const lighting = new StudioLighting();
   lighting.addToScene(scene.instance);
   const environment = new EnvironmentManager(renderer.instance);
-  environment.setupRoomEnvironment(scene.instance);
+  environment.setupSoftboxEnvironment(scene.instance);
   const loader = new MetaPersonLoader();
   const headMicro = new HeadMicroMovements();
   const gaze = new GazeSaccades();

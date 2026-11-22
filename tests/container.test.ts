@@ -4,6 +4,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 vi.mock('../src/core/renderer', () => ({
   AppRenderer: class {
     instance = { render: vi.fn(), toneMappingExposure: 1 };
+    maxPixelRatio = 2;
+    setPixelRatio = vi.fn();
     setSize = vi.fn();
     dispose = vi.fn();
   },
@@ -43,6 +45,7 @@ vi.mock('../src/scene/lighting', async () => {
 vi.mock('../src/scene/environment', () => ({
   EnvironmentManager: class {
     setupRoomEnvironment = vi.fn();
+    setupSoftboxEnvironment = vi.fn();
     dispose = vi.fn();
   },
 }));
