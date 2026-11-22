@@ -168,7 +168,7 @@ export class SettingsStore {
     try {
       parsed = JSON.parse(json) as unknown;
     } catch {
-      return { ok: false, error: 'Import nie powiódł się: to nie jest poprawny JSON.' };
+      return { ok: false, error: 'Import failed: not valid JSON.' };
     }
 
     const candidate =

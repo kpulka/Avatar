@@ -19,6 +19,7 @@ import {
 import { VisemeOverrideMap } from '../lipsync/viseme-overrides';
 import { TypedEventBus, Unsub } from '../app/events';
 import { AnimationService, AppEvents } from '../app/app-types';
+import { t } from '../app/copy';
 import { AnimationMode, FaceDriver, FramesClip } from '../types/avatar';
 import { SettingsStore } from '../app/store/settings-store';
 
@@ -105,7 +106,9 @@ export class AnimationController implements AnimationService {
       });
     }
     this.events.emit('toast', {
-      message: `Źródło animacji: ${mode === 'frames' ? 'A2F (frames)' : 'LIVE wizemy'}`,
+      message: t('toast.animationSource', {
+        source: mode === 'frames' ? t('animation.sourceFrames') : t('animation.sourceViseme'),
+      }),
       type: 'success',
     });
   }
@@ -116,7 +119,7 @@ export class AnimationController implements AnimationService {
     this.events.emit('transcript:agent', demoReply);
     this.speak('Hello, it is a wonderful pleasure to talk with you.');
     this.events.emit('toast', {
-      message: 'Odtwarzanie demonstracyjnej mowy z analizą sentymentu (Happy)',
+      message: t('toast.demoSpeech'),
       type: 'success',
     });
   }
@@ -126,7 +129,7 @@ export class AnimationController implements AnimationService {
       lang === 'pl'
         ? 'Dzień dobry! Cieszę się, że mogę z Tobą dzisiaj porozmawiać.'
         : 'Hello! I am delighted to speak with you and assist you today.';
-    this.events.emit('transcript:user', `[Test kalibracji ${lang.toUpperCase()}]`);
+    this.events.emit('transcript:user', t('animation.calibrationLabelPrefix', { lang: lang.toUpperCase() }));
     this.events.emit('transcript:agent', phrase);
     this.faceController?.clearManualOverrides();
     this.speak(phrase);
@@ -291,7 +294,7 @@ export class AnimationController implements AnimationService {
   public async runA2fDemo(): Promise<void> {
     const faceController = this.faceController;
     if (!faceController) {
-      this.events.emit('toast', { message: 'Najpierw załaduj awatara (Demo/Load).', type: 'error' });
+      this.events.emit('toast', { message: t('toast.loadAvatarFirst'), type: 'error' });
       return;
     }
 
@@ -321,9 +324,12 @@ export class AnimationController implements AnimationService {
         rtf,
       });
       this.events.emit('toast', {
-        message:
-          `A2F lokalny: ${real.clip.frames.length} ramek @ ${real.clip.fps}fps, ` +
-          `predict ${real.predictMs} ms (RTF ${rtf.toFixed(2)})`,
+        message: t('toast.a2fLocalResult', {
+          frames: real.clip.frames.length,
+          fps: real.clip.fps,
+          ms: real.predictMs,
+          rtf: rtf.toFixed(2),
+        }),
         type: 'success',
       });
       return;
@@ -336,10 +342,8 @@ export class AnimationController implements AnimationService {
     this.events.emit('a2f:stats', { source, frames: clip.frames.length, fps: clip.fps });
     this.events.emit('toast', {
       message:
-        `Demo A2F (frames): ${clip.frames.length} ramek @ ${clip.fps}fps, base=${baseSec.toFixed(3)}s` +
-        (source === 'voice'
-          ? ' — nagranie demo-speech.wav'
-          : ' — syntetyka (dodaj public/demo/demo-speech.wav)'),
+        t('toast.a2fDemoResult', { frames: clip.frames.length, fps: clip.fps, base: baseSec.toFixed(3) }) +
+        (source === 'voice' ? t('toast.a2fDemoVoice') : t('toast.a2fDemoSynthetic')),
       type: 'success',
     });
   }

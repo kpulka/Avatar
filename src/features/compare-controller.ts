@@ -16,6 +16,7 @@ import { encodeWav } from '../audio/pcm-to-wav';
 import { LastTurn, LastTurnBuffer } from './last-turn-buffer';
 import { TypedEventBus, Unsub } from '../app/events';
 import { AppEvents, CompareResultEvent } from '../app/app-types';
+import { t } from '../app/copy';
 
 export type CompareState =
   | 'idle'
@@ -168,7 +169,7 @@ export class CompareController {
         this.restoreMode(token);
         this.setState('error');
         this.deps.events.emit('toast', {
-          message: `Porównanie nie powiodło się: ${(error as Error).message}`,
+          message: t('compare.failedToast', { message: (error as Error).message }),
           type: 'error',
         });
       }
@@ -185,7 +186,7 @@ export class CompareController {
     this.deps.audioEngine.hardStop();
     this.restoreMode(token);
     this.setState('idle');
-    console.log(`[CompareController] Anulowano replay (${reason}).`);
+    console.log(`[CompareController] Replay cancelled (${reason}).`);
     this.deps.events.emit('compare:cancelled', undefined);
   }
 
@@ -235,7 +236,7 @@ export class CompareController {
       if (this.isCurrent(token)) {
         this.restoreMode(token);
         this.setState('error');
-        this.deps.events.emit('toast', { message: 'Nothing to compare: the last turn has no audio.', type: 'error' });
+        this.deps.events.emit('toast', { message: t('compare.noAudioToast'), type: 'error' });
       }
       return null;
     }
@@ -244,7 +245,7 @@ export class CompareController {
       const { parsed, predictMs } = await this.predict(this.deps.getA2fUrl(), wav);
       if (!this.isCurrent(token)) return null;
       if (!parsed.clip.frames.length) {
-        throw new Error('puste ramki z /predict');
+        throw new Error('empty frames from /predict');
       }
       return { clip: parsed.clip, predictMs };
     } catch (error) {
@@ -252,7 +253,7 @@ export class CompareController {
         this.restoreMode(token);
         this.setState('error');
         this.deps.events.emit('toast', {
-          message: `A2F niedostępny — sprawdź adres serwisu w Studio → A2F. (${(error as Error).message})`,
+          message: t('compare.a2fDownToast', { message: (error as Error).message }),
           type: 'error',
         });
       }

@@ -1,6 +1,6 @@
 /**
- * Panel „Animacja" (Faza 11, 11-04): silnik lip-sync (A/B), źródło animacji, presety
- * i suwaki kalibracji, testy głosek/fraz, demo A2F. 1:1 z sekcji kalibratora w hud.ts.
+ * "Animation" panel (Phase 11, 11-04): lip-sync engine (A/B), animation source, presets
+ * and calibration sliders, phoneme/phrase tests, A2F demo. 1:1 from the calibrator section of hud.ts.
  */
 import { PanelContext, PanelDefinition, PanelHandle } from '../panel-registry';
 import { el } from '../../shared/dom';
@@ -10,6 +10,7 @@ import {
   CalibrationProfile,
 } from '../../../lipsync/calibration';
 import { AnimationMode } from '../../../types/avatar';
+import { t } from '../../../app/copy';
 
 interface SliderSpec {
   key: keyof CalibrationProfile;
@@ -21,15 +22,15 @@ interface SliderSpec {
 }
 
 const SLIDERS: SliderSpec[] = [
-  { key: 'jawScale', label: 'Głębokość otwarcia żuchwy (jawOpen)', min: 0.5, max: 1.3, step: 0.05, format: (v) => `${Math.round(v * 100)}%` },
-  { key: 'closeScale', label: 'Domykanie warg M / B / P (mouthClose)', min: 0.3, max: 1.2, step: 0.05, format: (v) => `${Math.round(v * 100)}%` },
-  { key: 'puckerScale', label: 'Zaokrąglenie warg O / U (mouthPucker)', min: 0.4, max: 1.3, step: 0.05, format: (v) => `${Math.round(v * 100)}%` },
-  { key: 'funnelScale', label: 'Tuba wargowa O / SZ (mouthFunnel)', min: 0.4, max: 1.3, step: 0.05, format: (v) => `${Math.round(v * 100)}%` },
-  { key: 'rollScale', label: 'Podwijanie dolnej wargi F / V (mouthRollLower)', min: 0.4, max: 1.3, step: 0.05, format: (v) => `${Math.round(v * 100)}%` },
-  { key: 'teethExposureScale', label: 'Odsłanianie zębów / siekaczy (mouthUpperUp)', min: 0.4, max: 1.3, step: 0.05, format: (v) => `${Math.round(v * 100)}%` },
-  { key: 'smileScale', label: 'Szerokość uśmiechu w mowie (mouthSmile)', min: 0.4, max: 1.3, step: 0.05, format: (v) => `${Math.round(v * 100)}%` },
-  { key: 'coarticulationSpeed', label: 'Płynność przejść głosek (Szybkość lambda)', min: 8, max: 35, step: 1, format: (v) => `${Math.round(v)}` },
-  { key: 'syncOffsetMs', label: 'Przesunięcie synchronizacji AV (Audio Lead)', min: -150, max: 400, step: 5, format: (v) => `${v > 0 ? '+' : ''}${Math.round(v)} ms` },
+  { key: 'jawScale', label: t('animation.slider.jawScale'), min: 0.5, max: 1.3, step: 0.05, format: (v) => `${Math.round(v * 100)}%` },
+  { key: 'closeScale', label: t('animation.slider.closeScale'), min: 0.3, max: 1.2, step: 0.05, format: (v) => `${Math.round(v * 100)}%` },
+  { key: 'puckerScale', label: t('animation.slider.puckerScale'), min: 0.4, max: 1.3, step: 0.05, format: (v) => `${Math.round(v * 100)}%` },
+  { key: 'funnelScale', label: t('animation.slider.funnelScale'), min: 0.4, max: 1.3, step: 0.05, format: (v) => `${Math.round(v * 100)}%` },
+  { key: 'rollScale', label: t('animation.slider.rollScale'), min: 0.4, max: 1.3, step: 0.05, format: (v) => `${Math.round(v * 100)}%` },
+  { key: 'teethExposureScale', label: t('animation.slider.teethExposureScale'), min: 0.4, max: 1.3, step: 0.05, format: (v) => `${Math.round(v * 100)}%` },
+  { key: 'smileScale', label: t('animation.slider.smileScale'), min: 0.4, max: 1.3, step: 0.05, format: (v) => `${Math.round(v * 100)}%` },
+  { key: 'coarticulationSpeed', label: t('animation.slider.coarticulationSpeed'), min: 8, max: 35, step: 1, format: (v) => `${Math.round(v)}` },
+  { key: 'syncOffsetMs', label: t('animation.slider.syncOffsetMs'), min: -150, max: 400, step: 5, format: (v) => `${v > 0 ? '+' : ''}${Math.round(v)} ms` },
 ];
 
 const PHONEMES: Array<{ key: 'A' | 'E' | 'O' | 'U' | 'M' | 'SZ' | 'F' | 'neutral'; label: string }> = [
@@ -39,13 +40,13 @@ const PHONEMES: Array<{ key: 'A' | 'E' | 'O' | 'U' | 'M' | 'SZ' | 'F' | 'neutral
   { key: 'M', label: '[ M / B / P ]' },
   { key: 'SZ', label: '[ SZ / CZ ]' },
   { key: 'F', label: '[ F / V ]' },
-  { key: 'neutral', label: 'Spoczynek' },
+  { key: 'neutral', label: t('animation.phonemeRest') },
 ];
 
 export function createAnimationPanel(): PanelDefinition {
   return {
     id: 'animation',
-    title: 'Animacja',
+    title: t('panel.title.animation'),
     icon: '🎛️',
     visibleIn: 'studio',
     region: 'right',
@@ -53,7 +54,7 @@ export function createAnimationPanel(): PanelDefinition {
       const { store, events, services, ui, container } = ctx;
       const root = el('div', { className: 'panel panel-animation' });
 
-      // 0. Silnik lip-syncu (A/B)
+      // 0. Lip-sync engine (A/B)
       const engineToggle = el('input', { type: 'checkbox' }) as HTMLInputElement;
       engineToggle.checked = store.getEffective<'phoneme' | 'char'>('lipSyncEngine') === 'phoneme';
       engineToggle.addEventListener('change', () => {
@@ -63,17 +64,17 @@ export function createAnimationPanel(): PanelDefinition {
         el('div', { className: 'drawer-section' }, [
           el('label', { className: 'engine-toggle' }, [
             engineToggle,
-            el('span', { text: 'Fonemowy silnik EN (G2P)' }),
+            el('span', { text: t('animation.engineLabel') }),
           ]),
-          el('p', { className: 'drawer-subtitle', text: 'ON = litery → fonemy (CMUdict); OFF = stara tabela znaków' }),
+          el('p', { className: 'drawer-subtitle', text: t('animation.engineHint') }),
         ])
       );
 
-      // 0b. Źródło animacji
+      // 0b. Animation source
       const sourceSelect = el('select', { className: 'engine-select' }) as HTMLSelectElement;
       sourceSelect.append(
-        el('option', { value: 'viseme', text: 'LIVE wizemy (domyślne)' }),
-        el('option', { value: 'frames', text: 'A2F (frames)' })
+        el('option', { value: 'viseme', text: t('animation.sourceViseme') }),
+        el('option', { value: 'frames', text: t('animation.sourceFrames') })
       );
       sourceSelect.value = store.getEffective<string>('animationSource') === 'frames' ? 'frames' : 'viseme';
       sourceSelect.addEventListener('change', () => {
@@ -82,19 +83,19 @@ export function createAnimationPanel(): PanelDefinition {
       root.append(
         el('div', { className: 'drawer-section' }, [
           el('label', { className: 'engine-toggle column' }, [
-            el('span', { text: 'Źródło animacji:' }),
+            el('span', { text: t('animation.sourceLabel') }),
             sourceSelect,
           ]),
-          el('p', { className: 'drawer-subtitle', text: 'frames = absolutne ramki neuronowe; wybierz i odpal „▶ Demo A2F" poniżej' }),
+          el('p', { className: 'drawer-subtitle', text: t('animation.sourceHint') }),
         ])
       );
 
-      // 1. Presety
+      // 1. Presets
       const presetNames: CalibrationPresetName[] = ['subtle', 'balanced', 'expressive'];
       const presetLabels: Record<CalibrationPresetName, string> = {
-        subtle: '🎯 Dyskretny',
-        balanced: '🌟 Naturalny',
-        expressive: '🎭 Ekspresyjny',
+        subtle: t('animation.presetSubtle'),
+        balanced: t('animation.presetBalanced'),
+        expressive: t('animation.presetExpressive'),
       };
       const presetButtons = new Map<CalibrationPresetName, HTMLButtonElement>();
       const presetRow = el('div', { className: 'preset-buttons' });
@@ -114,12 +115,12 @@ export function createAnimationPanel(): PanelDefinition {
       }
       root.append(
         el('div', { className: 'drawer-section' }, [
-          el('span', { className: 'section-title', text: '1. Profile artykulacji:' }),
+          el('span', { className: 'section-title', text: t('animation.presetsTitle') }),
           presetRow,
         ])
       );
 
-      // 2. Testy głosek
+      // 2. Phoneme tests
       const phonemeRow = el('div', { className: 'phoneme-buttons' });
       for (const phoneme of PHONEMES) {
         const button = el('button', {
@@ -130,30 +131,30 @@ export function createAnimationPanel(): PanelDefinition {
         button.addEventListener('click', () => services.animation.testPhoneme(phoneme.key));
         phonemeRow.append(button);
       }
-      const phrasePl = el('button', { className: 'btn btn-small', type: 'button', text: '▶ Zdanie testowe (PL)' });
+      const phrasePl = el('button', { className: 'btn btn-small', type: 'button', text: t('animation.phrasePl') });
       phrasePl.addEventListener('click', () => services.animation.testPhrase('pl'));
-      const phraseEn = el('button', { className: 'btn btn-small', type: 'button', text: '▶ Sample Speech (EN)' });
+      const phraseEn = el('button', { className: 'btn btn-small', type: 'button', text: t('animation.phraseEn') });
       phraseEn.addEventListener('click', () => services.animation.testPhrase('en'));
-      const demoA2f = el('button', { className: 'btn btn-small', type: 'button', text: '▶ Demo A2F (frames)' });
+      const demoA2f = el('button', { className: 'btn btn-small', type: 'button', text: t('animation.demoA2f') });
       demoA2f.addEventListener('click', () => {
         void services.animation.runA2fDemo();
       });
       root.append(
         el('div', { className: 'drawer-section' }, [
-          el('span', { className: 'section-title', text: '2. Podgląd ułożenia ust (statyczny test):' }),
+          el('span', { className: 'section-title', text: t('animation.phonemesTitle') }),
           phonemeRow,
           el('div', { className: 'sample-speech-buttons' }, [phrasePl, phraseEn, demoA2f]),
         ])
       );
 
-      // 3+4. Suwaki kalibracji
+      // 3+4. Calibration sliders
       const sliderInputs = new Map<keyof CalibrationProfile, HTMLInputElement>();
       const sliderLabels = new Map<keyof CalibrationProfile, HTMLElement>();
       const geometrySection = el('div', { className: 'drawer-section' }, [
-        el('span', { className: 'section-title', text: '3. Geometria ust i zębów:' }),
+        el('span', { className: 'section-title', text: t('animation.geometryTitle') }),
       ]);
       const dynamicsSection = el('div', { className: 'drawer-section' }, [
-        el('span', { className: 'section-title', text: '4. Dynamika i synchronizacja AV:' }),
+        el('span', { className: 'section-title', text: t('animation.dynamicsTitle') }),
       ]);
 
       for (const spec of SLIDERS) {
@@ -181,17 +182,17 @@ export function createAnimationPanel(): PanelDefinition {
         (spec.key === 'coarticulationSpeed' || spec.key === 'syncOffsetMs' ? dynamicsSection : geometrySection).append(group);
       }
 
-      const saveButton = el('button', { className: 'btn btn-primary', type: 'button', text: '💾 Zapisz Profil' });
+      const saveButton = el('button', { className: 'btn btn-primary', type: 'button', text: t('animation.save') });
       saveButton.addEventListener('click', () => {
         services.animation.saveCalibration();
-        ui.toast.show('Profil kalibracji fonetycznej zapisany w pamięci!', 'success');
+        ui.toast.show(t('animation.savedToast'), 'success');
       });
-      const resetButton = el('button', { className: 'btn btn-secondary', type: 'button', text: '↺ Przywróć Domyślne' });
+      const resetButton = el('button', { className: 'btn btn-secondary', type: 'button', text: t('animation.reset') });
       resetButton.addEventListener('click', () => {
         const profile = services.animation.resetCalibration();
         updateSliders(profile);
         setActivePreset('balanced');
-        ui.toast.show('Przywrócono domyślny profil kalibracji', 'success');
+        ui.toast.show(t('animation.resetToast'), 'success');
       });
       const actions = el('div', { className: 'drawer-actions' }, [saveButton, resetButton]);
 
@@ -213,7 +214,7 @@ export function createAnimationPanel(): PanelDefinition {
         }
       }
 
-      // Stan początkowy
+      // Initial state
       const initialProfile = services.animation.updateCalibrationSliders();
       updateSliders(initialProfile);
 

@@ -1,15 +1,16 @@
 /**
- * Panel „Scena" (Faza 11, 11-04/11-07): ładowanie modelu (demo / .glb), informacje o modelu,
- * presety sceny (pełne przełączanie w 11-07 — tu zapis wyboru do store).
+ * "Scene" panel (Phase 11, 11-04/11-07): model loading (demo / .glb), model info,
+ * scene presets (full switching in 11-07 — here the choice is written to the store).
  */
 import { PanelContext, PanelDefinition, PanelHandle } from '../panel-registry';
 import { el } from '../../shared/dom';
 import { setSkinSSSEnabled } from '../../../scene/skin-shader';
+import { t } from '../../../app/copy';
 
 export function createScenePanel(): PanelDefinition {
   return {
     id: 'scene',
-    title: 'Scena',
+    title: t('panel.title.scene'),
     icon: '🎨',
     visibleIn: 'studio',
     region: 'right',
@@ -18,21 +19,21 @@ export function createScenePanel(): PanelDefinition {
       const root = el('div', { className: 'panel panel-scene' });
 
       // --- Model
-      const modelInfo = el('p', { className: 'drawer-subtitle', text: 'Model: brak (ładowanie w toku...)' });
+      const modelInfo = el('p', { className: 'drawer-subtitle', text: t('scene.modelNone') });
       const renderInfo = (info: { name: string; shapesCount: number; speechMeshes: number }): void => {
-        modelInfo.textContent = `Model: ${info.name} · shapes: ${info.shapesCount} · meshe mowy: ${info.speechMeshes}`;
+        modelInfo.textContent = t('scene.modelInfo', { name: info.name, shapes: info.shapesCount, meshes: info.speechMeshes });
       };
       const existingInfo = services.scene.getAvatarInfo();
       if (existingInfo) renderInfo(existingInfo);
-      const loadDemoButton = el('button', { className: 'btn btn-small btn-primary', type: 'button', text: 'Wczytaj demo' });
+      const loadDemoButton = el('button', { className: 'btn btn-small btn-primary', type: 'button', text: t('scene.loadDemo') });
       loadDemoButton.addEventListener('click', () => {
-        ui.loader.show('Generowanie demonstracyjnego awatara...');
+        ui.loader.show(t('scene.generatingDemo'));
         setTimeout(() => {
           try {
             services.scene.loadDemo();
           } catch (error) {
             ui.loader.hide();
-            ui.toast.show(`Błąd generowania: ${(error as Error).message}`, 'error');
+            ui.toast.show(t('scene.demoError', { message: (error as Error).message }), 'error');
           }
         }, 50);
       });
@@ -40,19 +41,19 @@ export function createScenePanel(): PanelDefinition {
       const fileInput = el('input', { type: 'file', attrs: { accept: '.glb,.gltf' } }) as HTMLInputElement;
       fileInput.style.display = 'none';
       const fileButton = el('label', { className: 'btn btn-small btn-secondary file-upload-btn' }, [
-        el('span', { text: 'Wybierz .GLB' }),
+        el('span', { text: t('scene.chooseGlb') }),
         fileInput,
       ]);
       fileInput.addEventListener('change', async () => {
         const file = fileInput.files?.[0];
         fileInput.value = '';
         if (!file) return;
-        ui.loader.show(`Wczytywanie pliku ${file.name}...`);
+        ui.loader.show(t('scene.loadingFile', { name: file.name }));
         try {
           await services.scene.loadFile(file);
         } catch (error) {
           ui.loader.hide();
-          ui.toast.show(`Błąd ładowania: ${(error as Error).message}`, 'error');
+          ui.toast.show(t('scene.fileError', { message: (error as Error).message }), 'error');
         }
       });
 
@@ -61,7 +62,7 @@ export function createScenePanel(): PanelDefinition {
         ui.loader.hide();
       });
 
-      // --- Presety sceny (F11) — picker ukryty, gdy dostępnych jest < 2
+      // --- Scene presets (F11) — picker hidden when fewer than 2 are available
       const presetList = el('div', { className: 'scene-preset-list' });
       const availablePresets = services.scenePresets.list();
       if (availablePresets.length >= 2) {
@@ -90,20 +91,20 @@ export function createScenePanel(): PanelDefinition {
 
       root.append(
         el('div', { className: 'drawer-section' }, [
-          el('span', { className: 'section-title', text: 'Model awatara:' }),
+          el('span', { className: 'section-title', text: t('scene.modelTitle') }),
           modelInfo,
           el('div', { className: 'panel-actions' }, [loadDemoButton, fileButton]),
         ]),
         el('div', { className: 'drawer-section' }, [
-          el('span', { className: 'section-title', text: 'Presety sceny:' }),
+          el('span', { className: 'section-title', text: t('scene.presetsTitle') }),
           presetList,
           el('p', {
             className: 'drawer-subtitle',
-            text: 'Preset zmienia tło, światło, exposure i kadr (crossfade 280 ms; reduced-motion = natychmiast).',
+            text: t('scene.presetsHint'),
           }),
         ]),
         el('div', { className: 'drawer-section' }, [
-          el('label', { className: 'engine-toggle' }, [sssToggle, el('span', { text: 'Skin subsurface scattering' })]),
+          el('label', { className: 'engine-toggle' }, [sssToggle, el('span', { text: t('scene.sssLabel') })]),
         ])
       );
       container.append(root);

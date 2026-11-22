@@ -181,13 +181,13 @@ function sanitizeLocks(value: unknown): Record<string, boolean> {
  */
 export function validateSettings(raw: unknown): { ok: true; value: SettingsStateV1 } | { ok: false; error: string } {
   if (!isRecord(raw)) {
-    return { ok: false, error: 'Ustawienia muszą być obiektem JSON.' };
+    return { ok: false, error: 'Settings must be a JSON object.' };
   }
   if (hasReservedKeys(raw)) {
-    return { ok: false, error: 'Ustawienia zawierają zarezerwowane klucze (__proto__/constructor/prototype).' };
+    return { ok: false, error: 'Settings contain reserved keys (__proto__/constructor/prototype).' };
   }
   if (raw.schemaVersion !== undefined && raw.schemaVersion !== 1) {
-    return { ok: false, error: `Nieobsługiwana wersja schematu: ${String(raw.schemaVersion)}.` };
+    return { ok: false, error: `Unsupported schema version: ${String(raw.schemaVersion)}.` };
   }
 
   const userRaw = isRecord(raw.user) && !hasReservedKeys(raw.user) ? raw.user : {};

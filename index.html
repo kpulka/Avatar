@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="pl">
+<html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -10,21 +10,10 @@
     <div id="app">
       <canvas id="avatar-canvas"></canvas>
 
-      <!-- WebGL Fallback Overlay -->
-      <div id="webgl-fallback" class="overlay hidden">
-        <div class="card error-card">
-          <h2>⚠️ Brak obsługi WebGL</h2>
-          <p>
-            Twoja przeglądarka lub karta graficzna nie obsługuje WebGL / akceleracji sprzętowej.
-          </p>
-          <p class="subtext">
-            Upewnij się, że masz włączoną akcelerację sprzętową w ustawieniach przeglądarki.
-          </p>
-          <p class="subtext">Open this page in a recent Chrome, Edge, Firefox or Safari with hardware acceleration enabled.</p>
-        </div>
-      </div>
+      <!-- WebGL fallback overlay: empty mount, the card is rendered by src/ui/webgl-fallback.ts -->
+      <div id="webgl-fallback" class="overlay hidden"></div>
 
-      <!-- ROOT warstwy UI: user (dock/status/captions/segment/ustawienia), studio shell, shared (toast/loader/modal) -->
+      <!-- UI root: user layer (dock/status/captions/segment/settings), studio shell, shared (toast/loader/modal) -->
       <div id="ui-root"></div>
     </div>
     <script type="module" src="/src/main.ts"></script>

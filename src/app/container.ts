@@ -17,6 +17,7 @@ import { GazeSaccades } from '../realism/gaze-saccades';
 import { EmbedBridge } from '../prod/embed-bridge';
 import { TelemetryManager } from '../prod/telemetry';
 import { TypedEventBus } from './events';
+import { t } from './copy';
 import { AppEvents, AppServices } from './app-types';
 import { SettingsStore } from './store/settings-store';
 import { attachLegacyBridge } from './store/legacy-bridge';
@@ -114,7 +115,9 @@ export function createApp(canvas: HTMLCanvasElement): AppHandle {
   });
   const unsubAvatarProgress = events.on('avatar:progress', ({ fraction }) => {
     if (avatarReady) return;
-    loaderUi.show(fraction === null ? 'Loading 3D avatar…' : `Loading 3D avatar… ${Math.round(fraction * 100)}%`);
+    loaderUi.show(
+      fraction === null ? t('loader.avatar') : t('loader.avatarProgress', { percent: Math.round(fraction * 100) })
+    );
   });
   const unsubAvatarError = events.on('avatar:error', ({ message }) => {
     avatarReady = true;
@@ -266,8 +269,8 @@ export function createApp(canvas: HTMLCanvasElement): AppHandle {
   const exitPresentation = el('button', {
     className: 'btn-exit-presentation hidden',
     type: 'button',
-    text: '👁️ Pokaż Panel Sterowania',
-    ariaLabel: 'Pokaż interfejs',
+    text: t('presentation.show'),
+    ariaLabel: t('presentation.showAria'),
   });
   hostRoot.append(exitPresentation);
   let presentation = false;
@@ -328,7 +331,7 @@ export function createApp(canvas: HTMLCanvasElement): AppHandle {
     start(): void {
       applyInputDevice();
       scenePresetController.apply(store.getEffective<string>('scenePreset'));
-      loaderUi.show('Loading 3D avatar…');
+      loaderUi.show(t('loader.avatar'));
       sceneController.loadDefaultAvatar();
       rafId = requestAnimationFrame(animate);
       embedBridge.notifyReady();

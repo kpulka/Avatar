@@ -9,6 +9,7 @@ import { AudioEngine } from '../audio/audio-engine';
 import { EmbedBridge } from '../prod/embed-bridge';
 import { TypedEventBus } from '../app/events';
 import { AppEvents, ConversationService } from '../app/app-types';
+import { t } from '../app/copy';
 
 export interface ConversationControllerDeps {
   speechBackend: ElevenAgentsSpeechBackend;
@@ -101,7 +102,7 @@ export class ConversationController implements ConversationService {
     try {
       await this.speechBackend.start();
     } catch (error) {
-      const message = error instanceof MicAccessError ? error.message : `Connection error: ${(error as Error).message}`;
+      const message = error instanceof MicAccessError ? error.message : t('toast.connectionError', { message: (error as Error).message });
       this.events.emit('voice:error', message);
       this.events.emit('toast', { message, type: 'error' });
       throw error;
@@ -115,10 +116,10 @@ export class ConversationController implements ConversationService {
   public async toggle(): Promise<void> {
     if (this.speechBackend.getIsRunning() || this.startPromise) {
       await this.stop();
-      this.events.emit('toast', { message: 'Rozmowa zakończona.', type: 'success' });
+      this.events.emit('toast', { message: t('toast.conversationEnded'), type: 'success' });
       return;
     }
-    this.events.emit('toast', { message: 'Rozpoczynanie rozmowy z agentem...', type: 'success' });
+    this.events.emit('toast', { message: t('toast.conversationStarting'), type: 'success' });
     await this.start().catch(() => undefined);
   }
 
@@ -127,7 +128,7 @@ export class ConversationController implements ConversationService {
     this.speechBackend.setMuted(muted);
     this.events.emit('voice:muted', muted);
     this.events.emit('toast', {
-      message: `Mikrofon: ${muted ? 'Wyciszony' : 'Włączony'}`,
+      message: muted ? t('toast.micMuted') : t('toast.micUnmuted'),
       type: 'success',
     });
   }
@@ -145,7 +146,7 @@ export class ConversationController implements ConversationService {
     this.events.emit('speech:interruption', 'client_interrupted');
     this.events.emit('voice:state', 'listening');
     this.events.emit('toast', {
-      message: 'Barge-in: Natychmiastowe przerwanie mowy agenta',
+      message: t('toast.bargeIn'),
       type: 'success',
     });
   }
@@ -164,31 +165,31 @@ export class ConversationController implements ConversationService {
 
   public async runPocStress(): Promise<void> {
     this.events.emit('toast', {
-      message: 'Uruchamianie testu PoC Stress (3 sekwencje z przerwaniami)...',
+      message: t('poc.start'),
       type: 'success',
     });
-    this.events.emit('transcript:user', 'Test obciążeniowy PoC');
+    this.events.emit('transcript:user', t('poc.transcriptUser'));
 
-    this.events.emit('transcript:agent', '[Faza 1/3] Mówię zdanie, które zostanie przerwane w połowie...');
+    this.events.emit('transcript:agent', t('poc.phase1'));
     this.speechBackend.triggerDemoSpeech('First phrase will be abruptly interrupted midway.');
     await new Promise((resolve) => setTimeout(resolve, 600));
 
     this.audioEngine.hardStop();
     this.events.emit('speech:interruption', 'poc-stress');
-    this.events.emit('toast', { message: 'Przerwanie 1/2 zrealizowane', type: 'success' });
+    this.events.emit('toast', { message: t('poc.interrupt1'), type: 'success' });
     await new Promise((resolve) => setTimeout(resolve, 300));
 
-    this.events.emit('transcript:agent', '[Faza 2/3] Natychmiastowa druga wypowiedź i szybkie cięcie...');
+    this.events.emit('transcript:agent', t('poc.phase2'));
     this.speechBackend.triggerDemoSpeech('Second phrase tested for bilabial stop.');
     await new Promise((resolve) => setTimeout(resolve, 400));
 
     this.audioEngine.hardStop();
     this.events.emit('speech:interruption', 'poc-stress');
-    this.events.emit('toast', { message: 'Przerwanie 2/2 zrealizowane', type: 'success' });
+    this.events.emit('toast', { message: t('poc.interrupt2'), type: 'success' });
     await new Promise((resolve) => setTimeout(resolve, 300));
 
-    this.events.emit('transcript:agent', '[Faza 3/3] Pełna fraza bez przerwania — naturalny powrót do spoczynku.');
+    this.events.emit('transcript:agent', t('poc.phase3'));
     this.speechBackend.triggerDemoSpeech('Final smooth sentence demonstrating natural relaxation.');
-    this.events.emit('toast', { message: 'Test PoC Stress zakończony sukcesem (0 wycieków węzłów)', type: 'success' });
+    this.events.emit('toast', { message: t('poc.done'), type: 'success' });
   }
 }

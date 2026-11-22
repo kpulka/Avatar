@@ -1,7 +1,8 @@
 /**
- * Loader (Faza 11, 11-03): pływający wskaźnik postępu (bez blokowania canvasu).
+ * Loader (Phase 11, 11-03): floating progress indicator (does not block the canvas).
  */
 import { el } from './dom';
+import { t } from '../../app/copy';
 
 export interface LoaderHandle {
   show(text?: string): void;
@@ -10,7 +11,7 @@ export interface LoaderHandle {
 }
 
 export function createLoader(container: HTMLElement): LoaderHandle {
-  const text = el('div', { className: 'loader-text', text: 'Loading…' });
+  const text = el('div', { className: 'loader-text', text: t('loader.default') });
   const node = el('div', { className: 'loader-overlay hidden' }, [
     el('div', { className: 'spinner' }),
     text,
@@ -18,7 +19,7 @@ export function createLoader(container: HTMLElement): LoaderHandle {
   container.append(node);
 
   return {
-    show(message = 'Loading 3D model…'): void {
+    show(message = t('loader.model')): void {
       text.textContent = message;
       node.classList.remove('hidden');
     },

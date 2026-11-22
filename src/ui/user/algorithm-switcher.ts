@@ -1,23 +1,24 @@
 /**
- * AlgorithmSwitcher (Faza 11, 11-06): segment LIVE|A2F z rejestru źródeł + „Porównaj A/B"
- * + tryb blind. Empty state: brak wypowiedzi do porównania (UI-SPEC Copywriting Contract).
+ * AlgorithmSwitcher (Phase 11, 11-06): LIVE|A2F segment from the source registry + "Compare A/B"
+ * + blind mode. Empty state: no utterance to compare (UI-SPEC Copywriting Contract).
  */
 import { PanelContext, PanelDefinition, PanelHandle } from '../studio/panel-registry';
 import { el } from '../shared/dom';
 import { CompareResultEvent } from '../../app/app-types';
+import { t } from '../../app/copy';
 
 export function createAlgorithmSwitcher(): PanelDefinition {
   return {
     id: 'algorithm-switcher',
-    title: 'Algorytm',
+    title: t('panel.title.algorithm'),
     icon: '🔀',
     visibleIn: 'user',
     mount(ctx: PanelContext): PanelHandle {
       const { events, services, container, ui } = ctx;
       const root = el('div', { className: 'user-algo' });
 
-      // --- Segment źródeł (z rejestru — F10 doda a2f-cloud bez zmian tutaj)
-      const segment = el('div', { className: 'algo-segment', attrs: { role: 'group', 'aria-label': 'Źródło animacji' } });
+      // --- Source segment (from the registry — F10 adds a2f-cloud without changes here)
+      const segment = el('div', { className: 'algo-segment', attrs: { role: 'group', 'aria-label': t('algo.segmentAria') } });
       const segmentButtons = new Map<string, HTMLButtonElement>();
       for (const spec of services.animationSources.list()) {
         const button = el('button', {
@@ -43,13 +44,13 @@ export function createAlgorithmSwitcher(): PanelDefinition {
       };
       refreshSegment();
 
-      // --- Porównaj A/B
-      const compareButton = el('button', { className: 'btn btn-small', type: 'button', text: 'Porównaj A/B' });
+      // --- Compare A/B
+      const compareButton = el('button', { className: 'btn btn-small', type: 'button', text: t('algo.compare') });
       compareButton.addEventListener('click', () => {
         void services.compare.run({ blind: blindToggle.checked });
       });
 
-      const blindLabel = el('span', { text: 'Tryb blind' });
+      const blindLabel = el('span', { text: t('algo.blind') });
       const blindToggle = el('input', { type: 'checkbox' }) as HTMLInputElement;
       const blindRow = el('label', { className: 'engine-toggle' }, [blindToggle, blindLabel]);
 
@@ -59,33 +60,33 @@ export function createAlgorithmSwitcher(): PanelDefinition {
         const can = services.compare.canCompare();
         (compareButton as HTMLButtonElement).disabled = !can;
         if (!can && services.compare.getState() === 'idle') {
-          statusLine.textContent = 'Brak wypowiedzi do porównania — odbądź jedną turę rozmowy albo odtwórz demo, a potem wróć tutaj.';
+          statusLine.textContent = t('algo.empty');
         }
       };
 
       const unsubSource = events.on('animation:source', () => refreshSegment());
       const unsubState = events.on('compare:state', (state) => {
         if (state === 'predicting') {
-          statusLine.textContent = 'A2F: przetwarzanie…';
+          statusLine.textContent = t('algo.predicting');
         } else if (state === 'playing-a' || state === 'playing-b') {
-          statusLine.textContent = state === 'playing-a' ? 'Odtwarzanie toru A…' : 'Odtwarzanie toru B…';
+          statusLine.textContent = state === 'playing-a' ? t('algo.playingA') : t('algo.playingB');
         } else {
           refreshCompare();
         }
       });
       const unsubResult = events.on('compare:result', (result: CompareResultEvent) => {
         const parts: string[] = [];
-        parts.push(`kolejność: ${result.order[0] === 'live' ? 'LIVE → A2F' : 'A2F → LIVE'}`);
-        if (result.a2f.predictMs !== undefined) parts.push(`predict ${result.a2f.predictMs} ms`);
-        if (result.a2f.frames !== undefined) parts.push(`${result.a2f.frames} ramek`);
-        statusLine.textContent = `Wynik — ${parts.join(' · ')}`;
+        parts.push(t('algo.resultOrder', { order: result.order[0] === 'live' ? t('algo.orderLiveFirst') : t('algo.orderA2fFirst') }));
+        if (result.a2f.predictMs !== undefined) parts.push(t('algo.resultPredictMs', { ms: result.a2f.predictMs }));
+        if (result.a2f.frames !== undefined) parts.push(t('algo.resultFrames', { frames: result.a2f.frames }));
+        statusLine.textContent = t('algo.result', { details: parts.join(' · ') });
         if (result.partial) {
-          ui.toast.show('Uwaga: klip A2F jest krótszy niż wypowiedź (stan partial).', 'error');
+          ui.toast.show(t('algo.partialWarning'), 'error');
         }
         refreshCompare();
       });
       const unsubCancelled = events.on('compare:cancelled', () => {
-        statusLine.textContent = 'Porównanie przerwane przez nową turę rozmowy.';
+        statusLine.textContent = t('algo.cancelled');
         refreshCompare();
       });
       const unsubVoice = events.on('voice:state', () => {
