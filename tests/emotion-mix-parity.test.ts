@@ -1,7 +1,11 @@
 import { describe, it, expect } from 'vitest';
-import { FaceController, EMOTION_MIX_SPEAKING } from '../src/lipsync/face-controller';
+import { FaceController } from '../src/lipsync/face-controller';
+import { ANIM_DEFAULTS } from '../src/lipsync/anim-config';
+
 import { FaceDriver, FramesClip } from '../src/types/avatar';
 import { AudioEngine } from '../src/audio/audio-engine';
+
+const EMOTION_MIX_SPEAKING = ANIM_DEFAULTS.emotion.mixFactorSpeaking;
 
 class MockDriver implements FaceDriver {
   public appliedWeights: Record<string, number> = {};

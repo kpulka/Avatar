@@ -63,7 +63,7 @@ describe('FaceController State Machine', () => {
     );
 
     expect(controller.getState()).toBe('SPEAKING');
-    expect(controller.getQueueLength()).toBe(2);
+    expect(controller.getVisemeQueueLength()).toBe(2);
   });
 
   it('rejects chunks with outdated epoch', () => {
@@ -80,7 +80,7 @@ describe('FaceController State Machine', () => {
     );
 
     expect(controller.getState()).toBe('IDLE');
-    expect(controller.getQueueLength()).toBe(0);
+    expect(controller.getVisemeQueueLength()).toBe(0);
   });
 
   it('transitions immediately to RELAXING on interruption and clears queue', () => {
@@ -94,12 +94,12 @@ describe('FaceController State Machine', () => {
       0
     );
 
-    expect(controller.getQueueLength()).toBe(3);
+    expect(controller.getVisemeQueueLength()).toBe(3);
 
     controller.onInterruption();
 
     expect(controller.getState()).toBe('RELAXING');
-    expect(controller.getQueueLength()).toBe(0);
+    expect(controller.getVisemeQueueLength()).toBe(0);
   });
 
   it('energy-fallback porusza wyłącznie żuchwą (jawOpen > 0, reszta 0)', () => {
@@ -118,7 +118,7 @@ describe('FaceController State Machine', () => {
 
     expect(controller.getState()).toBe('SPEAKING');
     // Tylko okno z energią > 0.02 trafia do kolejki
-    expect(controller.getQueueLength()).toBe(1);
+    expect(controller.getVisemeQueueLength()).toBe(1);
 
     // Render w czasie startu okna: jawOpen aktywny, pozostałe kształty mowy = 0
     controller.render(0.016);

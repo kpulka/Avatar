@@ -86,7 +86,7 @@ describe('FaceController transition matrix (16-CONTEXT §2)', () => {
   it('row 3: interruption in IDLE stays IDLE with empty queues', () => {
     controller.onInterruption();
     expect(controller.getState()).toBe('IDLE');
-    expect(controller.getQueueLength()).toBe(0);
+    expect(controller.getVisemeQueueLength()).toBe(0);
     expect(controller.getFrameQueueLength()).toBe(0);
   });
 
@@ -102,7 +102,7 @@ describe('FaceController transition matrix (16-CONTEXT §2)', () => {
     controller.setAnimationMode('frames');
     expect(controller.getAnimationMode()).toBe('frames');
     expect(controller.getState()).toBe('RELAXING');
-    expect(controller.getQueueLength()).toBe(0);
+    expect(controller.getVisemeQueueLength()).toBe(0);
 
     controller.render(0.016);
     const jawWrites = driver.writes.slice(mark).filter(([s]) => s === 'jawOpen').map(([, w]) => w);
@@ -112,12 +112,12 @@ describe('FaceController transition matrix (16-CONTEXT §2)', () => {
 
   it('row 14: testPhoneme during SPEAKING is ignored (cannot cut a live turn)', () => {
     speakUntilJawOpen();
-    const queueBefore = controller.getQueueLength();
+    const queueBefore = controller.getVisemeQueueLength();
     const mark = driver.writes.length;
     controller.testPhoneme('neutral');
     controller.testPhoneme('M');
     expect(controller.getState()).toBe('SPEAKING');
-    expect(controller.getQueueLength()).toBe(queueBefore);
+    expect(controller.getVisemeQueueLength()).toBe(queueBefore);
     expect(driver.writes.length).toBe(mark);
   });
 
@@ -151,7 +151,7 @@ describe('FaceController transition matrix (16-CONTEXT §2)', () => {
     engine.epoch = 1; // hardStop bumped the engine epoch
     controller.onAudioChunk(CHUNK, 0, 0); // stale epoch 0
     expect(controller.getState()).toBe('RELAXING');
-    expect(controller.getQueueLength()).toBe(0);
+    expect(controller.getVisemeQueueLength()).toBe(0);
   });
 
   it('row 18: feedFrames during RELAXING enters SPEAKING in frames mode (compare-B replay path)', () => {

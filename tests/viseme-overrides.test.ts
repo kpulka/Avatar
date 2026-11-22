@@ -4,11 +4,9 @@ import {
   saveVisemeOverrides,
   clearVisemeOverrides,
   defaultVisemeShapes,
-  charTokenFor,
   isEditableViseme,
 } from '../src/lipsync/viseme-overrides';
-import { charTokenFor as charTokenFn } from '../src/lipsync/viseme-overrides';
-import { mapCharToShapes, charDefaultShapesForToken } from '../src/lipsync/viseme-mappings';
+import { mapCharToShapes, charDefaultShapesForToken, charTokenFor } from '../src/lipsync/viseme-mappings';
 
 describe('Edytor Wizemów — nadpisania (viseme-overrides)', () => {
   const mockStorage: Record<string, string> = {};
@@ -71,10 +69,5 @@ describe('Edytor Wizemów — nadpisania (viseme-overrides)', () => {
     expect(isEditableViseme('M')).toBe(true);
     expect(isEditableViseme('AA')).toBe(true);
     expect(isEditableViseme(' ')).toBe(false);
-  });
-
-  it('charTokenFor jest eksportowane (tożsamość z funkcją z viseme-mappings)', () => {
-    expect(charTokenFn).toBeTypeOf('function');
-    expect(charTokenFn(['s', 'h'], 0)).toBe('SH');
   });
 });

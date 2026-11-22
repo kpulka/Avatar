@@ -95,7 +95,7 @@ describe('Barge-in Pipeline (INT-01 & INT-02)', () => {
     );
 
     expect(controller.getState()).toBe('SPEAKING');
-    expect(controller.getQueueLength()).toBe(5);
+    expect(controller.getVisemeQueueLength()).toBe(5);
 
     // 3. Występuje zdarzenie interruption (Barge-in)
     engine.hardStop();
@@ -108,7 +108,7 @@ describe('Barge-in Pipeline (INT-01 & INT-02)', () => {
 
     // Weryfikacja INT-02: mimika przechodzi do RELAXING, kolejka wizemów wyczyszczona
     expect(controller.getState()).toBe('RELAXING');
-    expect(controller.getQueueLength()).toBe(0);
+    expect(controller.getVisemeQueueLength()).toBe(0);
 
     // 4. After the relax duration (160 ms on the injected wall clock) the face reaches IDLE
     wallMs += 160;
