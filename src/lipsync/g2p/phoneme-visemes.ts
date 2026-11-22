@@ -20,6 +20,10 @@ export interface LipPose {
   pucker?: number;
   funnel?: number;
   roll?: number;
+  /** mouthRollLower (alias of `roll`, explicit name for bilabial closure) */
+  rollLower?: number;
+  /** mouthRollUpper — upper lip tucked in, helps the lips meet without mouthClose */
+  rollUpper?: number;
   shrug?: number;
   upperUp?: number;
   lowerDown?: number;
@@ -37,7 +41,8 @@ function pose(p: LipPose): Map<string, number> {
   set('mouthClose', p.close);
   set('mouthPucker', p.pucker);
   set('mouthFunnel', p.funnel);
-  set('mouthRollLower', p.roll);
+  set('mouthRollLower', p.rollLower ?? p.roll);
+  set('mouthRollUpper', p.rollUpper);
   set('mouthShrugLower', p.shrug);
   set('tongueOut', p.tongue);
   const sym = (base: string, v?: number) => {
@@ -95,11 +100,19 @@ export function mapPhonemeToShapes(phoneme: string): Map<string, number> | null 
     case 'OY': // "boy" — zaokrąglenie → uśmiech
       return pose({ jaw: 0.42, pucker: 0.45, smile: 0.1 });
 
-    // ---- Spółgłoski wargowe (MetaPerson: nie 1.0 — warga na nos; moc przez press) ----
+    // ---- Spółgłoski wargowe (MetaPerson: wysokie mouthClose ciągnie dolną wargę na nos) ----
+    // Phase 11.2 SHOW-06 (D-7): zamknięcie z jaw ≈ 0 + docisk warg (press) + podwinięcie (roll),
+    // z NISKIM mouthClose. Wartości tabeli x skala profilu 'balanced' (closeScale 0.60 dotyczy
+    // mouthClose ORAZ mouthPress*; roll/jaw skala 1.0):
+    //   jawOpen        0.02 x 1.0  = 0.02  (<= 0.03)
+    //   mouthClose     0.50 x 0.60 = 0.30  (<= 0.35)
+    //   mouthPress L/R 0.58 x 0.60 = 0.35  (0.35 +- 0.05)
+    //   mouthRollLower 0.25 x 1.0  = 0.25
+    //   mouthRollUpper 0.15 x 1.0  = 0.15
     case 'P':
     case 'B':
     case 'M':
-      return pose({ close: 0.8, press: 0.2 });
+      return pose({ jaw: 0.02, close: 0.5, press: 0.58, rollLower: 0.25, rollUpper: 0.15 });
 
     // ---- Wargowo-zębowe (dolna warga pod górne zęby; mocny roll) ----
     case 'F':
