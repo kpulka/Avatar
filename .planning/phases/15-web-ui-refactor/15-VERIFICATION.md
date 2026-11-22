@@ -100,8 +100,9 @@ screenshot-worthy here:
   (`tests/copy.test.ts`) keeps translation from leaking inline.
 - **Phase 13 (README):** screenshots from §5; mention `?studio=1` + Ctrl+Shift+D in the
   feature list (the UI-SPEC decision: settings toggle primary, URL param documented
-  backdoor). Quickstart facts: `public/models/avatar.glb` ships in-repo (real avatar, no
-  setup); conversation needs mic + a public agent; demo avatar via Studio → Scena.
+  backdoor). Quickstart facts: `public/models/avatar.glb` committed in 11.2 (SHOW-09) (real avatar, no
+  setup); "Listen" demo works without an agent (SHOW-01); conversation needs mic + a public agent;
+  demo avatar via Studio → Scena. (amended 2026-11-19 — see 11.1/11.2)
 - **Phase 14 (architecture) cross-seams to bless:** mic-error rethrow +
   `onAgentCorrection` wiring (`speech-backend.ts`), `avatar:error` event
   (`scene-controller.ts` + `app-types.ts`), toast de-spam (`conversation-controller.ts`),

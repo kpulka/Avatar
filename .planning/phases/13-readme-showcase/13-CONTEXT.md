@@ -34,7 +34,7 @@ is language, staleness, and what's missing (visuals, quickstart, proof-of-life s
 | Line | Claim | Reality (verified) | Severity |
 |---|---|---|---|
 | :86 | "**Etap: dokumentacja** (brak kodu w repo)" — documentation stage, no code in repo | **78 source modules, 41 test files, 204 passing tests**, GSD phases 1–8 + 11 implemented; the app runs | CRITICAL — reads as "vaporware" exactly when the repo is full of working code |
-| :87 | Prerequisites: "eksport modelu MetaPerson `.glb`" (you must export a model) | `public/models/avatar.glb` (**11.9 MB**) is committed — the avatar renders with zero setup after `npm install && npm run dev` (verified in 15-CONTEXT scoping) | HIGH — invents a barrier that doesn't exist |
+| :87 | Prerequisites: "eksport modelu MetaPerson `.glb`" (you must export a model) | `public/models/avatar.glb` (**11.9 MB**) is committed in 11.2 (SHOW-09) — after that the avatar renders with zero setup after `npm install && npm run dev` (as of 2026-11-19 it is still gitignored, `.gitignore:49`; amended 2026-11-19 — see 11.1/11.2) | HIGH — invents a barrier that won't exist once SHOW-09 lands |
 | :74-80 | docs table lists pre-rename filenames | 12-01 renames 8 of 10 docs (canonical map, 12-CONTEXT §1.1) | MEDIUM — mechanical, 12-04's conditional step or this phase |
 | :83 | Architecture section presents FaceController/AudioEngine as current | True and current (single-writer, one clock, epoch) — but lacks the studio/user layers, compare flow, A2F track added in F8/F11 | LOW — needs extension, not correction |
 | — | No mention of tests/CI/gates | 204 tests + language/layering gates (12-01, 14-02) are the repo's best credibility signals | HIGH (omission) |
@@ -47,8 +47,9 @@ is language, staleness, and what's missing (visuals, quickstart, proof-of-life s
   is occupied by another project on the dev machine; document the URL as
   `http://localhost:5310`).
 - **Zero setup for the visual:** the real MetaPerson avatar (`public/models/avatar.glb`,
-  11.9 MB, in-repo) loads automatically at startup (`container.ts` `start()` →
-  `loadDefaultAvatar()`); loader overlay hides on `avatar:loaded`.
+  11.9 MB, committed in 11.2 (SHOW-09)) loads automatically at startup (`container.ts` `start()` →
+  `loadDefaultAvatar()`); loader overlay hides on `avatar:loaded`. Precondition: SHOW-09 landed
+  (amended 2026-11-19 — see 11.1/11.2).
 - **To talk:** a **public `agent_id`** of an ElevenLabs Conversational AI agent in
   Settings + mic permission. Without it, everything else still works (below).
 - **Works with no agent/backend at all:** demo speech (Animation panel → demo utterance),

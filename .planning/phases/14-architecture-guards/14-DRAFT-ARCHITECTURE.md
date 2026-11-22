@@ -76,7 +76,7 @@ shell and its panels, subscribes the bus, and returns `{ services, store, ui, sh
 start, dispose }`.
 
 - `start()` applies persisted settings, shows the loader, loads the default avatar
-  (`public/models/avatar.glb` ships in the repo — the app renders something real with
+  (`public/models/avatar.glb` ships in the repo since 11.2 SHOW-09 — the app renders something real with
   zero setup), starts the rAF loop, and notifies an embedding parent page if present.
 - The rAF loop runs three updates in a fixed order — scene (gaze/micro-movement), face
   animation, scene-preset tweening — then samples FPS for telemetry over a 500 ms window.

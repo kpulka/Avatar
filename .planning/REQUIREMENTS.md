@@ -79,6 +79,33 @@ Decyzje (2026-09-10): dwie warstwy — `user` (ładna scena + rozmowa + porówny
 - [ ] **UI-04**: Modularny frontend: `SettingsStore` (jeden schemat + precedencja defaults → profil tweakera → user), kontrolery w `src/features/`, panele zamiast god-object `hud.ts`, `main.ts` ≤ ~100 linii (composition root `app/container.ts`), markup paneli w modułach
 - [ ] **UI-05**: Profil tweakera: export/import JSON, blokady ustawień dla usera (niewidoczne/disabled), zero martwych ustawień (`micSensitivity` podpięte albo usunięte)
 
+## v1.1 Requirements — Hardening & Showcase (Fazy 11.1–11.2, INSERTED 2026-11-19)
+
+Źródło: `refactoring.md` (Rewizja, Rewizja 2), `11.1-CONTEXT.md`, `11.2-CONTEXT.md`.
+
+### Hardening (Faza 11.1)
+
+- [x] **HARD-01**: Embed bridge przyjmuje wiadomości wyłącznie od `window.parent` osadzonego widgetu z originu z allowlisty (lub same-origin); `document.referrer` nie wpływa na zaufanie; pusty origin nigdy nie jest zaufany; odpowiedzi idą na origin ostatniej zaufanej wiadomości
+- [x] **HARD-02**: Brak zdalnej zmiany agenta (`avatar:set_agent` usunięte); `avatar:say` przycinane do 500 znaków; martwe `theme/autostart/model_url` usunięte
+- [x] **HARD-03**: `?allow_any_origin` działa tylko w trybie dev (`import.meta.env.DEV`); poza dev targetOrigin nigdy nie jest `'*'`
+- [x] **HARD-04**: agentId ma jedno źródło: URL `?agent_id=` > SettingsStore (`studio.agentId`) > domyślny; nic nie zapisuje `elevenlabs_agent_id`
+- [x] **HARD-05**: Każdy `audio:chunk` niesie rzeczywisty sampleRate PCM (demo/say 44100, live wynegocjowany); obsługa `pcm_<rate>`, ostrzeżenie dla `ulaw_*`
+- [x] **HARD-06**: Wymiana awatara zwalnia geometrie/materiały/tekstury/szkielety (bez envMap); `avatarInfo` ustawione przed `avatar:loaded`
+- [x] **HARD-07**: Porównanie A/B: tor LIVE w trybie viseme, tor A2F w trybie frames, tryb przywracany; `run()` zwraca false przy porażce; pusta tura → błąd z toastem
+
+### Showcase (Faza 11.2)
+
+- [ ] **SHOW-01**: Widz bez agenta i mikrofonu uruchamia mowę awatara przyciskiem „Listen” (nagrany klip TTS + prawdziwy alignment + napisy, ten sam tor lip-sync co live)
+- [x] **SHOW-02**: Widoczne, uczciwe stany błędów: odmowa mikrofonu, błąd/wyczerpanie prób WSS, błąd ładowania awatara (loader nie wisi), brak WebGL; `?studio=1` nie utrwala trybu studio
+- [ ] **SHOW-03**: SSS skóry liczony od key light (uniformy kierunku/koloru w przestrzeni widoku), działa na przodzie twarzy
+- [ ] **SHOW-04**: Cień key light wycentrowany na głowie (target + frustum ±0,35 m), cienie na wszystkich meshach awatara
+- [ ] **SHOW-05**: Zegar lip-sync oparty na czasie słyszalnym (kompensacja `outputLatency`/`getOutputTimestamp`); `syncOffsetMs` zredukowany do reszty
+- [ ] **SHOW-06**: Spółgłoski P/B/M czytelnie domykają usta (jaw≈0 + press + roll, `mouthClose` nisko — ochrona MetaPerson)
+- [ ] **SHOW-07**: Oczy zachowują mapy normal/roughness z GLB; rogówka bez martwego override; rzęsy/włosy z alphaToCoverage
+- [ ] **SHOW-08**: Środowisko softbox (PMREM) zamiast RoomEnvironment + adaptacyjny pixelRatio przy spadku FPS
+- [x] **SHOW-09**: `public/models/avatar.glb` w repo (licencja po stronie właściciela); postęp ładowania; świeży klon pokazuje prawdziwego awatara
+- [ ] **SHOW-10**: Nagranie hero (10–15 s) awatara mówiącego klip demo, gotowe dla README (faza 13)
+
 ## v1.1 Requirements — Portfolio Polish (Fazy 12–18)
 
 Milestone v1.1 (2026-11): publiczne repo jako produkt rekruterski — język angielski, README pokazujący projekt z najlepszej strony, architektura udokumentowana i pilnowana testami, dopracowany UI, refaktor mechaniki animacji i lip-syncu na fonemach, oraz CI/licencja/deploy/higiena. Artefakty 12+ po angielsku (decyzja D2 w 12-CONTEXT); archiwa 01–11 zostają po polsku jako zapis historyczny. Każda faza ma własny CONTEXT z dowodami pomiarowymi.
@@ -155,7 +182,7 @@ Milestone v1.1 (2026-11): publiczne repo jako produkt rekruterski — język ang
 
 - [ ] **QUAL-01**: Sekrety & security — skan pełnej historii git (gitleak lub równoważne wzorce) → zero findings; `.env` w .gitignore; SECURITY.md (kanał disclosure, polityka public-agent-id); `xi-api-key` wyłącznie w kontekście polityki negatywnej
 - [ ] **QUAL-02**: CI — `.github/workflows/ci.yml`: npm ci → typecheck → test → build na push/PR (ubuntu, Node 22, cache); zielony na main; badge w README; ≤ ~3 min
-- [ ] **QUAL-03**: Licencja — LICENSE (MIT, potwierdzone przez ownera) + THIRD-PARTY-NOTICES (audyt 2026-11-18: wszystkie permissive, zero copyleft) + sekcja licencyjna README
+- [ ] **QUAL-03**: Licencja — LICENSE (wszystkie prawa zastrzeżone, decyzja właściciela) + THIRD-PARTY-NOTICES (audyt 2026-11-18: wszystkie permissive, zero copyleft) + sekcja licencyjna README
 - [ ] **QUAL-04**: CONTRIBUTING — setup (Node 20+, 4 komendy), bramki (testy/language/layering/typecheck), proces GSD, zasady PR
 - [ ] **QUAL-05**: Lint/format — ESLint (flat, typescript-eslint) z regułą layering z `layering-rules.ts` (single source z 14-02); Prettier; `lint`/`format:check` zielone; dwa osobne commity (fix violations / one-shot format); CI je uruchamia
 - [ ] **QUAL-06**: Pages demo — build demo (`?demo=1`, base-path override) deployowany na push do main; demo = avatar + demo speech + synthetic A2F + bring-your-own agent_id (bez live conversation, chyba że owner zaakceptował koszt kwoty — D4); link w README
@@ -212,6 +239,8 @@ Milestone v1.1 (2026-11): publiczne repo jako produkt rekruterski — język ang
 | UI-03 | Phase 11 | Not Started |
 | UI-04 | Phase 11 | Not Started |
 | UI-05 | Phase 11 | Not Started |
+| HARD-01..07 | Phase 11.1 | Verified by automated tests and drift reviews; manual UAT pending |
+| SHOW-01..10 | Phase 11.2 | In progress; SHOW-02 and SHOW-09 passed wave 1 |
 | I18N-01..08 | Phase 12 | Not Started (planned; CONTEXT+plany gotowe) |
 | READ-01..06 | Phase 13 | Not Started (planned; DRAFT-README gotowy) |
 | ARCH-01..08 | Phase 14 | Not Started (planned; DRAFT-ARCHITECTURE gotowy) |

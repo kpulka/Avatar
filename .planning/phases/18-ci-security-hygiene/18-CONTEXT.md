@@ -50,21 +50,22 @@ What legitimately lives in this repo vs. what must never:
 
 | Kind | Policy |
 |---|---|
-| Public `agent_id` | **By design public** (ElevenLabs public agents; used in settings UI, embed-bridge allowlist). Documented as such — not a secret, but quota-relevant (see 1.4) |
+| Public `agent_id` | **By design public** (ElevenLabs public agents; used in the Settings UI and `?agent_id=`; the embed-bridge allowlist holds *origins*, not agent ids). Documented as such — not a secret, but quota-relevant (see 1.4); restrict allowed domains/quotas in the ElevenLabs dashboard (amended 2026-11-19) |
 | `xi-api-key` / any API key | NEVER in client code (ROB-03; signed-URL design). Scan must cover full **git history**, not just HEAD |
 | Signed-URL backend endpoints | Must not appear hardcoded |
-| `?parent_origin=` allowlist, `?allow_any_origin=1` | Existing embed-bridge escape hatch — verify documented (P11 review P2 closed this) |
+| `?parent_origin=` allowlist, `?allow_any_origin=1` | Hardened in 11.1-01: framed-parent source check, no referrer trust, `set_agent` removed, `allow_any_origin` dev-only. 18-01 verifies 11.1-01 shipped + documents it in SECURITY.md (amended 2026-11-19 — see 11.1/11.2) |
 | `.env` files | Must not exist committed (scan + .gitignore) |
 
 ### 1.4 GitHub Pages demo — feasibility & the one open decision
 
 Technically straightforward: `vite build` emits a static bundle; the demo-able surface
-needs no backend (avatar renders from the in-repo GLB; demo speech + synthetic A2F frames
-work offline — verified in 15-CONTEXT scoping). Constraints:
+needs no backend (avatar renders from the GLB committed in 11.2 (SHOW-09); the SHOW-01 "Listen"
+demo + synthetic A2F frames work offline). Owner takes responsibility for the model license
+(2026-11-19), so the Pages demo ships the real avatar (amended 2026-11-19 — see 11.1/11.2). Constraints:
 
 - **Base path**: Pages serves at `/Avatar/` → set `base: './'` (relative) or
   `/Avatar/` for the demo build only — keep the main build unchanged.
-- **Size**: `avatar.glb` 11.9 MB in Pages is fine (limit 1 GB); CMU dictionary chunk is
+- **Size**: `avatar.glb` 11.9 MB (committed in 11.2, SHOW-09; possibly smaller if SHOW-09 compresses textures) in Pages is fine (limit 1 GB); CMU dictionary chunk is
   lazy — and Phase 17 replaces it with a pruned lexicon anyway.
 - **The decision (owner)**: does the deployed demo expose a *live* conversation with the
   owner's public agent? A public agent on a public page = anyone can talk = **quota/cost
@@ -86,8 +87,8 @@ work offline — verified in 15-CONTEXT scoping). Constraints:
 
 ### 1.6 Size audit (repo footprint)
 
-Tracked-size drivers: `public/models/avatar.glb` 11.9 MB (accepted — it IS the zero-setup
-quickstart), `package-lock.json`, docs (small), `.planning` (small text). Untracked-by-
+Tracked-size drivers: `public/models/avatar.glb` 11.9 MB, committed in 11.2 (SHOW-09) (accepted — it IS the zero-setup
+quickstart; amended 2026-11-19), `package-lock.json`, docs (small), `.planning` (small text). Untracked-by-
 design: `a2f/sdk/` (2 GB) and `a2f/.venv/` — must never enter git (verify
 `git ls-files a2f/` shows only scripts/docs/README, not sdk/.venv). Fresh clone ≈ 13 MB —
 fine.

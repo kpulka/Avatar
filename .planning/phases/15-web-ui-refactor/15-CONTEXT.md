@@ -103,7 +103,7 @@ Severity: **H** = recruiter-visible breakage or a11y blocker · **M** = portfoli
 
 | # | Finding | Evidence | Sev | Cost |
 |---|---------|----------|-----|------|
-| S1 | **First-run double-failure dead-ends.** If `/models/avatar.glb` fails AND the demo-avatar fallback throws, only `console.error` fires (scene-controller.ts:64-71); `avatar:loaded` never emits, so the loader pill "Ładowanie zrigowanego modelu MetaPerson 3D…" hangs forever with no error surface. Note: `public/models/avatar.glb` (11.9 MB) **is** committed, so the normal first-run shows the real MetaPerson avatar; this path covers cloned/partial checkouts. | scene-controller.ts:57-72; container.ts:105 | H | S |
+| S1 | **First-run double-failure dead-ends.** If `/models/avatar.glb` fails AND the demo-avatar fallback throws, only `console.error` fires (scene-controller.ts:64-71); `avatar:loaded` never emits, so the loader pill "Ładowanie zrigowanego modelu MetaPerson 3D…" hangs forever with no error surface. Note: `public/models/avatar.glb` (11.9 MB) is committed in 11.2 (SHOW-09) — not yet as of 2026-11-19 (gitignored); after SHOW-09 the normal first-run shows the real MetaPerson avatar and this path covers partial checkouts. 11.2 SHOW-02 already hides the loader on fallback failure — 15 builds the full error state on top (amended 2026-11-19 — see 11.1/11.2). | scene-controller.ts:57-72; container.ts:105 | H | S |
 | S2 | **Loader collides with the dock and hides under it.** `.loader-overlay` is bottom-center at `z-index:20` (style.css:804-818); `.user-dock` is bottom-center at `z-index:40` (1062-1078). The loading indicator renders behind the dock in the same spot. Also contradicts 11-UI-SPEC "loader blocks CTA" — it blocks nothing. | style.css:804-818 vs 1062-1078 | H | S |
 | S3 | **Captions are unbounded.** `captions.ts:3` claims "wraps to 3 lines (CSS)"; grep finds **no line-clamp anywhere** in style.css. Long transcripts grow the box over the avatar indefinitely. 11-UI-SPEC marked this "covered". | captions.ts:1-4; grep `line-clamp` → 0 | M | S |
 | S4 | **Interrupted-turn feedback lost.** `agent_response_correction` is parsed by raw-wss-client (152-155) but `onAgentCorrection` is never wired in speech-backend → corrected transcript never replaces the stale one after barge-in; captions show outdated text. No visual "interrupted" cue either. (Phase 4 ROB-02 had this in the old HUD.) | raw-wss-client.ts:152-155; speech-backend.ts (no `onAgentCorrection`) | H | M |
@@ -395,7 +395,7 @@ backend/a2f/ folder changes.
 2. **Phase 13 (README)**: screenshot session should run **after** Phase 15 (light theme is
    currently broken — screenshots of it would be misleading). Requested shots listed in
    15-VERIFICATION.md §5 (user dark, user light, studio overview, compare A/B, presentation
-   mode). Quickstart facts: repo-committed `public/models/avatar.glb` (11.9 MB) means the real
+   mode). Quickstart facts: `public/models/avatar.glb` (11.9 MB), committed in 11.2 (SHOW-09; amended 2026-11-19), means the real
    avatar loads with zero setup; conversation needs a public agent + mic permission; demo
    avatar fallback exists in Scene panel.
 3. **Phase 14 (architecture)**: bless/adjust four cross-seams created here — mic-error

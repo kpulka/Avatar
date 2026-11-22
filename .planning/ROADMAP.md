@@ -24,13 +24,15 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [ ] **Phase 9: Lokalny PoC NVIDIA Audio2Face (RTX 3090)** - Audio2Face-3D SDK (MIT, TensorRT) + rig z avatar.glb + REST wrapper + E2E offline + przełącznik A/B + go/no-go
 - [ ] **Phase 10: A2F w chmurze — Cloud Run MVP (L4)** - po lokalnym go/no-go: deploy serverless GPU scale-to-zero (płacimy tylko za przetwarzanie), cold start, koszty, UAT
 - [ ] **Phase 11: UI dual-persona i modularny frontend** - user/studio, porównywarka algorytmów, scene presets, refaktor modułowy (równolegle z Fazą 9)
+- [ ] **Phase 11.1: Hardening & bugfix pack (INSERTED)** - embed-bridge security (public repo), agentId single source, chunk sampleRate, avatar GPU dispose, A/B compare lanes (v1.1)
+- [ ] **Phase 11.2: Showcase wow pack (INSERTED)** - demo "Listen" without agent, visible error states, skin SSS + shadows + eyes, latency-aware lip clock, bilabial closure, committed avatar, hero capture (v1.1)
 - [ ] **Phase 12: English language (i18n)** - docs, UI strings, comments, tests, runtime messages → English; language gate (v1.1)
 - [ ] **Phase 13: README — recruiter showcase** - English, truthful, verified quickstart, visual assets, badge slots (v1.1)
 - [ ] **Phase 14: Architecture — documentation, strictness, guards** - ARCHITECTURE.md, full typecheck, layering gate, lifecycle test, dead code (v1.1)
 - [ ] **Phase 15: Web UI refactor** - design tokens, light theme, states matrix, a11y, microcopy (v1.1)
 - [ ] **Phase 16: Animation mechanics refactor** - state machine, single writer, timebase, config extraction, hot path, extensibility (v1.1)
 - [ ] **Phase 17: Lip-sync phonemes refactor** - pruned CMU lexicon, PL G2P, table-doc reconciliation, quality harness (v1.1)
-- [ ] **Phase 18: CI, security, license, deploy, hygiene** - secrets scan, CI+badge, MIT, Pages demo, ESLint/Prettier, `npm run verify` (v1.1)
+- [ ] **Phase 18: CI, security, license, deploy, hygiene** - secrets scan, CI+badge, project rights notice, offline Pages demo, ESLint/Prettier, `npm run verify` (v1.1)
 
 ## Phase Details
 
@@ -282,7 +284,9 @@ Plans:
 Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6, następnie **8 → 9 → 10** (A2F), a **Faza 7 ⏸ (UAT) wznawia się po Fazie 10**.
 **Phase 11 (UI) startuje po UAT 08-04 i biegnie równolegle z Fazą 9** (która czeka na instalacje sprzętowe po stronie człowieka); Faza 10 dokłada źródło „A2F (cloud)" do rejestru źródeł animacji z F11.
 
-**v1.1 (Fazy 12–18)**: kolejność rekomendowana — **18-01 (secrets scan) najpierw** (repo publiczne), potem **12 → 13 → 15 → 16 → 17 → 14 → 18 (reszta)**.
+**v1.1 (Fazy 11.1–18)**: kolejność rekomendowana — **18-01 (secrets scan) najpierw** (repo publiczne), potem **11.1 → 11.2 → 12 → 13 → 15 → 16 → 17 → 14 → 18 (reszta)**.
+- [ ] 18-01 — security scan, policy and production CSP reviewed. Embed verified after 11.1-01; headless browser loaded the showcase GLB after the CSP fix. Listen and compressed GLBs still require production verification.
+Fazy wstawione 2026-11-19 (refactoring.md, Rewizja/Rewizja 2): 11.1 (bezpieczeństwo embed + bugi spoza planów 12–18) przed 11.2 (efekt „wow” dla widza); obie przed 12, bo 12 tłumaczy kod, a nowy kod z 11.x pisany jest od razu po angielsku. Kolejność 12–18 bez zmian (12-CONTEXT §6.2).
 Uzasadnienie: 12 przed 13/14/15/16/17 (tłumaczenie komentarzy przed refaktorami — 12-CONTEXT §6.2); 15 przed 13-03 (screenshoty czekają na naprawiony light theme); 16/17 przed 14-05 (ARCHITECTURE.md pisany po ich zmianach) i przed promocją deep-dive'ów (16-07/17-06); 14-01/14-02 przed 18-03/18-04 (CI i ESLint konsumują typecheck + layering-rules); 13-03 i 18-05/18-06/18-07 zamykają milestone.
 
 | Phase | Plans Complete | Status | Completed |
@@ -298,6 +302,8 @@ Uzasadnienie: 12 przed 13/14/15/16/17 (tłumaczenie komentarzy przed refaktorami
 | 9. Lokalny PoC Audio2Face | 0/5 | Not Started (czeka na środowisko) | - |
 | 10. A2F Cloud Run MVP | 0/4 | Not Started (po go/no-go z Fazy 9) | - |
 | 11. UI dual-persona | 6/7 | Executed — kod 7/7, automated PASS; UAT manualny pending (11-VERIFICATION §3) | - |
+| 11.1. Hardening & bugfix pack (INSERTED) | 5/5 | 11.1 automated gates passed. Manual UAT pending. Next: 11.2 wave 1. | - |
+| 11.2. Showcase wow pack (INSERTED) | 2/9 | Wave 1 verified; Listen asset gate next | - |
 | 12. English language (i18n) | 0/7 | Planned — CONTEXT + plany + glossary + VERIFICATION gotowe | - |
 | 13. README recruiter showcase | 0/4 | Planned — CONTEXT + DRAFT-README + VERIFICATION gotowe | - |
 | 14. Architecture guards | 0/6 | Planned — CONTEXT + DRAFT-ARCHITECTURE + VERIFICATION gotowe | - |
@@ -348,6 +354,55 @@ Plans:
 **Wave 6** *(blocked on Wave 5 completion)*
 
 - [ ] 11-07: Scene presets + szlif + UAT (kod gotowy; ⏳ UAT manualny pending — 11-VERIFICATION.md §3) — `SCENE_PRESETS` (studio-dark/soft/cinema/light) z tweenem 280 ms, tło/gradient z dispose, reduced-motion, picker usera, winieta CSS; docs + 11-VERIFICATION.md (60 FPS backstop, RMS < 1%) + retro F9/F10 (UI-03 + weryfikacja UI-01..UI-05)
+
+### Phase 11.1: Hardening & bugfix pack (INSERTED) — v1.1
+
+**Goal**: The public repo's embed widget cannot be driven by foreign pages (no opener attack, no remote agent change, no production wildcard), the agent id has one source of truth, every audio chunk carries its real sample rate, replaced avatars free their GPU memory, and the A/B comparison animates both lanes and reports failures honestly.
+**Depends on**: 18-01 recommended first (secrets scan); no code dependency
+**Requirements**: HARD-01..07
+**Docs refs**: `11.1-CONTEXT.md` (threat model + locked decisions D-1..D-12); `refactoring.md` (Rewizja R2/R3/R9)
+**Success Criteria** (what must be TRUE):
+
+  1. Inbound postMessage accepted only from `window.parent` of a framed widget with an allowlisted/same origin; `document.referrer` unused; `avatar:set_agent` gone; `?allow_any_origin` dev-only
+  2. Agent id = URL `?agent_id=` > Settings > default; nothing writes `elevenlabs_agent_id`
+  3. `audio:chunk.sampleRate` equals the rate the PCM was generated at (demo 44100, live negotiated)
+  4. `clearAvatar` disposes geometry/materials/textures/skeletons (never envMap); `avatarInfo` set before `avatar:loaded`
+  5. A/B: LIVE lane in viseme mode, A2F lane in frames mode, mode restored; `run()` false on failure; empty turn → error toast
+
+**Plans**: 5 plans
+
+- [x] 11.1-01: Embed bridge hardening — framed-parent source check, no referrer, empty-origin reject, `set_agent` removed, dev-only wildcard, reply-to-origin, say cap (HARD-01..03) — wave 1
+- [x] 11.1-02: agentId single source — pure `resolveAgentId`, injected getter, store-only writes, container reorder (HARD-04) — wave 2
+- [x] 11.1-03: sampleRate threaded through `onAudioChunk` + first speech-backend tests (HARD-05) — wave 3
+- [x] 11.1-04: `disposeObject3D` + `clearAvatar` wiring + `avatarInfo` ordering (HARD-06) — wave 1
+- [x] 11.1-05: Compare lanes mode handling + honest results (HARD-07) — wave 1
+
+### Phase 11.2: Showcase wow pack (INSERTED) — v1.1
+
+**Goal**: A first-time viewer is impressed within 30 seconds without any setup: the real avatar loads with progress, can speak a recorded line with captions at the press of "Listen", looks better lit (working SSS, head-centred shadow, proper eyes/lashes/hair, softbox reflections), its lips close on P/B/M and stay in sync with the audible sound on any output device, and every failure is visible and recoverable.
+**Depends on**: Phase 11.1 (sampleRate path, agentId source); owner accepted the MetaPerson license responsibility (2026-11-19)
+**Requirements**: SHOW-01..10
+**Docs refs**: `11.2-CONTEXT.md`; `refactoring.md` (Rewizja 2: R9/R10)
+**Success Criteria** (what must be TRUE):
+
+  1. User mode has a "Listen" action that plays a recorded TTS clip with real alignment and captions, through the same lip-sync path as live speech
+  2. Mic denial, WSS failure, avatar load failure and missing WebGL each produce a visible, honest message; `?studio=1` does not persist
+  3. Before/after screenshots show SSS on the face, head-centred shadows, eye/lash/hair fixes and softbox catchlights at ≥ 60 FPS on the reference machine (adaptive pixel ratio below)
+  4. Lip clock uses audible time; P/B/M read as closed lips in Studio checks ("mama", "baby", "pop")
+  5. `public/models/avatar.glb` committed; cold clone renders the real avatar; hero clip recorded for README
+
+**Plans**: 9 plans
+
+- [x] 11.2-01: Real avatar committed (`!public/models/avatar.glb`) + load progress + honest load error (SHOW-09) — wave 1
+- [x] 11.2-02: Visible failure states — mic denied, WSS onError + max retries, loader on fallback failure, WebGL fallback copy, `?studio=1` session-only (SHOW-02) — wave 1
+- [ ] 11.2-03: "Listen" demo — recorded TTS clip + real alignment JSON (`scripts/make-demo-clip.mjs`), same lip-sync path, captions (SHOW-01) — wave 2
+  - Generator reviewed; original WAV and ElevenLabs alignment JSON pending at the blocking checkpoint.
+- [ ] 11.2-04: Skin SSS from key light (view-space uniforms) + head-centred key shadow (SHOW-03, SHOW-04) — wave 3
+- [ ] 11.2-07: Audible-time lip clock `src/audio/audible-clock.ts` + reduced `syncOffsetMs` (SHOW-05) — wave 3
+- [ ] 11.2-05: Eyes keep GLB maps, cornea override removed, lashes/hair alphaToCoverage (SHOW-07) — wave 4
+- [ ] 11.2-08: Bilabial closure via jaw≈0 + press + roll, low mouthClose (SHOW-06) — wave 4
+- [ ] 11.2-06: Softbox PMREM environment + adaptive pixel ratio (SHOW-08) — wave 5
+- [ ] 11.2-09: Hero capture for README (SHOW-10) — wave 6
 
 ### Phase 12: English language (i18n) — v1.1
 
@@ -436,7 +491,7 @@ Plans:
 
 ### Phase 18: CI, security, license, deploy, hygiene — v1.1
 
-**Goal**: The repo is credible at a glance and safe by construction: full-history secrets scan (public repo — priority 1), CI + badge, MIT license + notices + CONTRIBUTING + SECURITY, ESLint/Prettier (consuming 14's rule data), GitHub Pages demo (no live conversation by default — quota protection), `npm run verify` umbrella, and the hygiene/metadata close-out.
+**Goal**: The repo is credible at a glance and safe by construction: full-history secrets scan (public repo — priority 1), CI + badge, project rights notice + third-party notices + CONTRIBUTING + SECURITY, ESLint/Prettier (consuming 14's rule data), GitHub Pages demo (no live conversation by default — quota protection), `npm run verify` umbrella, and the hygiene/metadata close-out.
 **Depends on**: 14-01 (typecheck) + 14-02 (layering-rules) for CI/ESLint; 13-01 slots; 13-03 social card
 **Requirements**: QUAL-01..08
 **Docs refs**: `18-CONTEXT.md` (license audit — package-lock: all permissive, zero copyleft; Pages feasibility + quota decision; hygiene inventory)
@@ -444,7 +499,7 @@ Plans:
 
   1. Secrets: full git-history scan clean; SECURITY.md published; `.env` ignored; public-agent-id policy stated
   2. CI green on main (`npm ci` → typecheck → test → build), ≤ ~3 min, badge live; lint/format adopted with two labeled commits, layering rule single-sourced from 14-02
-  3. MIT LICENSE (owner-confirmed) + THIRD-PARTY-NOTICES + CONTRIBUTING; Pages demo live in demo mode (avatar + demo speech + synthetic A2F + bring-your-own agent_id); `npm run verify` reproducible from a cold clone; hygiene dispositions executed; milestone close-out prep delivered
+  3. All Rights Reserved LICENSE (owner-confirmed) + THIRD-PARTY-NOTICES + CONTRIBUTING; Pages demo live in demo mode (avatar + demo speech + synthetic A2F + bring-your-own agent_id); `npm run verify` reproducible from a cold clone; hygiene dispositions executed; milestone close-out prep delivered
 
 **Plans**: 7 — 18-01 secrets (FIRST) · 18-02 license+contributing · 18-03 CI · 18-04 lint/format · 18-05 Pages demo · 18-06 hygiene+metadata · 18-07 verify umbrella + milestone close prep
 

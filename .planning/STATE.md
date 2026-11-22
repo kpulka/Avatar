@@ -2,18 +2,18 @@
 gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Portfolio Polish
-current_phase: 12
-current_phase_name: English language (i18n)
-status: planning_complete
-stopped_at: "Fazy 12–18 w pełni rozplanowane (CONTEXT + plany + VERIFICATION + drafty, integracja ROADMAP/REQUIREMENTS zrobiona). Wykonanie v1.1: najpierw 18-01 (secrets scan — repo publiczne), potem 12 → 13 → 15 → 16 → 17 → 14 → reszta 18. Blokada operacyjna: rate limit API (subagenci padają na RateLimitError — praca inline orkiestratora)."
-last_updated: "2026-11-18"
-last_activity: "2026-11-18"
-last_activity_desc: "Planning v1.1 Portfolio Polish: komplet artefaktów faz 12–18 (CONTEXT z dowodami pomiarowymi, plany z kryteriami akceptacji, VERIFICATION, drafty: glossary/ui-spec/animation-runtime/lipsync-deep-dive/ARCHITECTURE/README); ROADMAP (fazy 12–18 + kolejność wykonania), REQUIREMENTS (58 wymagań I18N/READ/ARCH/UIX/ANIM/LIP/QUAL + traceability), STATE (v1.1)"
+current_phase: 11.2
+current_phase_name: Showcase wow pack
+status: in_progress
+stopped_at: "11.2-03 Task 1 reviewed. Blocking checkpoint: real ElevenLabs WAV and alignment JSON, or a fresh local ELEVENLABS_API_KEY."
+last_updated: "2026-11-19"
+last_activity: "2026-11-19"
+last_activity_desc: "11.2 wave 1 passed (245 tests, cold-clone build and Chromium). 11.2-03 generator syntax, mock and drift checks passed. Real recording checkpoint pending."
 progress:
-  total_phases: 18
+  total_phases: 20
   completed_phases: 6
-  total_plans: 94
-  completed_plans: 39
+  total_plans: 108
+  completed_plans: 46
 ---
 
 # Project State
@@ -23,16 +23,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-09-01)
 
 **Core value:** Płynna rozmowa głosowa z realistycznym awatarem — usta idealnie zsynchronizowane z mową, naturalne przerwania bez zamrożonej miny.
-**Current focus:** v1.1 Portfolio Polish — planning faz 12–18 ZAKOŃCZONY (wszystkie artefakty gotowe, integracja ROADMAP/REQUIREMENTS zrobiona); czeka na rozpoczęcie wykonania (rekomendacja: 18-01 secrets scan najpierw). Równolegle zaległe z v1.0: UAT F11/F8 (człowiek), F9 (OOM — zgoda człowieka), F7 (UAT po F10).
+**Current focus:** 11.2 wave 2 — prepare the Listen generator and wait for the real recording checkpoint. 11.1 automated gates and 11.2 wave 1 are complete.
 
 ## Current Position
 
-Phase: v1.1 planned — fazy 12–18 z kompletem artefaktów (CONTEXT/PLANY/VERIFICATION/DRAFTY); wykonanie nierozpoczęte
-Plan: 44 nowe plany (12-01..18-07) gotowe do wykonania; kolejność: **18-01 → 12 → 13 → 15 → 16 → 17 → 14 → 18 (02..07)**
-Status: planning complete; v1.0 w tle: F11/F8 UAT pending (człowiek), F9 zablokowana OOM, F10 po go/no-go
-Last activity: 2026-11-18 — planning kompletu v1.1 + integracja centralna (ROADMAP/REQUIREMENTS/STATE)
+Phase: 11.2 — Showcase wow pack, wave 1 complete.
+Plan: 11.1-01..05 + 11.2-01.. + 44 plany 12–18; kolejność: **18-01 → 11.1 → 11.2 → 12 → 13 → 15 → 16 → 17 → 14 → 18 (02..07)**
+Status: execution started; 18-01 code reviewed, downstream checks pending. v1.0: F11/F8 manual UAT pending, F9 blocked on OOM, F10 subject to go/no-go.
+Last activity: 2026-11-19 — 11.2 wave 1 passed: 245 tests, cold-clone production build, Chromium avatar loading with 100% loader and no CSP violations.
 
-Progress: 39/94 planów wykonanych (v1.0: F1–F6 26/26, F7 3/4, F8 3/4, F11 7/7; v1.1: 0/44 — planning done)
+Progress: 46/108 plans executed, including 7/58 v1.1 plans fully gated. 18-01 remains partial pending Listen.
 
 ## Performance Metrics
 
@@ -72,6 +72,8 @@ Progress: 39/94 planów wykonanych (v1.0: F1–F6 26/26, F7 3/4, F8 3/4, F11 7/7
 Decisions are logged in PROJECT.md Key Decisions table.
 Recent decisions affecting current work:
 
+- v1.1 owner decisions (2026-11-19): GitHub Pages demo is offline, with no live agent. Keep the original showcase GLB for 11.2-01. In 18-06, preserve the local config.json changes and remove the backup. Project code: all rights reserved. README directs commercial licensing inquiries to the owner via GitHub. Third-party terms are preserved. This decision supersedes MIT and the GitHub standard-license recognition gate in 18-02.
+
 - Init: ElevenAgents (Tryb A) jako mózg konwersacji — barge-in i alignment serwerowo
 - Init: Surowy WSS zamiast SDK — audio + alignment na jednej osi czasu (precyzja lipsync)
 - Init: Epoch-based barge-in + FaceController jako jedyny właściciel morph targetów
@@ -93,6 +95,8 @@ Recent decisions affecting current work:
 
 - Phase 11 added (2026-09-10): UI dual-persona i modularny frontend — user/studio, porównywarka algorytmów, scene presets, refaktor modułowy; decyzje w `11-CONTEXT.md`; start po UAT 08-04, równolegle z Fazą 9 (UI-01..UI-05)
 - Milestone v1.1 added (2026-11-18): **Portfolio Polish** — fazy 12–18 (EN-ization, README, architektura+guards, web UI, mechanika animacji, fonemy/lip-sync, CI/security/licencja/deploy/higiena); 58 wymagań (I18N/READ/ARCH/UIX/ANIM/LIP/QUAL); artefakty 12+ po angielsku (D2 w 12-CONTEXT); komplet CONTEXT/PLAN/VERIFICATION + drafty per faza; kolejność wykonania w ROADMAP §Progress
+
+- Phases 11.1 + 11.2 inserted (2026-11-19): po rewizji `refactoring.md` (7 subagentów weryfikujących + baseline tsc 0 / vitest 209 zielonych). 11.1 = HARD-01..07 (embed-bridge: atak przez opener/referrer, trwała podmiana agenta, wildcard w prod; split-brain agentId; sampleRate dema; wyciek GPU; tory A/B). 11.2 = SHOW-01..10 (cel właściciela: „zrobić wrażenie”; licencja MetaPerson po stronie właściciela → GLB do repo). Kolejność 12–18 bez zmian.
 
 ### Pending Todos
 
@@ -126,6 +130,8 @@ Recent decisions affecting current work:
 
 ### Blockers/Concerns
 
+- 11.2 wave 1 fresh clone: npm ci passed. npm audit reported two moderate and three high advisories in the current lockfile (Vite, Vitest and transitive development dependencies). Review during CI/security work.
+
 - **Rate limit API OpenCode (miesięczny, reset ~23 dni od 2026-11-18):** subagenci padają natychmiast na RateLimitError — planning v1.1 wykonany w całości inline przez orkiestratora. Przy wykonaniu faz 12–18: albo czekać na reset, albo wykonywać plany inline (`/gsd-fast`/`/gsd-quick` zamiast swarmów), albo delegować pojedynczo z dużymi przerwami. Wpływa na tempo, nie na treść planów.
 - **Decyzje człowieka wymagane na starcie Fazy 18** (zbiorczo, 18-CONTEXT §6.5): licencja (rekomendacja MIT — audyt zależności: same permissive), live-agent na demo Pages (rekomendacja: NIE — quota), dyspozycja `.planning/config.json.bak-*` i zmodyfikowanego `config.json` (pliki sprzed tej sesji — nietknięte).
 - ~~Luka artefaktów GSD (A3/A4)~~ — **ZAMKNIĘTE 2026-09-12**: dopisane SUMMARY 07-01..07-04, 08-01..08-03, 11-01..11-07 oraz `08-VERIFICATION.md`; `manual_uat` w 07-04/08-VERIFICATION/11-VERIFICATION pozostaje `pending` (świadomie, bez konfabulacji wyników).
@@ -151,5 +157,5 @@ Recent decisions affecting current work:
 ## Session Continuity
 
 Last session: 2026-11-18
-Stopped at: Planning v1.1 Portfolio Polish KOMPLETNY — fazy 12–18 (artefakty w `.planning/phases/12..18-*`), integracja ROADMAP/REQUIREMENTS/STATE zrobiona, 44 plany gotowe do wykonania. NEXT: (1) `18-01` secrets scan (natychmiast możliwy); (2) wykonanie faz wg kolejności z ROADMAP §Progress (18-01 → 12 → 13 → 15 → 16 → 17 → 14 → 18); (3) zbiorczy ask do ownera na starcie Fazy 18 (licencja/Pages quota/.bak); (4) tło v1.0: UAT F11/F8 człowiek, OOM F9.
+Stopped at: 11.2-03 Task 1 at the blocking audio checkpoint. Resume from 11.2-03 Task 2 after generating and checking both assets.
 Resume file: .planning/ROADMAP.md (§Progress — v1.1 execution order) + .planning/STATE.md (Tor D)

@@ -29,15 +29,19 @@ npm install
 npm run dev        # → http://localhost:5310
 ```
 
-That's it for the visuals — the avatar model ships in the repo, so the app renders a
+That's it for the visuals — the avatar model ships in the repo (committed in 11.2, SHOW-09), so the app renders a
 real MetaPerson head with zero setup. Requires Node.js 20+.
+<!-- amended 2026-11-19 — see 11.1/11.2 -->
 
-**To actually talk with it** (optional): enter the public `agent_id` of an
-ElevenLabs Conversational AI agent in Settings and allow microphone access. Everything
+**Hear it right away:** press **Listen** — the avatar speaks a recorded demo sentence with
+full lip-sync and captions. No agent, no microphone, no backend (SHOW-01).
+
+**To actually talk with it** (optional): paste the public `agent_id` of an
+ElevenLabs Conversational AI agent in Studio → Session (saved in your local settings;
+a `?agent_id=` URL parameter takes priority) and allow microphone access. Everything
 below works with no agent and no backend at all:
 
-- **Demo speech** — the Animation panel speaks a demo utterance with full lip-sync
-  (EN phoneme path and PL digraphs).
+- **Listen demo** — recorded TTS sentence with real timing alignment and captions (SHOW-01).
 - **A2F frames demo** — plays a synthetic clip of the neural frame track
   (what NVIDIA Audio2Face will drive end-to-end).
 - **Studio** — `?studio=1` (or Ctrl+Shift+D) opens the tweaker layer: viseme
