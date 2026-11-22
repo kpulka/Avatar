@@ -36,7 +36,7 @@ describe('MicCapture — wybór urządzenia (F11)', () => {
     const capture = new MicCapture();
     const devices = await capture.listDevices();
     expect(devices).toEqual([
-      { id: 'mic1', label: 'Mikrofon' },
+      { id: 'mic1', label: 'Microphone' },
       { id: 'mic2', label: 'Yeti' },
     ]);
 

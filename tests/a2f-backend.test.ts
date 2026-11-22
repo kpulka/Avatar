@@ -64,7 +64,7 @@ describe('a2f-backend (09-03, klient wrappera /predict)', () => {
 
   it('niepoprawny JSON → błąd parsera', async () => {
     fetchMock.mockResolvedValue(okResponse('{nie json'));
-    await expect(predictFrames('http://x', new Blob(['x']))).rejects.toThrowError('A2F: niepoprawny JSON');
+    await expect(predictFrames('http://x', new Blob(['x']))).rejects.toThrowError('A2F: invalid JSON');
   });
 
   it('abort zewnętrzny przerywa predict (barge-in)', async () => {
@@ -77,8 +77,8 @@ describe('a2f-backend (09-03, klient wrappera /predict)', () => {
         })
     );
     const p = predictFrames('http://x', new Blob(['x']), { signal: ac.signal });
-    ac.abort(new Error('A2F: anulowano'));
-    await expect(p).rejects.toThrowError('A2F: anulowano');
+    ac.abort(new Error('A2F: cancelled'));
+    await expect(p).rejects.toThrowError('A2F: cancelled');
   });
 
   it('timeout rzuca błąd A2F: timeout', async () => {

@@ -1,9 +1,9 @@
 /**
- * Klient wrappera A2F (09-03, kontrakt v2 — docs/7 §5).
+ * A2F wrapper client (09-03, contract v2 — docs/7 §5).
  *
- * Wrapper jest właścicielem formatu JSON; ten moduł robi fetch /predict i /status
- * i zwraca wynik przez parseA2fJson (a2f-parser). Testowalny bez serwera (mock fetch).
- * AbortController + timeout: barge-in / anulowanie przerywa predict bez wiszącego fetcha.
+ * The wrapper owns the JSON format; this module does fetch /predict and /status
+ * and returns the result via parseA2fJson (a2f-parser). Testable without a server (mock fetch).
+ * AbortController + timeout: barge-in / cancellation aborts predict without a dangling fetch.
  */
 
 import { parseA2fJson, A2fParseResult } from '../lipsync/a2f-parser';
@@ -38,7 +38,7 @@ function combineTimeout(
 ): { controller: AbortController; cleanup: () => void } {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(new Error('A2F: timeout')), timeoutMs);
-  const onExternalAbort = () => controller.abort(external?.reason ?? new Error('A2F: anulowano'));
+  const onExternalAbort = () => controller.abort(external?.reason ?? new Error('A2F: cancelled'));
   if (external) {
     if (external.aborted) onExternalAbort();
     else external.addEventListener('abort', onExternalAbort, { once: true });
@@ -65,15 +65,15 @@ async function fetchJson<T>(url: string, init: RequestInit, timeoutMs: number): 
   }
 }
 
-/** GET /status — szybki health-check (cache po stronie klienta 60 s, patrz main). */
+/** GET /status — quick health check (client-side cache 60 s, see main). */
 export async function fetchA2fStatus(baseUrl: string, opts?: RequestOptions): Promise<A2fStatus> {
   const clean = (baseUrl || '').replace(/\/+$/, '');
   return fetchJson<A2fStatus>(`${clean}/status`, {}, opts?.timeoutMs ?? STATUS_TIMEOUT_MS);
 }
 
 /**
- * POST /predict — wav → FramesClip (przez parser). Mierzy predictMs.
- * Abort (barge-in/przerwanie) i timeout rzucają czytelny błąd.
+ * POST /predict — wav → FramesClip (via the parser). Measures predictMs.
+ * Abort (barge-in/interruption) and timeout throw a readable error.
  */
 export async function predictFrames(
   baseUrl: string,

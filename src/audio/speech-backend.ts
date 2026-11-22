@@ -43,9 +43,9 @@ export class ElevenAgentsSpeechBackend implements SpeechBackend {
   private startPromise: Promise<void> | null = null;
   private startGeneration = 0;
   private isMuted = false;
-  private agentOutputSampleRate = 16000; // domyślnie 16000 dla ElevenLabs ConvAI, adaptowane z metadata
+  private agentOutputSampleRate = 16000; // default 16000 for ElevenLabs ConvAI, adapted from metadata
 
-  // Diagnostyka synchronizacji AV (docs/3): stan per wypowiedź (epoch)
+  // AV sync diagnostics (docs/3): state per utterance (epoch)
   private diagChunkIndex = 0;
   private diagEpoch = -1;
   private diagPrevChunkEndSec = 0;
@@ -78,12 +78,12 @@ export class ElevenAgentsSpeechBackend implements SpeechBackend {
         const epoch = this.audioEngine.getEpoch();
         const sampleRate = this.agentOutputSampleRate;
 
-        // Odtwarzamy audio przez Web Audio API z właściwą częstotliwością próbkowania
+        // Play the audio through the Web Audio API at the proper sample rate
         const scheduledStartTime = this.audioEngine.playChunk(pcmBytes, sampleRate, epoch);
 
         this.onStateChange('speaking');
 
-        // 1. Sprawdzamy i normalizujemy metadane alignmentu (obsługa payload.alignment, normalized_alignment, characters itp.)
+        // 1. Check and normalize the alignment metadata (handles payload.alignment, normalized_alignment, characters etc.)
         const rawAlign = (payload.alignment ?? (payload as any).normalized_alignment ?? (payload as any).alignments) as any;
         let alignment: CharAlignment | null = null;
 
@@ -119,17 +119,17 @@ export class ElevenAgentsSpeechBackend implements SpeechBackend {
           }
         }
 
-        // 1b. RESCALE do osi audio (v1.1): rozpiętość tekstu w chuście EL często NIE równa się
-        // długości audio chunka (obserwowane ratio 0.56-2.5x). Slices tekstu są rozłączne, więc
-        // błąd kumuluje się → dryf w długich zdaniach. Skalujemy czasy znaków tak, by koniec
-        // ostatniego znaku pokrywał się z końcem audio chunka (proporcje wewnątrz zachowane).
+        // 1b. RESCALE to the audio axis (v1.1): the text span in the EL alignment chunk often does NOT equal
+        // the audio length of the chunk (observed ratio 0.56-2.5x). Text slices are disjoint, so the
+        // error accumulates → drift in long sentences. We scale character times so that the end of the
+        // last character coincides with the end of the audio chunk (inner proportions preserved).
         if (alignment && alignment.source === 'elevenlabs') {
           const audioDurMs = (pcmBytes.byteLength / 2 / sampleRate) * 1000;
           alignment = rescaleAlignmentToAudio(alignment, audioDurMs);
         }
 
-        // 2. FALLBACK: Jeśli serwer ElevenLabs nie dołączył metadanych alignmentu lub są puste,
-        // generujemy naturalny alignment wprost z energii próbek audio PCM!
+        // 2. FALLBACK: if the ElevenLabs server did not attach alignment metadata or it is empty,
+        // we generate a natural alignment straight from the PCM audio sample energy!
         if (!alignment || alignment.chars.length === 0) {
           alignment = generateEnergyFallbackAlignment(pcmBytes, sampleRate);
         }
@@ -140,7 +140,7 @@ export class ElevenAgentsSpeechBackend implements SpeechBackend {
       },
 
       onInterruption: (reason = 'user_interrupted') => {
-        console.log(`[SpeechBackend] Przerwanie z serwera: ${reason}`);
+        console.log(`[SpeechBackend] Interruption from the server: ${reason}`);
         this.audioEngine.hardStop();
         this.onInterruption(reason);
         this.onStateChange('listening');
@@ -152,7 +152,7 @@ export class ElevenAgentsSpeechBackend implements SpeechBackend {
       },
 
       onAgentResponse: (text: string) => {
-        console.log(`[SpeechBackend] Odpowiedź agenta: ${text}`);
+        console.log(`[SpeechBackend] Agent response: ${text}`);
         this.onAgentResponse(text);
       },
 
@@ -223,11 +223,11 @@ export class ElevenAgentsSpeechBackend implements SpeechBackend {
 
   public setMuted(muted: boolean): void {
     this.isMuted = muted;
-    console.log(`[SpeechBackend] Mikrofon: ${muted ? 'Wyciszony' : 'Aktywny'}`);
+    console.log(`[SpeechBackend] Microphone: ${muted ? 'muted' : 'active'}`);
   }
 
   public triggerInterruption(reason = 'client_interrupted'): void {
-    console.log(`[SpeechBackend] Wymuszone przerwanie: ${reason}`);
+    console.log(`[SpeechBackend] Forced interruption: ${reason}`);
     this.audioEngine.hardStop();
     this.onInterruption(reason);
     this.onStateChange('listening');
@@ -241,7 +241,7 @@ export class ElevenAgentsSpeechBackend implements SpeechBackend {
     return this.isRunning;
   }
 
-  /** Wybór urządzenia wejściowego (F11) — stosowany przy następnym starcie capture. */
+  /** Input device selection (F11) — applied on the next capture start. */
   public setInputDevice(deviceId: string | null): void {
     this.micCapture.setDeviceId(deviceId);
   }
@@ -255,18 +255,18 @@ export class ElevenAgentsSpeechBackend implements SpeechBackend {
   }
 
   /**
-   * Rzeczywisty sampleRate wyjścia agenta dla bieżącej sesji (adaptowany z metadata WSS).
-   * Używany m.in. przez LastTurnBuffer/porównywarkę A/B (F11) — nigdy nie hardcode 44100.
+   * Actual sampleRate of the agent output for the current session (adapted from WSS metadata).
+   * Used by LastTurnBuffer/the A/B comparison (F11) among others — never hardcode 44100.
    */
   public getOutputSampleRate(): number {
     return this.agentOutputSampleRate;
   }
 
   /**
-   * Diagnostyka synchronizacji AV (v1.1): loguje per chunk relację rozpiętości FINALNEGO
-   * alignmentu (po rescale do osi audio) do długości audio chunka oraz luki między chunkami.
-   * Po rescale ratio powinno być ~1.0; odstępstwa sygnalizują patologie (fallback, pusty chunk,
-   * jitter sieci), a nie celowy dryf (ten usuwa rescaleAlignmentToAudio).
+   * AV sync diagnostics (v1.1): logs per chunk the ratio of the FINAL alignment span
+   * (after the rescale to the audio axis) to the audio chunk length, and the gaps between chunks.
+   * After the rescale the ratio should be ~1.0; deviations signal pathologies (fallback, empty chunk,
+   * network jitter), not intentional drift (that is removed by rescaleAlignmentToAudio).
    */
   private diagnoseSync(
     alignment: CharAlignment,
@@ -301,16 +301,16 @@ export class ElevenAgentsSpeechBackend implements SpeechBackend {
     }
 
     const flags: string[] = [];
-    if (isFallback) flags.push('FALLBACK (brak alignmentu z EL)');
-    else if (alignEndMs <= 0) flags.push('pusty alignment');
-    // Chunki graniczne EL (<150 ms) miewaja lekko rozjechane granice tekst/audio — pomijamy.
+    if (isFallback) flags.push('FALLBACK (no alignment from EL)');
+    else if (alignEndMs <= 0) flags.push('empty alignment');
+    // EL boundary chunks (<150 ms) tend to have slightly misaligned text/audio boundaries — skipped.
     else if (audioDurMs >= 150 && (ratio < 0.9 || ratio > 1.1))
-      flags.push(`ratio=${ratio.toFixed(2)} poza [0.9,1.1]`);
-    // Luka mid-wypowiedzi (30..1500 ms) = jitter wart uwagi; poza tym normalna przerwa miedzy turami.
-    if (gapMs > 30 && gapMs < 1500) flags.push(`LUKA ${gapMs.toFixed(0)}ms`);
-    if (samples === 0) flags.push('pusty chunk');
+      flags.push(`ratio=${ratio.toFixed(2)} outside [0.9,1.1]`);
+    // A mid-utterance gap (30..1500 ms) = jitter worth noting; otherwise a normal pause between turns.
+    if (gapMs > 30 && gapMs < 1500) flags.push(`GAP ${gapMs.toFixed(0)}ms`);
+    if (samples === 0) flags.push('empty chunk');
 
-    // Dump pierwszego chunka wypowiedzi — podgląd czasów (po rescale).
+    // Dump of the first chunk of the utterance — a look at the times (after the rescale).
     if (index === 0) {
       console.log(
         '[AlignDiag] first-chunk',
@@ -336,13 +336,13 @@ export class ElevenAgentsSpeechBackend implements SpeechBackend {
   }
 
   /**
-   * Symuluje wypowiedź agenta (do testów offline i demo bez aktywnego klucza API)
+   * Simulates an agent utterance (for offline tests and demos without an active API key)
    */
   public triggerDemoSpeech(phrase = 'Hello, I am your interactive 3D avatar.'): void {
     const epoch = this.audioEngine.getEpoch();
     this.onStateChange('speaking');
 
-    // Generujemy próbki audio (modulowany dźwięk mowy)
+    // Generate audio samples (modulated speech-like sound)
     const sampleRate = 44100;
     const durationSec = 2.4;
     const totalSamples = Math.floor(sampleRate * durationSec);
@@ -350,7 +350,7 @@ export class ElevenAgentsSpeechBackend implements SpeechBackend {
 
     for (let i = 0; i < totalSamples; i++) {
       const t = i / sampleRate;
-      // Dźwięk foniczny z obwiednią mowy
+      // Voiced sound with a speech envelope
       const envelope = Math.sin((t / durationSec) * Math.PI);
       const voice =
         0.5 * Math.sin(2 * Math.PI * 140 * t) +
@@ -362,7 +362,7 @@ export class ElevenAgentsSpeechBackend implements SpeechBackend {
     const base64 = int16ToBase64(int16Buffer);
     const pcmBytes = base64ToPcmBytes(base64);
 
-    // Dzielimy frazę na znaki z przybliżonym czasem trwania
+    // Split the phrase into characters with approximate durations
     const chars = phrase.split('');
     const charTimes: number[] = [];
     const charDurs: number[] = [];

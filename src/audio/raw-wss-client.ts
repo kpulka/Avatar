@@ -71,7 +71,7 @@ export class RawWssClient {
       if (this.ws !== socket) return;
       this.setState('connected');
 
-      // 1. Handshake klienta z inicjalizacją (docs/2)
+      // 1. Client handshake with initialization (docs/2)
       const initMsg: ClientInitMsg = {
         type: 'conversation_initiation_client_data',
         contextual_update: { text: 'User initiated conversation session' },
@@ -85,7 +85,7 @@ export class RawWssClient {
         const msg = JSON.parse(event.data) as ServerToClientMsg;
         this.handleServerMessage(msg, socket);
       } catch (err) {
-        console.warn('[RawWssClient] Błąd parsowania wiadomości:', err);
+        console.warn('[RawWssClient] Message parsing error:', err);
       }
     };
 
@@ -193,7 +193,7 @@ export class RawWssClient {
       }
 
       default:
-        // Inne powiadomienia (agent_metadata, tool calls)
+        // Other notifications (agent_metadata, tool calls)
         break;
     }
   }
@@ -227,9 +227,9 @@ export class RawWssClient {
     this.setState('reconnecting');
     this.reconnectAttempts++;
 
-    // Wykładniczy backoff: 1s, 2s, 4s, 8s, max 16s
+    // Exponential backoff: 1s, 2s, 4s, 8s, max 16s
     const delay = Math.min(1000 * Math.pow(2, this.reconnectAttempts - 1), 16000);
-    console.log(`[RawWssClient] Ponawianie połączenia za ${delay}ms (próba ${this.reconnectAttempts})...`);
+    console.log(`[RawWssClient] Reconnecting in ${delay}ms (attempt ${this.reconnectAttempts})...`);
 
     this.reconnectTimer = window.setTimeout(() => {
       this.connect();
@@ -238,7 +238,7 @@ export class RawWssClient {
 
   private handleSocketFailure(err: Error): void {
     this.lastSocketError = err.message.slice(0, 200);
-    console.error('[RawWssClient] Błąd połączenia socketu:', err);
+    console.error('[RawWssClient] Socket connection error:', err);
     if (!this.intentionalClose) {
       this.scheduleReconnect();
     } else {

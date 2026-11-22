@@ -1,10 +1,10 @@
 /**
- * Narzędzia do resamplingu audio, konwersji formatów PCM i kodowania base64 (docs/2, docs/4)
+ * Utilities for audio resampling, PCM format conversion and base64 encoding (docs/2, docs/4)
  */
 
 /**
- * Resampluje bufor Float32 z inSampleRate do outSampleRate (domyślnie 16000 Hz)
- * przy użyciu interpolacji liniowej.
+ * Resamples a Float32 buffer from inSampleRate to outSampleRate (default 16000 Hz)
+ * using linear interpolation.
  */
 export function resampleFloat32(
   input: Float32Array,
@@ -25,7 +25,7 @@ export function resampleFloat32(
     const index2 = Math.min(index1 + 1, input.length - 1);
     const fraction = originalPos - index1;
 
-    // Liniowa interpolacja pomiędzy próbkami
+    // Linear interpolation between samples
     output[i] = input[index1] + fraction * (input[index2] - input[index1]);
   }
 
@@ -33,12 +33,12 @@ export function resampleFloat32(
 }
 
 /**
- * Konwertuje próbki Float32 [-1.0, 1.0] do 16-bit PCM Int16 [-32768, 32767]
+ * Converts Float32 samples [-1.0, 1.0] to 16-bit PCM Int16 [-32768, 32767]
  */
 export function float32ToInt16(input: Float32Array): Int16Array {
   const output = new Int16Array(input.length);
   for (let i = 0; i < input.length; i++) {
-    // Clamp do zakresu [-1.0, 1.0] i skalowanie do Int16
+    // Clamp to the range [-1.0, 1.0] and scale to Int16
     const s = Math.max(-1.0, Math.min(1.0, input[i]));
     output[i] = s < 0 ? s * 0x8000 : s * 0x7fff;
   }
@@ -46,13 +46,13 @@ export function float32ToInt16(input: Float32Array): Int16Array {
 }
 
 /**
- * Koduje Int16Array (16-bit PCM little endian) do łańcucha base64
+ * Encodes an Int16Array (16-bit PCM little endian) to a base64 string
  */
 export function int16ToBase64(input: Int16Array): string {
   const uint8 = new Uint8Array(input.buffer, input.byteOffset, input.byteLength);
   let binary = '';
   const len = uint8.byteLength;
-  const chunkSize = 0x8000; // 32KB chunki unikające stack overflow w String.fromCharCode
+  const chunkSize = 0x8000; // 32KB chunks avoiding a stack overflow in String.fromCharCode
 
   for (let i = 0; i < len; i += chunkSize) {
     const slice = uint8.subarray(i, Math.min(i + chunkSize, len));
@@ -63,7 +63,7 @@ export function int16ToBase64(input: Int16Array): string {
 }
 
 /**
- * Dekoduje łańcuch base64 reprezentujący 16-bit PCM (little endian) do Uint8Array
+ * Decodes a base64 string representing 16-bit PCM (little endian) to a Uint8Array
  */
 export function base64ToPcmBytes(base64: string): Uint8Array {
   const binary = atob(base64);
@@ -75,7 +75,7 @@ export function base64ToPcmBytes(base64: string): Uint8Array {
 }
 
 /**
- * Konwertuje surowe bajty 16-bit PCM (Uint8Array) do Float32Array dla Web Audio API
+ * Converts raw 16-bit PCM bytes (Uint8Array) to a Float32Array for the Web Audio API
  */
 export function pcmBytesToFloat32(bytes: Uint8Array): Float32Array {
   const sampleCount = Math.floor(bytes.length / 2);

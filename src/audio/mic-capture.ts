@@ -1,6 +1,6 @@
 import { resampleFloat32, float32ToInt16, int16ToBase64 } from './pcm-resampler';
 
-/** Buduje constraints getUserMedia z opcjonalnym wyborem urządzenia (F11). */
+/** Builds getUserMedia constraints with an optional device choice (F11). */
 export function buildAudioConstraints(deviceId: string | null): MediaTrackConstraints {
   return {
     channelCount: 1,
@@ -25,7 +25,7 @@ export class MicCapture {
     }
   }
 
-  /** Ustawia urządzenie wejściowe (stosowane przy następnym starcie). */
+  /** Sets the input device (applied on the next start). */
   public setDeviceId(deviceId: string | null): void {
     this.deviceId = deviceId && deviceId.trim() !== '' ? deviceId : null;
   }
@@ -34,16 +34,16 @@ export class MicCapture {
     return this.deviceId;
   }
 
-  /** Lista dostępnych wejść audio (bez uprawnień etykiety mogą być puste). */
+  /** List of available audio inputs (without permissions the labels may be empty). */
   public async listDevices(): Promise<Array<{ id: string; label: string }>> {
     if (typeof navigator === 'undefined' || !navigator.mediaDevices?.enumerateDevices) return [];
     try {
       const devices = await navigator.mediaDevices.enumerateDevices();
       return devices
         .filter((device) => device.kind === 'audioinput')
-        .map((device) => ({ id: device.deviceId, label: device.label || 'Mikrofon' }));
+        .map((device) => ({ id: device.deviceId, label: device.label || 'Microphone' }));
     } catch (error) {
-      console.warn('[MicCapture] Nie udało się pobrać listy urządzeń:', error);
+      console.warn('[MicCapture] Could not fetch the device list:', error);
       return [];
     }
   }
@@ -72,8 +72,8 @@ export class MicCapture {
 
     this.sourceNode = ctx.createMediaStreamSource(this.mediaStream);
 
-    // Bufor 4096 próbek (~85ms przy 48kHz, ~92ms przy 44.1kHz)
-    // optymalny rozmiar pakietu audio dla detekcji mowy serwerowego VAD
+    // Buffer of 4096 samples (~85ms at 48kHz, ~92ms at 44.1kHz)
+    // optimal audio packet size for the server-side VAD speech detection
     const bufferSize = 4096;
     this.processorNode = ctx.createScriptProcessor(bufferSize, 1, 1);
 
@@ -85,23 +85,23 @@ export class MicCapture {
       // 1. Resampling do 16 kHz
       const resampled = resampleFloat32(inputChannelData, ctx.sampleRate, 16000);
 
-      // 2. Konwersja do 16-bit Int16 PCM
+      // 2. Conversion to 16-bit Int16 PCM
       const int16 = float32ToInt16(resampled);
 
-      // 3. Kodowanie do base64 i wysyłka
+      // 3. Encode to base64 and send
       const base64Chunk = int16ToBase64(int16);
       onChunk(base64Chunk);
     };
 
     this.sourceNode.connect(this.processorNode);
-    // Wyciszenie wyjścia procesora, aby uniknąć pętli sprzężenia zwrotnego (audio feedback)
+    // Mute the processor output to avoid a feedback loop (audio feedback)
     const silentGain = ctx.createGain();
     silentGain.gain.value = 0;
     this.processorNode.connect(silentGain);
     silentGain.connect(ctx.destination);
 
     this.isRunning = true;
-    console.log(`[MicCapture] Mikrofon aktywny. Częstotliwość źródłowa: ${ctx.sampleRate}Hz -> wyjście: 16000Hz`);
+    console.log(`[MicCapture] Microphone active. Source sample rate: ${ctx.sampleRate}Hz -> output: 16000Hz`);
   }
 
   public stop(): void {
@@ -127,7 +127,7 @@ export class MicCapture {
       this.mediaStream = null;
     }
 
-    console.log('[MicCapture] Mikrofon zatrzymany.');
+    console.log('[MicCapture] Microphone stopped.');
   }
 
   public getIsRunning(): boolean {

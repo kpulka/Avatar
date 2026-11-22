@@ -1,19 +1,19 @@
 import { CharAlignment } from '../types/avatar';
 
 /**
- * Tworzy syntetyczny alignment akustyczny jaw-only na podstawie analizy energii
- * próbek audio PCM (RMS w oknach 70 ms). Gwarantuje, że awatar ZAWSZE porusza
- * ustami synchronicznie z głosem agenta, nawet gdy backend ElevenLabs nie przesyła
- * metadanych 'alignment' w strumieniu WebSocket.
+ * Creates a synthetic jaw-only acoustic alignment from the energy analysis of
+ * PCM audio samples (RMS in 70 ms windows). Guarantees that the avatar ALWAYS moves
+ * its mouth in sync with the agent's voice, even when the ElevenLabs backend does not send
+ * 'alignment' metadata in the WebSocket stream.
  *
- * W przeciwieństwie do dawnego fallbacku NIE generuje fałszywych samogłosek
- * (A/O/E/I/U/M) — treść `chars` jest wypełniona spacjami (pusta mapa kształtów),
- * a energia RMS per okno trafia do `energies`. Decyzję o ruchu żuchwy
- * (jawOpen ∝ energia) podejmuje FaceController dla źródła 'energy-fallback'.
+ * Unlike the former fallback it does NOT generate false vowels
+ * (A/O/E/I/U/M) — the `chars` content is filled with spaces (empty shape map),
+ * and the per-window RMS energy goes to `energies`. The jaw-movement decision
+ * (jawOpen ∝ energy) is made by FaceController for the 'energy-fallback' source.
  */
 export function generateEnergyFallbackAlignment(pcmBytes: Uint8Array, sampleRate: number): CharAlignment {
   const int16 = new Int16Array(pcmBytes.buffer, pcmBytes.byteOffset, Math.floor(pcmBytes.byteLength / 2));
-  const sliceMs = 70; // okno analizy 70ms odpowiadające długości sylaby
+  const sliceMs = 70; // 70ms analysis window matching syllable length
   const samplesPerSlice = Math.max(1, Math.floor((sampleRate * sliceMs) / 1000));
   const numSlices = Math.max(1, Math.floor(int16.length / samplesPerSlice));
 

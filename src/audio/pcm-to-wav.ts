@@ -1,6 +1,6 @@
 /**
- * PCM → WAV (Faza 11, 11-05): mono 16-bit little-endian (format PCM z AudioEngine/WSS).
- * Nagłówek RIFF jest krytyczny — błędny = ciche złe ramki z /predict.
+ * PCM → WAV (Phase 11, 11-05): mono 16-bit little-endian (PCM format from AudioEngine/WSS).
+ * The RIFF header is critical — a wrong one = silently bad frames from /predict.
  */
 
 export function encodeWav(pcm: Uint8Array, sampleRate: number): Blob {
