@@ -7,7 +7,7 @@ function defined<T extends object>(params: T): T {
 }
 
 /**
- * Konfiguruje maksymalną anizotropię dla wszystkich tekstur w hierarchii modelu (docs/5)
+ * Configures maximum anisotropy for all textures in the model hierarchy (docs/5)
  */
 export function configureTextures(root: THREE.Object3D, renderer: THREE.WebGLRenderer): void {
   const maxAniso = renderer.capabilities.getMaxAnisotropy();
@@ -28,7 +28,7 @@ export function configureTextures(root: THREE.Object3D, renderer: THREE.WebGLRen
         const tex = record[prop];
         if (tex && tex.isTexture) {
           tex.anisotropy = maxAniso;
-          // Tylko kolor bazowy (albedo) jest w sRGB, reszta to dane liniowe
+          // Only the base colour (albedo) is in sRGB, the rest is linear data
           tex.colorSpace = prop === 'map' ? THREE.SRGBColorSpace : THREE.NoColorSpace;
           tex.needsUpdate = true;
         }
@@ -38,7 +38,7 @@ export function configureTextures(root: THREE.Object3D, renderer: THREE.WebGLRen
 }
 
 /**
- * Ulepsza materiały modelu MetaPerson do standardu PBR z Wrap Diffuse SSS i wilgotnością oczu (docs/5)
+ * Upgrades the MetaPerson model materials to the PBR standard with Wrap Diffuse SSS and eye wetness (docs/5)
  */
 export function enhanceAvatarMaterials(root: THREE.Object3D, renderer: THREE.WebGLRenderer): void {
   configureTextures(root, renderer);
@@ -61,7 +61,7 @@ export function enhanceAvatarMaterials(root: THREE.Object3D, renderer: THREE.Web
     const enhancedMaterials = materials.map((mat) => {
       if (!mat) return mat;
 
-      // 1. Zęby i jama ustna (wilgotność, clearcoat 0.3)
+      // 1. Teeth and mouth cavity (wetness, clearcoat 0.3)
       if (meshName.includes('teeth') || meshName.includes('tooth') || meshName.includes('mouth')) {
         if (mat instanceof THREE.MeshPhysicalMaterial) {
           mat.clearcoat = 0.3;
@@ -79,7 +79,7 @@ export function enhanceAvatarMaterials(root: THREE.Object3D, renderer: THREE.Web
         });
       }
 
-      // 2. Gałki oczne (zachowujemy oryginalną kolorową teksturę tęczówki i źrenicy z pliku GLB!)
+      // 2. Eyeballs (we keep the original coloured iris and pupil texture from the GLB file!)
       if (meshName.includes('eyeball') || (meshName.includes('eye') && !meshName.includes('lash'))) {
         const standard = mat as THREE.MeshStandardMaterial;
         const eyeMat = new THREE.MeshPhysicalMaterial(
@@ -125,7 +125,7 @@ export function enhanceAvatarMaterials(root: THREE.Object3D, renderer: THREE.Web
         return hair;
       }
 
-      // 5. Skóra (głowa, twarz, szyja, ciało) — PBR z Wrap Diffuse SSS (REAL-04, docs/5)
+      // 5. Skin (head, face, neck, body) — PBR with Wrap Diffuse SSS (REAL-04, docs/5)
       const isSkin =
         meshName.includes('head') ||
         meshName.includes('face') ||
@@ -163,7 +163,7 @@ export function enhanceAvatarMaterials(root: THREE.Object3D, renderer: THREE.Web
           });
         }
 
-        // Wstrzyknięcie rozproszenia podpowierzchniowego (SSS)
+        // Inject subsurface scattering (SSS)
         injectSkinSSS(skinMat);
         return skinMat;
       }

@@ -2,8 +2,8 @@ import * as THREE from 'three';
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
 
 /**
- * Generator środowiska Image-Based Lighting (IBL)
- * Wykorzystuje lekki PMREM z RoomEnvironment, eliminując płaski wygląd materiałów PBR (docs/5)
+ * Image-Based Lighting (IBL) environment generator
+ * Uses a light PMREM from RoomEnvironment, eliminating the flat look of PBR materials (docs/5)
  */
 export class EnvironmentManager {
   private readonly pmremGenerator: THREE.PMREMGenerator;
@@ -20,7 +20,7 @@ export class EnvironmentManager {
     }
 
     const roomEnv = new RoomEnvironment();
-    // 0.04 sigma daje miękkie, realistyczne odbicia studyjne
+    // 0.04 sigma gives soft, realistic studio reflections
     const envRenderTarget = this.pmremGenerator.fromScene(roomEnv, 0.04);
     this.currentEnvTexture = envRenderTarget.texture;
 

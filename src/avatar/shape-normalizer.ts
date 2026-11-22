@@ -1,5 +1,5 @@
 /**
- * Bezwzględnie wymagane blendshape'y z Apple ARKit dla riga mowy i mimiki (wg docs/1)
+ * Blendshapes from Apple ARKit that are strictly required for the speech and expression rig (per docs/1)
  */
 export const REQUIRED_SHAPES = [
   'jawOpen',
@@ -15,10 +15,10 @@ export const REQUIRED_SHAPES = [
 export type RequiredShape = (typeof REQUIRED_SHAPES)[number];
 
 /**
- * Mapa znanych aliasów i alternatywnych wariantów pisowni nazw kluczy ARKit
+ * Map of known aliases and alternative spellings of ARKit key names
  */
 const ALIAS_MAP: Record<string, string> = {
-  // CamelCase z prefiksem lub separatorem
+  // CamelCase with a prefix or separator
   jaw_open: 'jawOpen',
   jawopen: 'jawOpen',
   jaw_left: 'jawLeft',
@@ -44,7 +44,7 @@ const ALIAS_MAP: Record<string, string> = {
   mouth_roll_upper: 'mouthRollUpper',
   mouth_press_left: 'mouthPressLeft',
   mouth_press_right: 'mouthPressRight',
-  // Popularne aliasy z formatów RPM lub mocap
+  // Popular aliases from RPM or mocap formats
   viseme_aa: 'jawOpen',
   viseme_pp: 'mouthClose',
   viseme_oh: 'mouthFunnel',
@@ -52,7 +52,7 @@ const ALIAS_MAP: Record<string, string> = {
 };
 
 /**
- * Normalizuje nazwę klucza do standardu ARKit camelCase
+ * Normalizes a key name to the ARKit camelCase standard
  */
 export function normalizeShapeName(rawName: string): string {
   const clean = rawName.trim();
@@ -65,7 +65,7 @@ export function normalizeShapeName(rawName: string): string {
     return ALIAS_MAP[lower];
   }
 
-  // Usunięcie ewentualnego prefiksu namespace'u typu "head." lub "Avatar_"
+  // Remove a possible namespace prefix such as "head." or "Avatar_"
   const parts = clean.split(/[.:]/);
   const baseName = parts[parts.length - 1];
   const lowerBase = baseName.toLowerCase();
@@ -73,7 +73,7 @@ export function normalizeShapeName(rawName: string): string {
   if (baseName in ALIAS_MAP) return ALIAS_MAP[baseName];
   if (lowerBase in ALIAS_MAP) return ALIAS_MAP[lowerBase];
 
-  // Obsługa prefiksów z podkreśleniem np. Avatar_eye_blink_left
+  // Handle underscore prefixes, e.g. Avatar_eye_blink_left
   const underscoreIndex = clean.indexOf('_');
   if (underscoreIndex !== -1) {
     const afterPrefix = clean.slice(underscoreIndex + 1);
@@ -86,7 +86,7 @@ export function normalizeShapeName(rawName: string): string {
 }
 
 /**
- * Sprawdza obecność wymaganych blendshape'ów i rzuca błąd w przypadku braków (Fail-Fast)
+ * Checks for the required blendshapes and throws on missing ones (Fail-Fast)
  */
 export function validateRequiredShapes(availableShapes: string[]): {
   valid: boolean;
@@ -104,7 +104,7 @@ export function validateRequiredShapes(availableShapes: string[]): {
 export function assertRequiredShapes(availableShapes: string[]): void {
   const validation = validateRequiredShapes(availableShapes);
   if (!validation.valid) {
-    const errorMsg = `Model nie posiada blendshape'ów: ${validation.missing.join(', ')}`;
+    const errorMsg = `Model is missing blendshapes: ${validation.missing.join(', ')}`;
     console.error(`[ShapeNormalizer Fail-Fast] ${errorMsg}`);
     throw new Error(errorMsg);
   }

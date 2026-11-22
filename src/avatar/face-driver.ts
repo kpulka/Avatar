@@ -3,16 +3,16 @@ import { FaceDriver } from '../types/avatar';
 import { normalizeShapeName } from './shape-normalizer';
 
 /**
- * Sterownik mimiki ARKit dla Three.js.
- * Odpowiada za bezpośrednią synchronizację wag do wszystkich sub-meshy mowy
- * (np. skóra, zęby, język, wnętrze ust).
+ * ARKit facial expression driver for Three.js.
+ * Responsible for direct weight synchronization to all speech sub-meshes
+ * (e.g. skin, teeth, tongue, mouth interior).
  */
 export class ArKitBlendshapeDriver implements FaceDriver {
   private readonly speechMeshes: THREE.Mesh[];
   private readonly masterMorphDict: Record<string, number>;
   private readonly availableShapes: string[];
 
-  // Mapa szybkiego wyszukiwania: normalizedShapeName -> Array<{ meshIndex, morphIndex }>
+  // Fast lookup map: normalizedShapeName -> Array<{ meshIndex, morphIndex }>
   private readonly shapeTargetMap: Map<string, Array<{ mesh: THREE.Mesh; morphIndex: number }>>;
 
   constructor(speechMeshes: THREE.Mesh[], masterMorphDict: Record<string, number>) {
@@ -69,7 +69,7 @@ export class ArKitBlendshapeDriver implements FaceDriver {
 
   public relaxToNeutral(durationMs = 150): void {
     if (durationMs <= 0) {
-      // Natychmiastowe wyzerowanie
+      // Immediate zeroing
       for (const mesh of this.speechMeshes) {
         if (mesh.morphTargetInfluences) {
           mesh.morphTargetInfluences.fill(0);
@@ -78,7 +78,7 @@ export class ArKitBlendshapeDriver implements FaceDriver {
       return;
     }
 
-    // Płynne wygaszenie do 0 (pętla klatek lub interpolacja)
+    // Smooth fade to 0 (frame loop or interpolation)
     const startTime = performance.now();
     const initialWeights: Map<THREE.Mesh, Float32Array> = new Map();
 

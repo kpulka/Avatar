@@ -19,7 +19,7 @@ export class AppScene {
   }
 
   private createGroundPedestal(): void {
-    // Dysk podestu z delikatnym gradientem i cieniem kontaktowym
+    // Pedestal disc with a subtle gradient and a contact shadow
     const geometry = new THREE.CylinderGeometry(0.8, 0.8, 0.02, 64);
     const material = new THREE.MeshStandardMaterial({
       color: 0x181c24,
@@ -32,18 +32,18 @@ export class AppScene {
     this.instance.add(this.pedestal);
   }
 
-  /** Widoczność podestu (presety sceny, F11). */
+  /** Pedestal visibility (scene presets, F11). */
   public setPedestal(visible: boolean): void {
     if (this.pedestal) this.pedestal.visible = visible;
   }
 
-  /** Tło jednolite (F11). */
+  /** Solid background (F11). */
   public setBackgroundColor(hex: number): void {
     this.disposeGradient();
     this.instance.background = new THREE.Color(hex);
   }
 
-  /** Tło gradientowe (CanvasTexture, sRGB) z cache i dispose poprzedniej (F11). */
+  /** Gradient background (CanvasTexture, sRGB) with cache and dispose of the previous one (F11). */
   public setGradientBackground(from: number, to: number): void {
     if (typeof document === 'undefined') {
       this.setBackgroundColor(from);

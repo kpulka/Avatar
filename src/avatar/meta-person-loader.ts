@@ -47,12 +47,12 @@ export class MetaPersonLoader implements AvatarLoader {
           const mesh = child as THREE.Mesh;
           const dict = mesh.morphTargetDictionary!;
 
-          // Zabezpieczenie przed obcinaniem geometrii przy deformacji (docs/1)
+          // Protection against geometry clipping under deformation (docs/1)
           mesh.frustumCulled = false;
           mesh.castShadow = true;
           mesh.receiveShadow = true;
 
-          // Sprawdzamy czy siatka zawiera klucze aparatu mowy lub mimiki twarzy ARKit
+          // Check whether the mesh contains speech-apparatus or ARKit facial-expression keys
           const keys = Object.keys(dict).map(normalizeShapeName);
           const hasFacialKeys = keys.some(
             (k) =>
@@ -84,7 +84,7 @@ export class MetaPersonLoader implements AvatarLoader {
         mesh.castShadow = !(n.includes('eye') || n.includes('cornea') || n.includes('lash'));
       });
 
-      // Jeśli nie znaleziono bezpośrednio po kluczach mimiki, sprawdź wszystkie siatki z jakimikolwiek morph targetami
+      // If not found directly by the expression keys, check all meshes that have any morph targets
       if (speechMeshes.length === 0) {
         avatar.traverse((child) => {
           if ((child as THREE.Mesh).isMesh && (child as THREE.Mesh).morphTargetDictionary) {
@@ -101,27 +101,27 @@ export class MetaPersonLoader implements AvatarLoader {
         });
       }
 
-      // Fail-fast walidacja: bez wymaganych blendshape'ów lips-sync nie ma prawa działać
+      // Fail-fast validation: without the required blendshapes lip-sync has no right to work
       assertRequiredShapes(allAvailableShapeNames);
 
       const faceDriver = new ArKitBlendshapeDriver(speechMeshes, masterMorphDict || {});
 
-      // Dostosuj skalę i wycentrowanie riga jeśli to konieczne
+      // Adjust the rig scale and centering if necessary
       const box = new THREE.Box3().setFromObject(avatar);
       const size = new THREE.Vector3();
       box.getSize(size);
 
-      // Jeśli model jest wyższy niż 3 jednostki lub mniejszy niż 0.3, znormalizuj
+      // If the model is taller than 3 units or smaller than 0.3, normalize it
       if (size.y > 0) {
-        const scaleFactor = 1.75 / size.y; // przybliżenie naturalnego wzrostu człowieka
+        const scaleFactor = 1.75 / size.y; // approximation of natural human height
         avatar.scale.setScalar(scaleFactor);
       }
 
-      // Ustawienie stóp/bazy na podłożu
+      // Place the feet/base on the ground
       box.setFromObject(avatar);
       avatar.position.y -= box.min.y;
 
-      // Złagodzenie domyślnej postawy T-Pose do naturalnej pozycji spoczynkowej
+      // Relax the default T-Pose into a natural resting pose
       relaxArmsToNaturalPose(avatar);
 
       if (scene) {
@@ -147,7 +147,7 @@ export class MetaPersonLoader implements AvatarLoader {
 }
 
 /**
- * Ustawia kości ramion z surowej postawy T-Pose w naturalną, spoczynkową pozycję wzdłuż ciała
+ * Moves the arm bones from the raw T-Pose into a natural resting pose along the body
  */
 export function relaxArmsToNaturalPose(root: THREE.Object3D): void {
   const leftArm = root.getObjectByName('LeftArm');
@@ -156,7 +156,7 @@ export function relaxArmsToNaturalPose(root: THREE.Object3D): void {
   const rightForeArm = root.getObjectByName('RightForeArm');
 
   if (leftArm) {
-    // Obrót ramienia w dół wzdłuż tułowia (~68° opuszczenie ramion do naturalnej pozycji A-pose)
+    // Rotate the arm down along the torso (~68° lowering the arms into a natural A-pose)
     leftArm.rotateX(1.18);
   }
   if (rightArm) {

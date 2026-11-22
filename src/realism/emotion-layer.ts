@@ -25,19 +25,19 @@ const EMOTION_PROFILES: Record<EmotionType, Map<string, number>> = {
 };
 
 /**
- * Warstwa emocjonalna (EmotionLayer) analizująca sentyment wypowiedzi (REAL-03, docs/3, docs/5)
+ * Emotion layer (EmotionLayer) analysing the utterance sentiment (REAL-03, docs/3, docs/5)
  */
 export class EmotionLayer {
   private currentEmotion: EmotionType = 'neutral';
   private targetEmotion: EmotionType = 'neutral';
 
-  // Aktualne wagi przenikania
+  // Current cross-fade weights
   private readonly activeWeights: Map<string, number> = new Map();
-  private crossFadeDurationSec = 0.4; // 400ms cross-fade między stanami
+  private crossFadeDurationSec = 0.4; // 400ms cross-fade between states
   private crossFadeElapsed = 0.4;
 
   /**
-   * Analizuje tekst wypowiedzi pod kątem leksykalnego sentymentu
+   * Analyses the utterance text for lexical sentiment
    */
   public analyzeText(text: string): EmotionType {
     const lower = text.toLowerCase();
@@ -101,12 +101,12 @@ export class EmotionLayer {
   }
 
   /**
-   * Aktualizuje wagi emocji z uwzględnieniem cross-fade
+   * Updates the emotion weights taking the cross-fade into account
    */
   public update(dt: number): Map<string, number> {
     this.crossFadeElapsed = Math.min(this.crossFadeDurationSec, this.crossFadeElapsed + dt);
     const progress = this.crossFadeElapsed / this.crossFadeDurationSec;
-    // Cosine ease wygładzania emocji
+    // Cosine ease for emotion smoothing
     const ease = Math.sin((progress * Math.PI) / 2);
 
     const targetProfile = EMOTION_PROFILES[this.targetEmotion];
