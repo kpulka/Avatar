@@ -99,6 +99,7 @@ export class SceneController implements SceneService {
     this.deps.camera.instance.position.set(0, faceY + 0.03, 1.22);
     this.deps.camera.controls.target.set(0, faceY, 0);
     this.deps.camera.controls.update();
+    this.deps.lighting?.focusOn(new THREE.Vector3(0, faceY, 0));
 
     const shapesCount = avatar.faceDriver.listAvailableShapes().length;
     this.avatarInfo = {

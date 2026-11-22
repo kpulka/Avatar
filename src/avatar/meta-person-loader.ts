@@ -75,6 +75,15 @@ export class MetaPersonLoader implements AvatarLoader {
         }
       });
 
+      // Shadows: every mesh receives; eyes, corneas and lashes do not cast (avoids self-shadowed dark eyes)
+      avatar.traverse((child) => {
+        const mesh = child as THREE.Mesh;
+        if (!mesh.isMesh) return;
+        const n = mesh.name.toLowerCase();
+        mesh.receiveShadow = true;
+        mesh.castShadow = !(n.includes('eye') || n.includes('cornea') || n.includes('lash'));
+      });
+
       // Jeśli nie znaleziono bezpośrednio po kluczach mimiki, sprawdź wszystkie siatki z jakimikolwiek morph targetami
       if (speechMeshes.length === 0) {
         avatar.traverse((child) => {

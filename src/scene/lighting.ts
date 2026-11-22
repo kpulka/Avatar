@@ -1,4 +1,8 @@
 import * as THREE from 'three';
+import { updateSkinLightUniforms } from './skin-shader';
+
+/** Key light offset from the head target (direction is fixed, only the anchor moves). */
+const KEY_OFFSET = new THREE.Vector3(1.5, 2.0, 2.0);
 
 /**
  * Konfiguracja 3-punktowego oświetlenia studyjnego PoC wg docs/5
@@ -16,17 +20,17 @@ export class StudioLighting {
 
     // 1. Key Light (Główne ciepłe światło rysujące)
     this.keyLight = new THREE.DirectionalLight(0xfff2e0, 2.2);
-    this.keyLight.position.set(1.5, 2.0, 2.0);
+    this.keyLight.position.copy(KEY_OFFSET);
     this.keyLight.castShadow = true;
     this.keyLight.shadow.mapSize.width = 1024;
     this.keyLight.shadow.mapSize.height = 1024;
     this.keyLight.shadow.camera.near = 0.5;
-    this.keyLight.shadow.camera.far = 10.0;
+    this.keyLight.shadow.camera.far = 6.0;
     this.keyLight.shadow.bias = -0.0001;
-    this.keyLight.shadow.radius = 2.0; // Miękki cień twarzy
+    this.keyLight.shadow.normalBias = 0.01;
 
-    // Zacieśnienie frustum cienia pod popiersie/twarz
-    const d = 1.0;
+    // Tight orthographic frustum around the head (re-centred by focusOn)
+    const d = 0.35;
     this.keyLight.shadow.camera.left = -d;
     this.keyLight.shadow.camera.right = d;
     this.keyLight.shadow.camera.top = d;
@@ -44,12 +48,28 @@ export class StudioLighting {
     this.ambientLight = new THREE.AmbientLight(0xffffff, 0.15);
 
     this.group.add(this.keyLight);
+    this.group.add(this.keyLight.target); // target must be in the scene graph for world matrices
     this.group.add(this.fillLight);
     this.group.add(this.rimLight);
     this.group.add(this.ambientLight);
   }
 
+  /** Re-centres the key light (direction unchanged) and its shadow frustum on the given head point. */
+  public focusOn(head: THREE.Vector3): void {
+    this.keyLight.target.position.copy(head);
+    this.keyLight.position.copy(head).add(KEY_OFFSET);
+    this.keyLight.target.updateMatrixWorld();
+    this.keyLight.updateMatrixWorld();
+    this.keyLight.shadow.camera.updateProjectionMatrix();
+  }
+
   public addToScene(scene: THREE.Scene): void {
     scene.add(this.group);
+    // three calls Scene.onBeforeRender once per render; keeps the skin SSS uniforms on the key light.
+    scene.onBeforeRender = (_renderer, _scene, camera) => updateSkinLightUniforms(this.keyLight, camera);
+
+    if (import.meta.env?.DEV && new URLSearchParams(globalThis.location?.search ?? '').get('debugShadow') === '1') {
+      scene.add(new THREE.CameraHelper(this.keyLight.shadow.camera));
+    }
   }
 }

@@ -36,6 +36,7 @@ vi.mock('../src/scene/lighting', async () => {
       rimLight = { intensity: 2.6, color: new THREE.Color(0xffe8d6) };
       ambientLight = { intensity: 0.15 };
       addToScene = vi.fn();
+      focusOn = vi.fn();
     },
   };
 });
