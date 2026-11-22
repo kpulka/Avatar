@@ -74,12 +74,12 @@ describe('FaceController tryb frames (kontrakt v2)', () => {
     controller.setAnimationMode('frames');
   });
 
-  it('przełącza tryb do frames i czyści stan (IDLE)', () => {
+  it('switches the mode to frames and clears the state (IDLE)', () => {
     expect(controller.getAnimationMode()).toBe('frames');
     expect(controller.getState()).toBe('IDLE');
   });
 
-  it('aplikuje ramkę środkową — wartości bezwzględne ramki, bez wygładzania', () => {
+  it('applies the middle frame — absolute frame values, no smoothing', () => {
     const clip = clipOf([
       { timeSec: 0.0, weights: { jawOpen: 0.1, mouthSmileLeft: 0.2 } },
       { timeSec: 0.5, weights: { jawOpen: 0.6, mouthSmileLeft: 0.4 } },
@@ -89,7 +89,7 @@ describe('FaceController tryb frames (kontrakt v2)', () => {
     engine.hasPending = true; // playback w toku
     controller.feedFrames(clip, 0.0, 0);
 
-    // Czas między ramką 0 a 1: aplikujemy ramkę 0 (zero-order hold).
+    // Time between frame 0 and 1: frame 0 is applied (zero-order hold).
     engine.ctx.currentTime = 0.25;
     controller.render(1 / 60);
 
@@ -97,13 +97,13 @@ describe('FaceController tryb frames (kontrakt v2)', () => {
     expect(driver.appliedWeights['jawOpen']).toBe(0.1);
     expect(driver.appliedWeights['mouthSmileLeft']).toBe(0.2);
 
-    // Po przekroczeniu ramki 0.5 aplikujemy ramkę 1.
+    // After passing the 0.5 mark, frame 1 is applied.
     engine.ctx.currentTime = 0.51;
     controller.render(1 / 60);
     expect(driver.appliedWeights['jawOpen']).toBe(0.6);
   });
 
-  it('kończy turę w RELAXING startując z wartości OSTATNIEJ ramki (currentWeights)', () => {
+  it('ends the turn in RELAXING, starting from the LAST frame value (currentWeights)', () => {
     const clip = clipOf([
       { timeSec: 0.0, weights: { jawOpen: 0.1 } },
       { timeSec: 0.5, weights: { jawOpen: 0.7 } },
@@ -112,16 +112,16 @@ describe('FaceController tryb frames (kontrakt v2)', () => {
     engine.hasPending = true;
     controller.feedFrames(clip, 0.0, 0);
 
-    engine.ctx.currentTime = 2.0; // skok za koniec clipu
-    engine.hasPending = false; // audio dobiegło końca
+    engine.ctx.currentTime = 2.0; // jump past the end of the clip
+    engine.hasPending = false; // audio has finished
     controller.render(1 / 60);
 
-    // RELAXING z ostatniej ramki (0.7) — nie "teleport" do starej pozy.
+    // RELAXING from the last frame (0.7) — no "teleport" back to the old pose.
     expect(controller.getState()).toBe('RELAXING');
     expect(driver.appliedWeights['jawOpen']).toBe(0.7);
   });
 
-  it('przekazuje barge-in: onInterruption czyści bufor i wchodzi w RELAXING', () => {
+  it('passes barge-in: onInterruption clears the buffer and enters RELAXING', () => {
     const clip = clipOf([
       { timeSec: 0.0, weights: { jawOpen: 0.5 } },
       { timeSec: 0.5, weights: { jawOpen: 0.8 } },
@@ -137,7 +137,7 @@ describe('FaceController tryb frames (kontrakt v2)', () => {
     expect(controller.getAnimationMode()).toBe('frames');
   });
 
-  it('ignoruje feedFrames ze starej epoki', () => {
+  it('ignores feedFrames from an old epoch', () => {
     engine.epoch = 2;
     controller.feedFrames(clipOf([{ timeSec: 0.0, weights: { jawOpen: 0.9 } }]), 0.0, 1);
 
@@ -145,7 +145,7 @@ describe('FaceController tryb frames (kontrakt v2)', () => {
     expect(controller.getFrameQueueLength()).toBe(0);
   });
 
-  it('capuje mouthClose do 0.85 (safety MetaPerson)', () => {
+  it('clamps mouthClose to 0.85 (MetaPerson safety)', () => {
     const clip = clipOf([
       { timeSec: 0.0, weights: { mouthClose: 1.0, jawOpen: 0.05 } },
     ]);
@@ -157,7 +157,7 @@ describe('FaceController tryb frames (kontrakt v2)', () => {
     expect(driver.appliedWeights['mouthClose']).toBe(0.85);
   });
 
-  it('zeruje kształty należące do clipu, których brak w bieżącej ramce (owned = absolute)', () => {
+  it('zeroes the clip-owned shapes missing from the current frame (owned = absolute)', () => {
     const clip = clipOf([{ timeSec: 0.0, weights: { jawOpen: 0.5 } }], {
       shapes: ['jawOpen', 'mouthSmileLeft'],
     });
@@ -170,7 +170,7 @@ describe('FaceController tryb frames (kontrakt v2)', () => {
     expect(driver.appliedWeights['mouthSmileLeft']).toBe(0);
   });
 
-  it('wyłącza proceduralne mruganie gdy clip carriesEyes (A2F niesie oczy)', () => {
+  it('disables procedural blinking when the clip carriesEyes (A2F carries the eyes)', () => {
     let blinkCalls = 0;
     controller.setBlinkProvider(() => {
       blinkCalls++;
@@ -189,7 +189,7 @@ describe('FaceController tryb frames (kontrakt v2)', () => {
     expect(driver.appliedWeights['eyeBlinkLeft'] ?? 0).toBe(0);
   });
 
-  it('mruga proceduralnie gdy clip NIE niesie oczu (carriesEyes=false)', () => {
+  it('blinks procedurally when the clip does NOT carry eyes (carriesEyes=false)', () => {
     let blinkCalls = 0;
     controller.setBlinkProvider(() => {
       blinkCalls++;
@@ -207,7 +207,7 @@ describe('FaceController tryb frames (kontrakt v2)', () => {
     expect(blinkCalls).toBe(1);
   });
 
-  it('nie domieszkuje emocji do wag mowy gdy carriesEmotion (A2E prowadzi ekspresję)', () => {
+  it('does not blend emotion into speech weights when carriesEmotion (A2E drives the expression)', () => {
     controller.setEmotion('happy');
     const clip = clipOf([{ timeSec: 0.0, weights: { jawOpen: 0.5 } }], {
       carriesEmotion: true,
@@ -217,13 +217,13 @@ describe('FaceController tryb frames (kontrakt v2)', () => {
     controller.feedFrames(clip, 0.0, 0);
     controller.render(1 / 60);
 
-    // Wartość czysto z ramki — bez 30% domieszki emocji.
+    // Value comes purely from the frame — no 30% emotion blend.
     expect(driver.appliedWeights['jawOpen']).toBe(0.5);
   });
 
-  it('odracza zmianę trybu do granicy tury (deferToTurnEnd)', () => {
+  it('defers the mode change to the turn boundary (deferToTurnEnd)', () => {
     controller.setAnimationMode('viseme');
-    // Tura wizemowa w toku.
+    // Viseme turn in progress.
     controller.onAudioChunk(
       {
         chars: ['A'],
@@ -235,11 +235,11 @@ describe('FaceController tryb frames (kontrakt v2)', () => {
     );
     expect(controller.getState()).toBe('SPEAKING');
 
-    // Prośba o przełączenie w trakcie mowy -> pending, tryb bez zmian.
+    // Switch requested while speaking -> pending, mode unchanged.
     controller.setAnimationMode('frames', { deferToTurnEnd: true });
     expect(controller.getAnimationMode()).toBe('viseme');
 
-    // Koniec tury (kolejka pusta, audio skończone) -> przełączenie na granicy.
+    // End of turn (queue empty, audio finished) -> switch at the boundary.
     engine.ctx.currentTime = 1.0;
     engine.hasPending = false;
     controller.render(1 / 60);
@@ -248,7 +248,7 @@ describe('FaceController tryb frames (kontrakt v2)', () => {
     expect(controller.getState()).toBe('RELAXING');
   });
 
-  it('przełącza tryb natychmiast przy przerwaniu, gdy ustawiono pendingMode', () => {
+  it('switches the mode immediately on interruption when pendingMode is set', () => {
     controller.setAnimationMode('viseme');
     controller.onAudioChunk(
       {
@@ -269,21 +269,21 @@ describe('FaceController tryb frames (kontrakt v2)', () => {
     expect(controller.getFrameQueueLength()).toBe(0);
   });
 
-  it('dryf 30 s: playback klatka-po-klatce trafia w ramki (kontrakt v2, brak rozjazdu)', () => {
+  it('30 s drift: frame-by-frame playback hits the frames (v2 contract, no divergence)', () => {
     const clip = buildDemoFrames(44100, 30.0);
     engine.ctx.currentTime = 0.0;
     engine.hasPending = true;
     controller.feedFrames(clip, 0.0, 0);
 
-    // Odtwarzamy cały clip krok 1/60 s; każda klatka renderu przypada na granicę ramki
-    // (zero-order hold) — na końcu aplikowana jest OSTATNIA ramka clipu.
+    // Play the whole clip in 1/60 s steps; each render frame falls on a frame boundary
+    // (zero-order hold) — at the end the LAST frame of the clip is applied.
     const steps = Math.round(30.0 * 60);
     for (let s = 1; s <= steps; s++) {
       engine.ctx.currentTime = s / 60;
       controller.render(1 / 60);
     }
 
-    engine.ctx.currentTime = 30.1; // audio dobiegło końca
+    engine.ctx.currentTime = 30.1; // audio has finished
     engine.hasPending = false;
     controller.render(1 / 60);
 
@@ -297,7 +297,7 @@ describe('FaceController tryb frames (kontrakt v2)', () => {
 });
 
 describe('demo-frames (buildDemoFrames — kontrakt v2)', () => {
-  it('generuje ramki 60 fps o długości ~durationSec (±1 klatka)', () => {
+  it('generates 60 fps frames of length ~durationSec (±1 frame)', () => {
     const dur = 2.5;
     const clip = buildDemoFrames(44100, dur, 'Hello and welcome');
     expect(clip.fps).toBe(60);
@@ -306,7 +306,7 @@ describe('demo-frames (buildDemoFrames — kontrakt v2)', () => {
     expect(last.timeSec + 1 / 60).toBeCloseTo(dur, 5);
   });
 
-  it('wartości w 0..1, timeSec rosnące od 0, klucze zgodne z shapes', () => {
+  it('values in 0..1, timeSec increasing from 0, keys matching shapes', () => {
     const clip = buildDemoFrames(44100, 1.0, 'Map, mop, pop.');
     let prev = -1e-9;
     for (const f of clip.frames) {
@@ -323,7 +323,7 @@ describe('demo-frames (buildDemoFrames — kontrakt v2)', () => {
     expect(clip.frames[0].timeSec).toBe(0);
   });
 
-  it('M/B/P domyka wargi w clipie (mouthClose pojawia się w shapes)', () => {
+  it('M/B/P closes the lips in the clip (mouthClose appears in shapes)', () => {
     const clip = buildDemoFrames(44100, 2.0, 'Map pop boy');
     expect(clip.shapes).toContain('mouthClose');
     expect(clip.carriesEyes).toBe(false);

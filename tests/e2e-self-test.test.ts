@@ -56,7 +56,7 @@ describe('Automated E2E Self-Test (Kompletny audyt systemu)', () => {
     expect(avatar.root.getObjectByName('Avatar_Neck')).toBeDefined();
     expect(avatar.root.getObjectByName('Avatar_Torso')).toBeDefined();
 
-    // Sprawdzenie blendshape'ów ARKit
+    // Check the ARKit blendshapes
     const availableShapes = avatar.faceDriver.listAvailableShapes();
     expect(availableShapes.length).toBe(52);
     expect(availableShapes).toContain('jawOpen');
@@ -75,16 +75,16 @@ describe('Automated E2E Self-Test (Kompletny audyt systemu)', () => {
 
     const gaze = new GazeSaccades();
 
-    // Spojrzenie w prawo i w górę
+    // Look right and up
     gaze.setPointer(1.0, 1.0);
-    // Przebieg kilku klatek wygładzania
+    // Run a few smoothing frames
     for (let i = 0; i < 10; i++) {
       gaze.compute(i * 0.05, 0.05);
     }
 
     gaze.applyToEyeObjects(leftEye, rightEye);
 
-    // Kąty rotacji gałek powinny ulec zmianie w kierunku celu (dodatni yaw przy spojrzeniu w prawo)
+    // The eyeball rotation angles should change toward the target (positive yaw when looking right)
     expect(leftEye.rotation.y).toBeGreaterThan(-Math.PI / 2);
     expect(leftEye.rotation.x).toBeGreaterThan(0.1);
     expect(rightEye.rotation.y).toBeGreaterThan(-Math.PI / 2);
@@ -98,11 +98,11 @@ describe('Automated E2E Self-Test (Kompletny audyt systemu)', () => {
 
     for (let t = 0; t < 10; t += 0.05) {
       micro.update(0.05, container);
-      // Odchylenia kątowe głowy
+      // Head angular deviations
       expect(Math.abs(container.rotation.x)).toBeLessThanOrEqual(0.045);
       expect(Math.abs(container.rotation.y)).toBeLessThanOrEqual(0.036);
       expect(Math.abs(container.rotation.z)).toBeLessThanOrEqual(0.016);
-      // Translacja pionowa oddechu
+      // Vertical breathing translation
       expect(container.position.y).toBeGreaterThanOrEqual(1.45);
       expect(container.position.y).toBeLessThanOrEqual(1.453);
     }
@@ -113,7 +113,7 @@ describe('Automated E2E Self-Test (Kompletny audyt systemu)', () => {
     const engine = new AudioEngine(mockCtx as unknown as AudioContext);
     const controller = new FaceController(avatar.faceDriver, engine);
 
-    const pcm = new Uint8Array(44100 * 2); // 1 sekunda audio
+    const pcm = new Uint8Array(44100 * 2); // 1 second of audio
     const scheduledStart = engine.playChunk(pcm, 44100, 0);
 
     controller.onAudioChunk(
@@ -128,13 +128,13 @@ describe('Automated E2E Self-Test (Kompletny audyt systemu)', () => {
 
     expect(controller.getState()).toBe('SPEAKING');
 
-    // Symulacja 10 klatek mowy
+    // Simulate 10 speech frames
     for (let f = 0; f < 10; f++) {
       mockCtx.currentTime += 0.016;
       controller.render(0.016);
     }
 
-    // Wywołanie gwałtownego przerwania (barge-in)
+    // Trigger an abrupt interruption (barge-in)
     engine.hardStop();
     controller.onInterruption();
 
@@ -149,7 +149,7 @@ describe('Automated E2E Self-Test (Kompletny audyt systemu)', () => {
     expect(emotions.analyzeText('What an extraordinary question!')).toBe('surprised');
     expect(emotions.analyzeText('We must analyze and solve this issue.')).toBe('focused');
 
-    // Test zapisu ustawień (F11: SettingsStore + write-through legacy)
+    // Settings write test (F11: SettingsStore + write-through to legacy)
     const storage = createMemoryStorage();
     const store = new SettingsStore(storage);
     attachLegacyBridge(store, storage);

@@ -9,8 +9,8 @@
  *           enforced is still scanned and its file set is checked to be non-empty.
  *
  *  Gate B - link integrity: every relative ".md" link in an enforced document must
- *           resolve on disk. Pre-rename links to the 8 old docs/ filenames are
- *           tolerated through GATE_B_SKIP_LIST, which MUST be emptied by plan 12-04.
+ *           resolve on disk. GATE_B_SKIP_LIST is empty (emptied in 12-07): no
+ *           pre-rename link to the 8 old docs/ filenames is tolerated any more.
  *
  * This file is ASCII-only by construction: every Polish character is written as a
  * \uXXXX escape. Do not paste literal Polish letters into this file.
@@ -41,21 +41,12 @@ const RENAME_MAP: ReadonlyArray<readonly [string, string]> = [
 ];
 
 // ---------------------------------------------------------------------------
-// Gate B skip-list. TODO(12-04): this list MUST be emptied when plan 12-04 lands
-// (it repairs the inbound links). Until then it holds exactly the 8 pre-rename
-// filenames, so links into docs/ that still use the old names are tolerated.
+// Gate B skip-list. Emptied in plan 12-07: every inbound link to the 8 pre-rename
+// docs/ filenames was repaired (12-04 for living docs and README, 12-06 for
+// a2f/README.md). Keep it empty; a non-empty entry is a regression, not a tolerance.
 // ---------------------------------------------------------------------------
 
-const GATE_B_SKIP_LIST: readonly string[] = [
-  '1-architektura-i-modele-3d.md', // TODO(12-04): repair inbound links, then drop
-  '2-integracja-elevenlabs-wss.md', // TODO(12-04): repair inbound links, then drop
-  '3-lip-sync-i-koartykulacja.md', // TODO(12-04): repair inbound links, then drop
-  '4-audio-i-obsluga-przerwan.md', // TODO(12-04): repair inbound links, then drop
-  '5-shadery-i-realizm.md', // TODO(12-04): repair inbound links, then drop
-  '6-analiza-opensource-i-rozwoj.md', // TODO(12-04): repair inbound links, then drop
-  'A2F-LOCAL.md', // TODO(12-04): repair inbound links, then drop
-  'EN-visemes.md', // TODO(12-04): repair inbound links, then drop
-];
+const GATE_B_SKIP_LIST: readonly string[] = [];
 
 // ---------------------------------------------------------------------------
 // Gate A functional allowlist (12-CONTEXT section 1.2). Each entry exempts ONE line
@@ -170,11 +161,21 @@ const GATE_A_SCOPES: readonly GateAScope[] = [
     enforced: true,
     files: () => listFiles('src', ['.ts', '.css']),
   },
-  { name: 'tests', enforced: false, files: () => listFiles('tests', ['.ts']) },
+  {
+    name: 'tests',
+    // ON in 12-07: all describe/it titles and comments are English. No allowlist entry is
+    // needed: no test asserts on Polish text, and the two Polish regex literals in
+    // copy.test.ts are \uXXXX escapes.
+    enforced: true,
+    files: () => listFiles('tests', ['.ts']),
+  },
   {
     name: 'root',
-    enforced: false,
-    files: () => ['README.md', 'TODO_humanInTheLoop.md', 'index.html'].filter((f) => existsSync(join(ROOT, f))),
+    // ON in 12-07, with a documented EXCEPTION: README.md is not in this scope. Its content
+    // is still Polish and Phase 13 owns the rewrite (12-04 only repaired its links). Phase 13
+    // must add README.md back to this list when it lands; this exception is then removed.
+    enforced: true,
+    files: () => ['TODO_humanInTheLoop.md', 'index.html'].filter((f) => existsSync(join(ROOT, f))),
   },
 ];
 
@@ -277,8 +278,8 @@ describe('language gate - mechanics (always on)', () => {
     expect(relativeMdTargets(sample)).toEqual(['1-architecture.md', '../docs/x.md']);
   });
 
-  it('Gate B skip-list is exactly the 8 pre-rename filenames (TODO(12-04))', () => {
-    expect([...GATE_B_SKIP_LIST].sort()).toEqual(RENAME_MAP.map(([old]) => old).sort());
+  it('Gate B skip-list is empty (all inbound links to the 8 old names repaired)', () => {
+    expect([...GATE_B_SKIP_LIST]).toEqual([]);
   });
 
   it('every Gate A scope resolves to at least one file (scanned even when not enforced)', () => {

@@ -1,5 +1,5 @@
 /**
- * Wspólny fake localStorage dla testów (wzorowany na tests/calibration.test.ts).
+ * Shared fake localStorage for tests (modelled on tests/calibration.test.ts).
  */
 
 export interface MemoryStorage {

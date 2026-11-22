@@ -7,7 +7,7 @@ import { COPY, t } from '../src/app/copy';
 const ROOT = fileURLToPath(new URL('..', import.meta.url));
 
 /** Polish diacritics as \uXXXX escapes, so this test file stays ASCII-only. */
-const PL_DIACRITICS = /[ĄąĆćĘęŁłŃńÓóŚśŹźŻż]/;
+const PL_DIACRITICS = /[\u0104\u0105\u0106\u0107\u0118\u0119\u0141\u0142\u0143\u0144\u00D3\u00F3\u015A\u015B\u0179\u017A\u017B\u017C]/;
 
 function listTs(relDir: string): string[] {
   const out: string[] = [];
@@ -88,7 +88,7 @@ describe('copy registry (English UI strings)', () => {
         if (!PL_DIACRITICS.test(line)) return;
         if (/^\s*(\/\/|\*|\/\*)/.test(line)) return; // comment lines: covered by 12-06 / Gate A
         if (/\bconsole\.(log|warn|error)\b/.test(line)) return; // developer strings: covered by 12-06
-        if (file.endsWith('animation-controller.ts') && /Dzień dobry!/.test(line)) return; // functional data
+        if (file.endsWith('animation-controller.ts') && /Dzie\u0144 dobry!/.test(line)) return; // functional data (PL calibration phrase)
         if (file.endsWith('viseme-overrides.ts')) return;
         offenders.push(`${file.slice(ROOT.length)}:${idx + 1}`);
       });

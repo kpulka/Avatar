@@ -77,14 +77,14 @@ describe('Barge-in Pipeline (INT-01 & INT-02)', () => {
   });
 
   it('immediately stops audio and starts facial relaxation upon interruption', () => {
-    // 1. Rozpoczynamy odtwarzanie dźwięku
+    // 1. Start audio playback
     const pcmChunk = new Uint8Array(44100);
     engine.playChunk(pcmChunk, 44100, 0);
 
     expect(engine.getActiveNodesCount()).toBe(1);
     expect(engine.getTailTime()).toBeGreaterThan(5.0);
 
-    // 2. Dodajemy wizemy do FaceControllera
+    // 2. Add visemes to the FaceController
     controller.onAudioChunk(
       {
         chars: ['H', 'e', 'l', 'l', 'o'],
@@ -98,20 +98,20 @@ describe('Barge-in Pipeline (INT-01 & INT-02)', () => {
     expect(controller.getState()).toBe('SPEAKING');
     expect(controller.getQueueLength()).toBe(5);
 
-    // 3. Występuje zdarzenie interruption (Barge-in)
+    // 3. The interruption event occurs (barge-in)
     engine.hardStop();
     controller.onInterruption();
 
-    // Weryfikacja INT-01: audio milknie natychmiast, ogon czasowy wyzerowany, epoch inkrementowany
+    // Verify INT-01: audio stops immediately, time tail zeroed, epoch incremented
     expect(engine.getActiveNodesCount()).toBe(0);
     expect(engine.getTailTime()).toBe(0);
     expect(engine.getEpoch()).toBe(1);
 
-    // Weryfikacja INT-02: mimika przechodzi do RELAXING, kolejka wizemów wyczyszczona
+    // Verify INT-02: the expression moves to RELAXING, the viseme queue is cleared
     expect(controller.getState()).toBe('RELAXING');
     expect(controller.getQueueLength()).toBe(0);
 
-    // 4. Po upływie 160ms w stanie RELAXING twarz osiąga IDLE
+    // 4. After 160ms in RELAXING the face reaches IDLE
     vi.useFakeTimers();
     vi.setSystemTime(performance.now() + 160);
 

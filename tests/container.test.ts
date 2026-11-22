@@ -159,7 +159,7 @@ describe('createApp (container smoke, jsdom)', () => {
     vi.stubGlobal('localStorage', createMemoryStorage());
   });
 
-  it('składa aplikację i rejestruje 6 paneli w shellu', () => {
+  it('assembles the app and registers 6 panels in the shell', () => {
     const app = createApp(setupDom());
 
     expect(app.services.conversation).toBeDefined();
@@ -172,18 +172,18 @@ describe('createApp (container smoke, jsdom)', () => {
     expect(document.querySelectorAll('.studio-left-toggle')).toHaveLength(2);
   });
 
-  it('start() nie rzuca; ładowanie awatara kończy się danymi w panelu Scena', async () => {
+  it('start() does not throw; avatar loading ends with data in the Scene panel', async () => {
     const app = createApp(setupDom());
     expect(() => app.start()).not.toThrow();
     await new Promise((resolve) => setTimeout(resolve, 0));
 
-    // Panel Scena montujemy ręcznie (lazy tab) i sprawdzamy info o modelu.
+    // Mount the Scene panel manually (lazy tab) and check the model info.
     app.shell.openTab('scene');
     await new Promise((resolve) => setTimeout(resolve, 0));
     expect(document.querySelector('.panel-scene')?.textContent).toContain('MetaPerson Rigged Avatar');
   });
 
-  it('store steruje motywem (subskrypcja w kontenerze)', () => {
+  it('store drives the theme (subscription in the container)', () => {
     const app = createApp(setupDom());
     app.store.setUser('theme', 'light');
     expect(document.body.classList.contains('theme-light')).toBe(true);
@@ -191,7 +191,7 @@ describe('createApp (container smoke, jsdom)', () => {
     expect(document.body.classList.contains('theme-light')).toBe(false);
   });
 
-  it('dispose() usuwa shell i nie rzuca', () => {
+  it('dispose() removes the shell and does not throw', () => {
     const app = createApp(setupDom());
     app.start();
     expect(() => app.dispose()).not.toThrow();

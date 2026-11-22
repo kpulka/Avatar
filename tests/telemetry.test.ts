@@ -47,7 +47,7 @@ describe('Telemetry & Resilience (ROB-02)', () => {
 
     expect(engine.getPrebufferSeconds()).toBe(0.08);
 
-    // Występuje jitter sieciowy
+    // Network jitter occurs
     engine.bumpPrebufferForJitter();
     expect(engine.getPrebufferSeconds()).toBe(0.12);
 

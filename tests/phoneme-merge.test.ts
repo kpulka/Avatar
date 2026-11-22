@@ -15,17 +15,17 @@ function alignmentFor(text: string, msPerChar = 100, source: CharAlignment['sour
   };
 }
 
-describe('mergeCharAlignmentToPhonemes (kotwice czasowe ElevenLabs)', () => {
+describe('mergeCharAlignmentToPhonemes (ElevenLabs timing anchors)', () => {
   beforeAll(async () => {
     await ensureG2pLoaded();
   });
 
-  it('rozkłada czas słowa na fonemy — litery nieme nie produkują własnych spanów', () => {
-    // "know what" — 9 znaków, 100 ms/znak; know=4 znaki (400 ms), what=4 znaki (400 ms)
+  it('splits word time into phonemes — silent letters produce no spans of their own', () => {
+    // "know what" — 9 characters, 100 ms/char; know=4 chars (400 ms), what=4 chars (400 ms)
     const alignment = alignmentFor('know what');
     const spans = mergeCharAlignmentToPhonemes(alignment);
 
-    // know -> N, OW (K nieme znika); what -> W, AH, T
+    // know -> N, OW (silent K disappears); what -> W, AH, T
     expect(spans).toHaveLength(5);
     expect(spans[0].phoneme).toBe('N');
     expect(spans[1].phoneme).toBe('OW');
@@ -34,27 +34,27 @@ describe('mergeCharAlignmentToPhonemes (kotwice czasowe ElevenLabs)', () => {
     expect(spans[4].phoneme).toBe('T');
   });
 
-  it('zachowuje czasowe granice słowa (pierwszy start, suma duracji = długość słowa)', () => {
+  it('preserves the word time boundaries (first start, sum of durations = word length)', () => {
     const alignment = alignmentFor('know what');
     const spans = mergeCharAlignmentToPhonemes(alignment);
 
-    // know: słowo od 0 do 400 ms
+    // know: word from 0 to 400 ms
     expect(spans[0].startMs).toBeCloseTo(0, 0);
     const knowEnd = spans[0].startMs + spans[0].durationMs + spans[1].durationMs;
     expect(knowEnd).toBeCloseTo(400, 0);
 
-    // what: słowo od 500 do 900 ms
+    // what: word from 500 to 900 ms
     expect(spans[2].startMs).toBeCloseTo(500, 0);
     const whatEnd = spans[2].durationMs + spans[3].durationMs + spans[4].durationMs;
     expect(spans[2].startMs + whatEnd).toBeCloseTo(900, 0);
   });
 
-  it('zwraca [] dla fallbacku akustycznego (source energy-fallback)', () => {
+  it('returns [] for the acoustic fallback (source energy-fallback)', () => {
     const alignment = alignmentFor('any words', 100, 'energy-fallback');
     expect(mergeCharAlignmentToPhonemes(alignment)).toEqual([]);
   });
 
-  it('interpunkcja nie produkuje spanów', () => {
+  it('punctuation produces no spans', () => {
     const alignment = alignmentFor('say it.');
     const spans = mergeCharAlignmentToPhonemes(alignment);
     const expected =
@@ -65,7 +65,7 @@ describe('mergeCharAlignmentToPhonemes (kotwice czasowe ElevenLabs)', () => {
     }
   });
 
-  it('pusty alignment -> []', () => {
+  it('empty alignment -> []', () => {
     expect(
       mergeCharAlignmentToPhonemes({ chars: [], char_start_times_ms: [], char_durations_ms: [] })
     ).toEqual([]);

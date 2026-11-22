@@ -9,24 +9,24 @@ describe('rescaleAlignmentToAudio (dryf chunk-local alignmentu)', () => {
     source: 'elevenlabs' as const,
   };
 
-  it('skaluje tekst (480ms) do pełnej długości audio chunka (569ms) — usunięcie dryfu', () => {
+  it('rescales text (480ms) to the full length of the audio chunk (569ms) — drift removed', () => {
     const out = rescaleAlignmentToAudio(base, 569);
     const factor = 569 / 480;
     expect(out.char_start_times_ms[1]).toBeCloseTo(60 * factor, 3);
     const lastEnd = out.char_start_times_ms[7] + out.char_durations_ms[7];
     expect(lastEnd).toBeCloseTo(569, 3);
-    // proporcje wewnątrz zachowane
+    // proportions inside are preserved
     expect(out.char_durations_ms[0]).toBeCloseTo(60 * factor, 3);
   });
 
-  it('skala == 1.0 gdy tekst idealnie pokrywa audio', () => {
+  it('scale == 1.0 when the text matches the audio exactly', () => {
     const out = rescaleAlignmentToAudio(base, 480);
     expect(out.char_start_times_ms).toEqual(base.char_start_times_ms);
     expect(out.char_durations_ms).toEqual(base.char_durations_ms);
   });
 
-  it('clampuje patologiczny wspolczynnik do zakresu [0.5, 2.0]', () => {
-    // 240ms tekstu w 95ms audio → raw 0.40 → clamp 0.50
+  it('clamps a pathological factor to the range [0.5, 2.0]', () => {
+    // 240ms of text over 95ms of audio → raw 0.40 → clamp 0.50
     const short = {
       chars: ['[', 'n'],
       char_start_times_ms: [0, 120],
@@ -38,13 +38,13 @@ describe('rescaleAlignmentToAudio (dryf chunk-local alignmentu)', () => {
     expect(lastEnd).toBeCloseTo(240 * 0.5, 3);
   });
 
-  it('zwraca bez zmian pusty/nieprawidłowy alignment', () => {
+  it('returns an empty/invalid alignment unchanged', () => {
     const empty = { chars: [], char_start_times_ms: [], char_durations_ms: [], source: 'elevenlabs' as const };
     expect(rescaleAlignmentToAudio(empty, 500)).toBe(empty);
     expect(rescaleAlignmentToAudio(base, 0)).toBe(base);
   });
 
-  it('zachowuje source', () => {
+  it('keeps the source', () => {
     expect(rescaleAlignmentToAudio(base, 569).source).toBe('elevenlabs');
   });
 });

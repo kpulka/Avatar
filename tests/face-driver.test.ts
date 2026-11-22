@@ -4,13 +4,13 @@ import { ArKitBlendshapeDriver } from '../src/avatar/face-driver';
 
 describe('ArKitBlendshapeDriver', () => {
   it('synchronizes weights across multiple sub-meshes having the same morph targets', () => {
-    // Siatka 1 (skóra głowy)
+    // Mesh 1 (head skin)
     const geo1 = new THREE.BufferGeometry();
     const mesh1 = new THREE.Mesh(geo1);
     mesh1.morphTargetDictionary = { jawOpen: 0, mouthClose: 1 };
     mesh1.morphTargetInfluences = [0, 0];
 
-    // Siatka 2 (zęby z osobną kopią jawOpen)
+    // Mesh 2 (teeth with a separate jawOpen copy)
     const geo2 = new THREE.BufferGeometry();
     const mesh2 = new THREE.Mesh(geo2);
     mesh2.morphTargetDictionary = { jawOpen: 0 };

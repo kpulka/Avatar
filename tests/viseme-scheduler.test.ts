@@ -7,11 +7,11 @@ describe('VisemeScheduler & Coarticulation', () => {
     const scheduler = new VisemeScheduler({ blendInSec: 0.04, blendOutSec: 0.05 });
     const duration = 0.1; // 100ms
 
-    // Przed blend-in
+    // Before the blend-in
     expect(scheduler.computeEasing(-0.04, duration)).toBeCloseTo(0.0);
-    // W połowie blend-in
+    // Halfway through the blend-in
     expect(scheduler.computeEasing(-0.02, duration)).toBeGreaterThan(0.5);
-    // W trakcie hold
+    // During hold
     expect(scheduler.computeEasing(0.0, duration)).toBeCloseTo(1.0);
     expect(scheduler.computeEasing(0.05, duration)).toBeCloseTo(1.0);
     expect(scheduler.computeEasing(0.1, duration)).toBeCloseTo(1.0);
@@ -41,7 +41,7 @@ describe('VisemeScheduler & Coarticulation', () => {
     });
 
     const shapes = ['mouthPucker', 'jawOpen'];
-    // Update w czasie gdy oba fonemy są w fazie hold
+    // Update while both phonemes are in the hold phase
     const updated = scheduler.update(1.05, 0.016, 0, shapes);
 
     expect(updated.get('mouthPucker')).toBeLessThanOrEqual(1.0);
@@ -50,10 +50,10 @@ describe('VisemeScheduler & Coarticulation', () => {
 
   it('enforces mouthClose priority over jawOpen (LIPS-02)', () => {
     const scheduler = new VisemeScheduler();
-    scheduler.setCalibrationProfile({ closeScale: 1.0 }); // mechanika schedulera, nie kalibracja
+    scheduler.setCalibrationProfile({ closeScale: 1.0 }); // scheduler mechanics, not calibration
     const mShapes = new Map([
       ['mouthClose', 1.0],
-      ['jawOpen', 0.5], // np. z koartykulacji z sąsiednią samogłoską
+      ['jawOpen', 0.5], // e.g. from coarticulation with an adjacent vowel
     ]);
 
     scheduler.enqueue({
@@ -70,9 +70,9 @@ describe('VisemeScheduler & Coarticulation', () => {
       updated = scheduler.update(1.05, 0.016, 0, ['mouthClose', 'jawOpen']);
     }
 
-    // Nowa semantyka (LIPS-06): mouthClose = tabela (1.0) x closeScale (1.0), ale twardy sufit
-    // bezpieczeństwa MetaPerson ogranicza efektywne domknięcie do CLOSE_SAFETY_CAP = 0.85.
-    // jawOpen powinno być mocno wytłumione przez obecność mouthClose: 1.0.
+    // New semantics (LIPS-06): mouthClose = table (1.0) x closeScale (1.0), but a hard ceiling
+    // the MetaPerson safety limit caps the effective closure at CLOSE_SAFETY_CAP = 0.85.
+    // jawOpen should be strongly damped by the presence of mouthClose: 1.0.
     expect(updated.get('mouthClose')).toBeGreaterThan(0.8);
     expect(updated.get('jawOpen')).toBeLessThan(0.15);
   });
@@ -108,8 +108,8 @@ describe('VisemeScheduler & Coarticulation', () => {
   });
 
   it('applies single attenuation only: A (jawOpen 0.55) reaches > 0.5 in hold (LIPS-06)', () => {
-    // Stara semantyka: 0.55 x naturalScale(0.60) x jawScale(0.55) ~= 0.18-0.30 (płasko).
-    // Nowa: tabela = wartość efektywna, mnożona DOKŁADNIE RAZ przez jawScale (1.0).
+    // Old semantics: 0.55 x naturalScale(0.60) x jawScale(0.55) ~= 0.18-0.30 (flat).
+    // New: the table is the effective value, multiplied by jawScale EXACTLY ONCE (1.0).
     const scheduler = new VisemeScheduler();
     scheduler.enqueue({
       epoch: 0,
@@ -123,7 +123,7 @@ describe('VisemeScheduler & Coarticulation', () => {
       durationSec: 0.1,
     });
 
-    // Jedna klatka hold z dt=0.1: alpha jaw (cs 18 x 1.55) ~= 0.94 -> waga ~0.52
+    // One hold frame with dt=0.1: jaw alpha (cs 18 x 1.55) ~= 0.94 -> weight ~0.52
     scheduler.update(1.05, 0.1, 0, ['jawOpen', 'mouthSmileLeft', 'mouthSmileRight']);
 
     expect(scheduler.getWeight('jawOpen')).toBeGreaterThan(0.5);
@@ -131,7 +131,7 @@ describe('VisemeScheduler & Coarticulation', () => {
 
   it('full lip closure: mouthClose 1.0 reaches >= 0.8 in hold within ~5 frames (LIPS-02, cap 0.85)', () => {
     const scheduler = new VisemeScheduler();
-    scheduler.setCalibrationProfile({ closeScale: 1.0 }); // mechanika schedulera, nie kalibracja
+    scheduler.setCalibrationProfile({ closeScale: 1.0 }); // scheduler mechanics, not calibration
     scheduler.enqueue({
       epoch: 0,
       char: 'm',
@@ -140,7 +140,7 @@ describe('VisemeScheduler & Coarticulation', () => {
       durationSec: 0.1,
     });
 
-    // Tier domknięcia: cs 30 x 1.7 = 51 [1/s] -> szybko do sufitu bezpieczeństwa 0.85.
+    // Closure tier: cs 30 x 1.7 = 51 [1/s] -> quickly up to the safety ceiling 0.85.
     for (let i = 0; i < 5; i++) {
       scheduler.update(1.05, 0.016, 0, ['mouthClose']);
     }
@@ -185,13 +185,13 @@ describe('VisemeScheduler & Coarticulation', () => {
       durationSec: 0.05,
     });
 
-    // W trakcie dźwięku
+    // During the audio
     for (let t = 1.0; t <= 1.05; t += 0.016) {
       scheduler.update(t, 0.016, 0, ['jawOpen']);
     }
     expect(scheduler.getWeight('jawOpen')).toBeGreaterThan(0.3);
 
-    // Po zakończeniu dźwięku (czas > 1.2s)
+    // After the audio ends (time > 1.2s)
     for (let t = 1.06; t <= 1.5; t += 0.016) {
       scheduler.update(t, 0.016, 0, ['jawOpen']);
     }

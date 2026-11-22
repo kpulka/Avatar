@@ -7,7 +7,7 @@ interface TestEvents extends Record<string, unknown> {
 }
 
 describe('TypedEventBus', () => {
-  it('dostarcza payload do subskrybentów', () => {
+  it('delivers the payload to subscribers', () => {
     const bus = new TypedEventBus<TestEvents>();
     const seen: number[] = [];
     bus.on('ping', (payload) => seen.push(payload.n));
@@ -16,7 +16,7 @@ describe('TypedEventBus', () => {
     expect(seen).toEqual([1, 2]);
   });
 
-  it('off usuwa handler', () => {
+  it('off removes the handler', () => {
     const bus = new TypedEventBus<TestEvents>();
     const handler = vi.fn();
     bus.on('pong', handler);
@@ -25,7 +25,7 @@ describe('TypedEventBus', () => {
     expect(handler).not.toHaveBeenCalled();
   });
 
-  it('odpięcie handlera w trakcie emisji nie gubi pozostałych', () => {
+  it('unsubscribing a handler during emission does not drop the others', () => {
     const bus = new TypedEventBus<TestEvents>();
     const calls: string[] = [];
     const offA = bus.on('ping', () => {
@@ -39,14 +39,14 @@ describe('TypedEventBus', () => {
     expect(calls).toEqual(['a', 'b', 'b']);
   });
 
-  it('podwójny unsub jest bezpieczny', () => {
+  it('a double unsub is safe', () => {
     const bus = new TypedEventBus<TestEvents>();
     const unsub = bus.on('ping', () => undefined);
     unsub();
     expect(() => unsub()).not.toThrow();
   });
 
-  it('błąd jednego handlera nie przerywa emisji', () => {
+  it('an error in one handler does not stop the emission', () => {
     const bus = new TypedEventBus<TestEvents>();
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
     const second = vi.fn();
@@ -61,7 +61,7 @@ describe('TypedEventBus', () => {
 });
 
 describe('disposables', () => {
-  it('dispose woła wszystkie zebrane Unsub raz', () => {
+  it('dispose calls all collected Unsub functions once', () => {
     const a = vi.fn();
     const b = vi.fn();
     const bag = disposables();

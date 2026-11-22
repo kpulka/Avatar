@@ -31,12 +31,12 @@ describe('Viseme Mappings (EN & ARKit)', () => {
   });
 
   it('correctly applies contextual heuristic for letter C', () => {
-    // Miękkie C przed 'i' ("city") -> jak S (mouthSmile, mały jawOpen)
+    // Soft C before 'i' ("city") -> like S (mouthSmile, small jawOpen)
     const softC = mapCharToShapes(['c', 'i', 't', 'y'], 0);
     expect(softC.get('jawOpen')).toBeCloseTo(0.15);
     expect(softC.get('mouthSmileLeft')).toBeCloseTo(0.15);
 
-    // Twarde C przed 'a' ("cat") -> jak K (większy jawOpen 0.35)
+    // Hard C before 'a' ("cat") -> like K (larger jawOpen 0.35)
     const hardC = mapCharToShapes(['c', 'a', 't'], 0);
     expect(hardC.get('jawOpen')).toBeCloseTo(0.35);
     expect(hardC.has('mouthSmileLeft')).toBe(false);

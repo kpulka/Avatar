@@ -107,30 +107,30 @@ describe('PoC Stress Test Harness (5 Phased Interruptions & Leak-Free Lifecycle)
 
   it('runs 5 rapid speech utterances with interruptions across varied phonetic phases with 0 node leaks', () => {
     const speechChunks = [
-      // 1. Przerwanie podczas blend-in (t = 30ms)
+      // 1. Interruption during blend-in (t = 30ms)
       {
         chars: ['h', 'e', 'l', 'l', 'o'],
         interruptAtMs: 30,
       },
-      // 2. Przerwanie w szczycie otwartej samogłoski 'A'
+      // 2. Interruption at the peak of the open vowel 'A'
       {
         chars: ['a', 'h', 'h', 'h'],
         interruptAtMs: 80,
       },
-      // 3. Przerwanie podczas pełnego domknięcia warg 'M' (mouthClose: 1.0)
+      // 3. Interruption during full lip closure 'M' (mouthClose: 1.0)
       {
         chars: ['m', 'o', 'm'],
         interruptAtMs: 40,
       },
-      // 4. Przerwanie i natychmiastowa kolejna mowa
+      // 4. Interruption and immediately another utterance
       {
         chars: ['q', 'u', 'i', 'c', 'k'],
         interruptAtMs: 60,
       },
-      // 5. Pełna wypowiedź bez przerwania (do naturalnego wygaszenia)
+      // 5. Full utterance without interruption (until it fades out naturally)
       {
         chars: ['d', 'o', 'n', 'e'],
-        interruptAtMs: -1, // brak przerwania
+        interruptAtMs: -1, // no interruption
       },
     ];
 
@@ -139,7 +139,7 @@ describe('PoC Stress Test Harness (5 Phased Interruptions & Leak-Free Lifecycle)
       const epoch = engine.getEpoch();
 
       // Start wypowiedzi
-      const pcm = new Uint8Array(44100 * 2); // 1 sekunda audio
+      const pcm = new Uint8Array(44100 * 2); // 1 second of audio
       const scheduledStart = engine.playChunk(pcm, 44100, epoch);
 
       controller.onAudioChunk(
@@ -154,14 +154,14 @@ describe('PoC Stress Test Harness (5 Phased Interruptions & Leak-Free Lifecycle)
 
       expect(controller.getState()).toBe('SPEAKING');
 
-      // Animujemy przez klika klatek
+      // Animate through a few frames
       for (let f = 0; f < 5; f++) {
         mockCtx.advanceTime(0.016);
         controller.render(0.016);
       }
 
       if (scenario.interruptAtMs > 0) {
-        // Występuje przerwanie w zadanej milisekundzie
+        // Interruption occurs at the given millisecond
         mockCtx.advanceTime(scenario.interruptAtMs / 1000);
         engine.hardStop();
         controller.onInterruption();
@@ -169,29 +169,29 @@ describe('PoC Stress Test Harness (5 Phased Interruptions & Leak-Free Lifecycle)
         expect(controller.getState()).toBe('RELAXING');
         expect(engine.getActiveNodesCount()).toBe(0);
 
-        // Odczekaj czas relaksacji (160ms)
+        // Wait for the relaxation time (160ms)
         vi.advanceTimersByTime(160);
         controller.render(0.016);
         expect(controller.getState()).toBe('IDLE');
       } else {
-        // Naturalne zakończenie wypowiedzi
-        mockCtx.advanceTime(2.0); // koniec audio
+        // Natural end of the utterance
+        mockCtx.advanceTime(2.0); // end of audio
         vi.advanceTimersByTime(2000);
         controller.render(0.016);
 
-        // Po wygaszeniu stan powinien być IDLE
+        // After fading out, the state should be IDLE
         vi.advanceTimersByTime(200);
         controller.render(0.016);
         expect(controller.getState()).toBe('IDLE');
       }
     }
 
-    // Weryfikacja końcowa całego testu obciążeniowego
+    // Final check of the whole stress test
     expect(engine.getActiveNodesCount()).toBe(0);
     expect(engine.hasPendingAudio()).toBe(false);
     expect(controller.getState()).toBe('IDLE');
 
-    // Reguła fundamentu: wszystkie wagi mowy muszą być bezwzględnie 0.0
+    // Foundation rule: all speech weights must be exactly 0.0
     for (const shape of driver.listAvailableShapes()) {
       if (shape.startsWith('eyeBlink')) continue;
       expect(controller.getCurrentWeight(shape)).toBe(0.0);
