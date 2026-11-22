@@ -41,7 +41,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 **Goal**: Statyczny, realistyczny awatar renderuje się w przeglądarce z walidowanym rigiem ARKit — baza pod wszystko.
 **Depends on**: Nothing (first phase)
 **Requirements**: AVAT-01, AVAT-03, AVAT-04
-**Docs refs**: `docs/1-architektura-i-modele-3d.md` (loader, REQUIRED_SHAPES, sub-meshy, zasady), `docs/5-shadery-i-realizm.md` (etap 1: stock PBR, oświetlenie 3-point + environment + ACES, anizotropia, budżet FPS)
+**Docs refs**: `docs/1-architecture-and-3d-models.md` (loader, REQUIRED_SHAPES, sub-meshy, zasady), `docs/5-shaders-and-realism.md` (etap 1: stock PBR, oświetlenie 3-point + environment + ACES, anizotropia, budżet FPS)
 **Success Criteria** (what must be TRUE):
 
   1. Awatar MetaPerson `.glb` (bust/head) renderuje się po kliknięciu "Load" w aplikacji Vite+TS+Three.js
@@ -63,7 +63,7 @@ Plans:
 **Goal**: Awatar "umie mówić i słuchać": pełna pętla głosowa z agentem ElevenAgents bez animacji ust — audio gapless po naszej kontroli.
 **Depends on**: Phase 1
 **Requirements**: CONV-01, ROB-01
-**Docs refs**: `docs/2-integracja-elevenlabs-wss.md` (Tryb A: endpoint, protokół C2S/S2C, signed URL/public agent, PCM 44.1 kHz, ping-pong), `docs/4-audio-i-obsluga-przerwan.md` (AudioEngine: createBuffer/copyToChannel, prebuffer, unlock AudioContext, `onended` cleanup), `docs/6-analiza-opensource-i-rozwoj.md` (SDK do testów agenta)
+**Docs refs**: `docs/2-elevenlabs-wss-integration.md` (Tryb A: endpoint, protokół C2S/S2C, signed URL/public agent, PCM 44.1 kHz, ping-pong), `docs/4-audio-and-barge-in.md` (AudioEngine: createBuffer/copyToChannel, prebuffer, unlock AudioContext, `onended` cleanup), `docs/6-opensource-analysis-and-future.md` (SDK do testów agenta)
 **Success Criteria** (what must be TRUE):
 
   1. Agent skonfigurowany w dashboardzie (prompt, głos EN, client_events) i zwalidowany przez `@elevenlabs/client` przed własnym WSS
@@ -86,7 +86,7 @@ Plans:
 **Goal**: Usta awatara mówią w synchronizacji z głosem — rdzeń produktu.
 **Depends on**: Phase 2
 **Requirements**: LIPS-01, LIPS-02, LIPS-03
-**Docs refs**: `docs/3-lip-sync-i-koartykulacja.md` (tabela mapowań EN z dwuznakami i lookahead, koartykulacja, easing, damping, reguła fundamentu), `docs/4-audio-i-obsluga-przerwan.md` (FaceController state machine, epoch, jedyny właściciel morphów), `docs/1` (interfejs FaceDriver, synchronizacja sub-meshy)
+**Docs refs**: `docs/3-lip-sync-and-coarticulation.md` (tabela mapowań EN z dwuznakami i lookahead, koartykulacja, easing, damping, reguła fundamentu), `docs/4-audio-and-barge-in.md` (FaceController state machine, epoch, jedyny właściciel morphów), `docs/1` (interfejs FaceDriver, synchronizacja sub-meshy)
 **Success Criteria** (what must be TRUE):
 
   1. `FaceController` (state machine IDLE→SPEAKING→RELAXING) jest jedynym modułem piszącym do `morphTargetInfluences`
@@ -110,7 +110,7 @@ Plans:
 **Goal**: PoC kompletny: naturalne przerwania, twardość, metryki — spełnione wszystkie kryteria akceptacji PoC z docs/0.
 **Depends on**: Phase 3
 **Requirements**: CONV-02, CONV-03, CONV-04, CONV-05, AVAT-02, ROB-02
-**Docs refs**: `docs/4-audio-i-obsluga-przerwan.md` (sekwencja przerwania, epoch++, hardStop, RELAXING 150-300 ms, race conditions), `docs/0-roadmap-poc-mvp.md` (kryteria akceptacji PoC + rejestr ryzyk), `docs/2` (`agent_response_correction`, vad_score w UI)
+**Docs refs**: `docs/4-audio-and-barge-in.md` (sekwencja przerwania, epoch++, hardStop, RELAXING 150-300 ms, race conditions), `docs/0-roadmap-poc-mvp.md` (kryteria akceptacji PoC + rejestr ryzyk), `docs/2` (`agent_response_correction`, vad_score w UI)
 **Success Criteria** (what must be TRUE):
 
   1. Przerwanie użytkownika w dowolnym momencie wypowiedzi: audio stop < 50 ms, twarz neutral < 300 ms, zero zamrożeń miny — 10/10 losowych przerwań (CONV-03, CONV-04)
@@ -133,7 +133,7 @@ Plans:
 **Goal**: Awatar MVP cz. 1: skóra "prześwituje" (SSS), mówi po polsku, żyje między zdaniami.
 **Depends on**: Phase 4
 **Requirements**: AVAT-05, AVAT-06, LIPS-04
-**Docs refs**: `docs/5-shadery-i-realizm.md` (etap 2: pre-integrated SSS przez `onBeforeCompile` — wrap diffuse, translucency term, maska grubości, `customProgramCacheKey`; presety jakości GPU; realizm detali: oczy/włosy/zęby), `docs/3` (moduł PL: dwuznaki sz/cz/rz/ch, dź/dż, nosówki ą/ę), `docs/6` (sakkady, mikroruchy głowy szumem Perlina, idle sway, kolejność ROI ożywienia)
+**Docs refs**: `docs/5-shaders-and-realism.md` (etap 2: pre-integrated SSS przez `onBeforeCompile` — wrap diffuse, translucency term, maska grubości, `customProgramCacheKey`; presety jakości GPU; realizm detali: oczy/włosy/zęby), `docs/3` (moduł PL: dwuznaki sz/cz/rz/ch, dź/dż, nosówki ą/ę), `docs/6` (sakkady, mikroruchy głowy szumem Perlina, idle sway, kolejność ROI ożywienia)
 **Success Criteria** (what must be TRUE):
 
   1. SSS widoczny na uszach/nosie/wargach pod kontr-światłem (A/B zrzuty przed/po — LIPS… AVAT-05) z presetem wyłączanym na słabych GPU (60 FPS utrzymane)
@@ -156,7 +156,7 @@ Plans:
 **Goal**: MVP kompletny: emocje sterowane agentem, bezpieczeństwo (signed URL), agent as code, UI produktowe, kryteria akceptacji MVP z docs/0.
 **Depends on**: Phase 5
 **Requirements**: ROB-03, ROB-04, ROB-05, ROB-06
-**Docs refs**: `docs/6-analiza-opensource-i-rozwoj.md` (wariant 1 emocji: client tool `set_emotion` + prompt instrukcje; baza emocjonalna pod wizemy, wolniejszy damping), `docs/2` (signed URL z backendu, konfiguracja CLI as code, client_events), `docs/0` (kryteria akceptacji MVP)
+**Docs refs**: `docs/6-opensource-analysis-and-future.md` (wariant 1 emocji: client tool `set_emotion` + prompt instrukcje; baza emocjonalna pod wizemy, wolniejszy damping), `docs/2` (signed URL z backendu, konfiguracja CLI as code, client_events), `docs/0` (kryteria akceptacji MVP)
 **Success Criteria** (what must be TRUE):
 
   1. Awatar wyraża emocje: agent wywołuje `set_emotion` → mimika bazowa pod wizemami mowy (bez przeskoków), test na scenariuszu emocjonalnym (ROB-05)
@@ -184,7 +184,7 @@ Plans:
 **Goal**: Mowa EN ma widoczną charakterystykę fonemów — domknięcia M/B/P, odróżnialne F/V, S/Z, O/U, A — bez fantomowych ruchów na literach niemych, z timingiem nadal zakotwiczonym w alignmentcie ElevenLabs.
 **Depends on**: Phase 6
 **Requirements**: LIPS-05, LIPS-06, LIPS-07 (+ re-walidacja LIPS-01, LIPS-02)
-**Docs refs**: `docs/3-lip-sync-i-koartykulacja.md` (tabela mapowań, koartykulacja — zaktualizowana w 07-04), `.planning/phases/07-fonemowy-lip-sync-en/07-CONTEXT.md` (diagnoza: podwójna attenuacja amplitud + za wolna lambda + char→viseme bez G2P)
+**Docs refs**: `docs/3-lip-sync-and-coarticulation.md` (tabela mapowań, koartykulacja — zaktualizowana w 07-04), `.planning/phases/07-fonemowy-lip-sync-en/07-CONTEXT.md` (diagnoza: podwójna attenuacja amplitud + za wolna lambda + char→viseme bez G2P)
 **Success Criteria** (what must be TRUE):
 
   1. Badge HUD dev pokazuje źródło alignmentu per sesję; ALIGN: EL potwierdzone (fallback wykrywalny, nie cichy) (LIPS-07)
@@ -209,7 +209,7 @@ Plans:
 **Goal**: Jeden mechanizm napędzania twarzy dla dwóch źródeł animacji — (a) LIVE wizemy (obecne) i (b) absolutny strumień ramek (A2F/neuronowe) — ze wspólnym barge-in (epoka), jednym właścicielem morphów i state machine. Całość czysto kliencka, testowalna bez GPU (ramki syntetyczne).
 **Depends on**: Phase 6 (Faza 7 wstrzymana) — **start po review-unifikacji A2F↔wizemy** (wynik przeglądu może zmienić zakres)
 **Requirements**: UNA-01, A2F-01
-**Docs refs**: `docs/7-audio2face-cloudrun.md` (architektura docelowa), `docs/4-audio-i-obsluga-przerwan.md` (epoka/barge-in), `.planning/phases/08-unified-animation-core/08-CONTEXT.md`
+**Docs refs**: `docs/7-audio2face-cloudrun.md` (architektura docelowa), `docs/4-audio-and-barge-in.md` (epoka/barge-in), `.planning/phases/08-unified-animation-core/08-CONTEXT.md`
 **Success Criteria** (what must be TRUE):
 
   1. FaceController ma dwa tryby animacji: `viseme` (scheduler + koartykulacja) i `frames` (wartości bezwzględne z ramek, bez wygładzania) — przełączalne w runtime
@@ -233,7 +233,7 @@ Plans:
 **Goal**: Działający lokalnie, bezgłowy Audio2Face (kontener NVIDIA/Docker) wystawiony przez REST wrapper — E2E offline: wav → ramki → playback w aplikacji, przełącznik A/B (LIVE wizemy vs A2F), porównanie jakości i barge-in. Zero kosztów chmury.
 **Depends on**: Phase 8
 **Requirements**: A2F-02, A2F-03, A2F-04
-**Docs refs**: `docs/7-audio2face-cloudrun.md` (§4C lokalnie, §5 format), `docs/EN-visemes.md` (§6 zdania kontrolne)
+**Docs refs**: `docs/7-audio2face-cloudrun.md` (§4C lokalnie, §5 format), `docs/en-visemes.md` (§6 zdania kontrolne)
 **User setup**: RTX 3090 (24 GB) + CUDA 12.8+/TensorRT 10.13+ (Windows, bez kontenerow lokalnie; obraz produkcyjny Fazy 10 buduje Podman Desktop), konto Hugging Face (click-through licencji A2E; wagi NVIDIA Open Model License — darmowe), narzędzia `gcloud` niepotrzebne (później w Fazie 10)
 **Success Criteria** (what must be TRUE):
 
@@ -241,14 +241,14 @@ Plans:
   2. Wrapper REST (FastAPI) `/predict`: wejście `.wav` (mono 16–44.1 kHz) → wyjście JSON ramek (52 ARKit wg solvera na naszym rigu, PascalCase, gzip, bez capu długości) wg formatu z docs/7 §5; RTF < 1× długość audio na RTX 3090
   3. Aplikacja odtwarza offline: audio + ramki zsynchronizowane (playback gapless); przełącznik HUD `LIVE visemes` / `A2F (lokalny)` działa bez przeładowania
   4. Barge-in w trybie A2F: stop audio <50 ms, twarz neutral <300 ms (drop reszty ramek przez epokę)
-  5. Porównanie jakości na zdaniach kontrolnych (docs/EN-visemes.md §6) — raport 09-VERIFICATION.md + go/no-go do chmury
+  5. Porównanie jakości na zdaniach kontrolnych (docs/en-visemes.md §6) — raport 09-VERIFICATION.md + go/no-go do chmury
   6. Testy: pytest (wrapper: walidacja wejścia/wyjścia na syntetycznym audio), regresja `npm test` (klient)
 
 **Plans**: 5 plans
 
 Plans:
 
-- [ ] 09-01: Środowisko lokalne A2F — klon SDK (MIT) + modele HF (v3.0 primary) + TRT engines prebuild, rig ARKit-52 z avatar.glb (extract_rig.py), dump realnego wyjścia do fixture; notatka setupu w docs (A2F-LOCAL.md)
+- [ ] 09-01: Środowisko lokalne A2F — klon SDK (MIT) + modele HF (v3.0 primary) + TRT engines prebuild, rig ARKit-52 z avatar.glb (extract_rig.py), dump realnego wyjścia do fixture; notatka setupu w docs (a2f-local-setup.md)
 - [ ] 09-02: Wrapper REST `/predict` (FastAPI) — akceptacja wav (resample mono 16 kHz), A2F v3.0 + IBlendshapeSolver na naszym rigu, konwersja na JSON ramek (gzip, carriesEyes, emotions[]); pytest na fixture z 09-01
 - [ ] 09-03: Integracja offline w aplikacji — konfiguracja URL lokalnego serwisu, generowanie demo wav (ElevenLabs lub gotowy plik), POST → zapis ramek, playback trybem `frames` z Fazy 8
 - [ ] 09-04: Przełącznik A/B + UX — HUD `LIVE / A2F`, te same zdania kontrolne, metryki czasu przetwarzania; barge-in w trybie A2F (test 10×)
