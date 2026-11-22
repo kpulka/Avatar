@@ -34,6 +34,7 @@ import { createToast } from '../ui/shared/toast';
 import { createLoader } from '../ui/shared/loader';
 import { createModal } from '../ui/shared/modal';
 import { el } from '../ui/shared/dom';
+import { icon } from '../ui/shared/icons';
 import { PanelContext, PanelRegistry, PanelUi } from '../ui/studio/panel-registry';
 import { createStudioShell, StudioShell } from '../ui/studio/studio-shell';
 import { createAnimationPanel } from '../ui/studio/panels/animation-panel';
@@ -266,12 +267,15 @@ export function createApp(canvas: HTMLCanvasElement): AppHandle {
   window.addEventListener('resize', onResize);
 
   // ---- Presentation mode (H/Esc) — a single global keyboard handler in src/app
-  const exitPresentation = el('button', {
-    className: 'btn-exit-presentation hidden',
-    type: 'button',
-    text: t('presentation.show'),
-    ariaLabel: t('presentation.showAria'),
-  });
+  const exitPresentation = el(
+    'button',
+    {
+      className: 'btn-exit-presentation hidden',
+      type: 'button',
+      ariaLabel: t('presentation.showAria'),
+    },
+    [icon('eye'), el('span', { className: 'btn-label', text: t('presentation.show') })]
+  );
   hostRoot.append(exitPresentation);
   let presentation = false;
   const setPresentation = (value: boolean): void => {
@@ -286,6 +290,8 @@ export function createApp(canvas: HTMLCanvasElement): AppHandle {
     const target = event.target as HTMLElement | null;
     const tag = target?.tagName?.toLowerCase();
     if (tag === 'input' || tag === 'textarea' || tag === 'select' || target?.isContentEditable) return;
+    // A11: Esc belongs to an open dialog (native close) — it must not also flip presentation mode.
+    if (document.querySelector('dialog[open]')) return;
     if (event.key === 'Escape' || event.key === 'h' || event.key === 'H') {
       setPresentation(!presentation);
     }

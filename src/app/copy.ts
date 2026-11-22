@@ -27,6 +27,7 @@ export const COPY: Readonly<Record<string, string>> = {
   'captions.you': 'YOU:',
   'captions.agent': 'AGENT:',
   'captions.empty': '—',
+  'captions.regionAria': 'Live captions',
   'algo.segmentAria': 'Animation source',
   'algo.compare': 'Compare A/B',
   'algo.blind': 'Blind mode',
@@ -51,7 +52,7 @@ export const COPY: Readonly<Record<string, string>> = {
   'settings.themeLight': 'Light',
   'settings.presetLabel': 'Scene preset:',
   'settings.lockTooltip': 'Locked by studio ({key})',
-  'presentation.show': '👁️ Show controls',
+  'presentation.show': 'Show controls',
   'presentation.showAria': 'Show interface',
   'loader.default': 'Loading…',
   'loader.model': 'Loading 3D model…',
@@ -214,6 +215,8 @@ export const COPY: Readonly<Record<string, string>> = {
   // ---- Visemes panel
   'visemes.groupEn': 'EN engine (G2P phonemes)',
   'visemes.groupChar': 'Character path (PL / fallback)',
+  'visemes.groupAria': 'Viseme key group',
+  'visemes.searchAria': 'Filter viseme keys',
   'visemes.searchPlaceholder': '🔍 Filter viseme keys…',
   'visemes.pickViseme': '— pick a viseme —',
   'visemes.stateDefault': 'default',
@@ -235,6 +238,7 @@ export const COPY: Readonly<Record<string, string>> = {
   'visemes.shape.mouthPress': 'Lip press (L+R)',
 
   // ---- Inspector panel
+  'inspector.searchAria': 'Search shapes',
   'inspector.searchPlaceholder': '🔍 Search shape (e.g. jaw, roll, eye)…',
   'inspector.resetAll': 'Reset all',
   'inspector.mirror': 'Mirror L/R (smile, press, brow, eye…)',

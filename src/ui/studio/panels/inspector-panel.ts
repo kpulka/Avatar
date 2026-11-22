@@ -3,7 +3,7 @@
  * by category, with filter, L/R symmetry and reset — 1:1 from the inspector section of hud.ts.
  */
 import { PanelContext, PanelDefinition, PanelHandle } from '../panel-registry';
-import { el } from '../../shared/dom';
+import { el, uid } from '../../shared/dom';
 import { t } from '../../../app/copy';
 
 interface ShapeRow {
@@ -131,6 +131,7 @@ export function createInspectorPanel(): PanelDefinition {
       const searchInput = el('input', {
         className: 'search-input',
         placeholder: t('inspector.searchPlaceholder'),
+        ariaLabel: t('inspector.searchAria'),
         type: 'text',
       }) as HTMLInputElement;
       const resetAllButton = el('button', { className: 'btn btn-tiny btn-secondary', type: 'button', text: t('inspector.resetAll') });
@@ -154,6 +155,7 @@ export function createInspectorPanel(): PanelDefinition {
         for (const row of category.rows) {
           const valueLabel = el('span', { text: '0.00' });
           const input = el('input', {
+            id: uid('inspector-shape'),
             type: 'range',
             attrs: { min: '0', max: '1', step: '0.01' },
           }) as HTMLInputElement;
@@ -174,7 +176,7 @@ export function createInspectorPanel(): PanelDefinition {
           });
 
           const rowEl = el('div', { className: 'slider-group inspector-row', attrs: { 'data-shape': row.shape } }, [
-            el('label', {}, [el('span', { text: `${row.label} ` }), valueLabel]),
+            el('label', { attrs: { for: input.id } }, [el('span', { text: `${row.label} ` }), valueLabel]),
             input,
           ]);
           rowsByShape.set(row.shape, { row: rowEl, input, label: valueLabel });

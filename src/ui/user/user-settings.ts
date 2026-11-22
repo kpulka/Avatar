@@ -3,14 +3,15 @@
  * theme, scene preset. Locked keys (studio.locks) are disabled with a tooltip (UI-05).
  */
 import { PanelContext, PanelDefinition, PanelHandle } from '../studio/panel-registry';
-import { el } from '../shared/dom';
+import { el, uid } from '../shared/dom';
+import { icon } from '../shared/icons';
 import { t } from '../../app/copy';
 
 export function createUserSettings(): PanelDefinition {
   return {
     id: 'user-settings',
     title: t('panel.title.settings'),
-    icon: '⚙️',
+    icon: '',
     visibleIn: 'user',
     mount(ctx: PanelContext): PanelHandle {
       const { store, services, container, ui } = ctx;
@@ -18,14 +19,17 @@ export function createUserSettings(): PanelDefinition {
       const gear = el('button', {
         className: 'dock-icon-btn user-settings-btn',
         type: 'button',
-        text: '⚙️',
         ariaLabel: t('settings.title'),
         title: t('settings.title'),
-      });
+      }, [icon('settings', 20)]);
       container.append(gear);
 
       const volumeValue = el('span', { text: `${Math.round(store.getEffective<number>('volume') * 100)}%` });
-      const volumeSlider = el('input', { type: 'range', attrs: { min: '0', max: '1', step: '0.05' } }) as HTMLInputElement;
+      const volumeSlider = el('input', {
+        id: uid('volume'),
+        type: 'range',
+        attrs: { min: '0', max: '1', step: '0.05' },
+      }) as HTMLInputElement;
       volumeSlider.value = String(store.getEffective<number>('volume'));
       volumeSlider.addEventListener('input', () => {
         const value = parseFloat(volumeSlider.value);
@@ -34,7 +38,7 @@ export function createUserSettings(): PanelDefinition {
       });
       applyLock(volumeSlider, 'volume');
 
-      const micSelect = el('select', { className: 'engine-select' }) as HTMLSelectElement;
+      const micSelect = el('select', { id: uid('mic'), className: 'engine-select' }) as HTMLSelectElement;
       micSelect.append(el('option', { value: '', text: t('settings.defaultDevice') }));
       const refreshDevices = async (): Promise<void> => {
         const devices = await services.conversation.listInputDevices();
@@ -52,7 +56,7 @@ export function createUserSettings(): PanelDefinition {
       void refreshDevices();
       applyLock(micSelect, 'micDeviceId');
 
-      const themeSelect = el('select', { className: 'engine-select' }) as HTMLSelectElement;
+      const themeSelect = el('select', { id: uid('theme'), className: 'engine-select' }) as HTMLSelectElement;
       themeSelect.append(
         el('option', { value: 'dark', text: t('settings.themeDark') }),
         el('option', { value: 'light', text: t('settings.themeLight') })
@@ -63,7 +67,7 @@ export function createUserSettings(): PanelDefinition {
       });
       applyLock(themeSelect, 'theme');
 
-      const presetSelect = el('select', { className: 'engine-select' }) as HTMLSelectElement;
+      const presetSelect = el('select', { id: uid('preset'), className: 'engine-select' }) as HTMLSelectElement;
       const availablePresets = services.scenePresets.list();
       if (availablePresets.length >= 2) {
         for (const preset of availablePresets) {
@@ -90,19 +94,19 @@ export function createUserSettings(): PanelDefinition {
       function buildForm(): HTMLElement {
         return el('div', { className: 'user-settings-form' }, [
           el('div', { className: 'form-group' }, [
-            el('label', {}, [el('span', { text: t('settings.volumeLabel') }), volumeValue]),
+            el('label', { attrs: { for: volumeSlider.id } }, [el('span', { text: t('settings.volumeLabel') }), volumeValue]),
             volumeSlider,
           ]),
           el('div', { className: 'form-group' }, [
-            el('label', { text: t('settings.micLabel') }),
+            el('label', { text: t('settings.micLabel'), attrs: { for: micSelect.id } }),
             micSelect,
           ]),
           el('div', { className: 'form-group' }, [
-            el('label', { text: t('settings.themeLabel') }),
+            el('label', { text: t('settings.themeLabel'), attrs: { for: themeSelect.id } }),
             themeSelect,
           ]),
           el('div', { className: 'form-group' }, [
-            el('label', { text: t('settings.presetLabel') }),
+            el('label', { text: t('settings.presetLabel'), attrs: { for: presetSelect.id } }),
             presetSelect,
           ]),
         ]);

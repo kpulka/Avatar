@@ -3,7 +3,7 @@
  * Overrides are persisted through the store (`studio.visemeOverrides`) and applied to FaceController.
  */
 import { PanelContext, PanelDefinition, PanelHandle } from '../panel-registry';
-import { el } from '../../shared/dom';
+import { el, uid } from '../../shared/dom';
 import {
   VISEME_GROUPS,
   EDITOR_SHAPES,
@@ -48,12 +48,17 @@ export function createVisemesPanel(): PanelDefinition {
       let selectedKey: string | null = null;
       let record: VisemeOverrideMap = store.getEffective<VisemeOverrideMap>('visemeOverrides') ?? {};
 
-      const groupSelect = el('select', { className: 'viseme-group-select' }) as HTMLSelectElement;
+      const groupSelect = el('select', { className: 'viseme-group-select', ariaLabel: t('visemes.groupAria') }) as HTMLSelectElement;
       groupSelect.append(
         el('option', { value: 'en', text: t('visemes.groupEn') }),
         el('option', { value: 'char', text: t('visemes.groupChar') })
       );
-      const searchInput = el('input', { className: 'search-input', placeholder: t('visemes.searchPlaceholder'), type: 'text' }) as HTMLInputElement;
+      const searchInput = el('input', {
+        className: 'search-input',
+        placeholder: t('visemes.searchPlaceholder'),
+        ariaLabel: t('visemes.searchAria'),
+        type: 'text',
+      }) as HTMLInputElement;
 
       const chipsEl = el('div', { className: 'viseme-chip-list' });
       const detailName = el('strong', { text: t('visemes.pickViseme') });
@@ -114,6 +119,7 @@ export function createVisemesPanel(): PanelDefinition {
         for (const control of SHAPE_CONTROLS) {
           const valueSpan = el('span', { text: shapeVal(ref.key, control.shapes[0]).toFixed(2) });
           const input = el('input', {
+            id: uid('viseme-shape'),
             type: 'range',
             attrs: { min: '0', max: '1', step: '0.01' },
           }) as HTMLInputElement;
@@ -132,7 +138,7 @@ export function createVisemesPanel(): PanelDefinition {
           });
           slidersEl.append(
             el('div', { className: 'slider-group' }, [
-              el('label', {}, [el('span', { text: `${control.label}: ` }), valueSpan]),
+              el('label', { attrs: { for: input.id } }, [el('span', { text: `${control.label}: ` }), valueSpan]),
               input,
             ])
           );

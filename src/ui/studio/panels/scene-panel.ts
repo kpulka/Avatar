@@ -39,11 +39,16 @@ export function createScenePanel(): PanelDefinition {
       });
 
       const fileInput = el('input', { type: 'file', attrs: { accept: '.glb,.gltf' } }) as HTMLInputElement;
-      fileInput.style.display = 'none';
-      const fileButton = el('label', { className: 'btn btn-small btn-secondary file-upload-btn' }, [
-        el('span', { text: t('scene.chooseGlb') }),
-        fileInput,
-      ]);
+      // Keyboard users go through the visible button; the native input stays out of the tab order / a11y tree.
+      fileInput.classList.add('hidden');
+      fileInput.tabIndex = -1;
+      fileInput.setAttribute('aria-hidden', 'true');
+      const fileButton = el('button', {
+        className: 'btn btn-small btn-secondary file-upload-btn',
+        type: 'button',
+        text: t('scene.chooseGlb'),
+      });
+      fileButton.addEventListener('click', () => fileInput.click());
       fileInput.addEventListener('change', async () => {
         const file = fileInput.files?.[0];
         fileInput.value = '';
@@ -93,7 +98,7 @@ export function createScenePanel(): PanelDefinition {
         el('div', { className: 'drawer-section' }, [
           el('span', { className: 'section-title', text: t('scene.modelTitle') }),
           modelInfo,
-          el('div', { className: 'panel-actions' }, [loadDemoButton, fileButton]),
+          el('div', { className: 'panel-actions' }, [loadDemoButton, fileButton, fileInput]),
         ]),
         el('div', { className: 'drawer-section' }, [
           el('span', { className: 'section-title', text: t('scene.presetsTitle') }),

@@ -11,7 +11,7 @@ export function createAlgorithmSwitcher(): PanelDefinition {
   return {
     id: 'algorithm-switcher',
     title: t('panel.title.algorithm'),
-    icon: '🔀',
+    icon: '',
     visibleIn: 'user',
     mount(ctx: PanelContext): PanelHandle {
       const { events, services, container, ui } = ctx;
@@ -54,7 +54,11 @@ export function createAlgorithmSwitcher(): PanelDefinition {
       const blindToggle = el('input', { type: 'checkbox' }) as HTMLInputElement;
       const blindRow = el('label', { className: 'engine-toggle' }, [blindToggle, blindLabel]);
 
-      const statusLine = el('p', { className: 'drawer-subtitle algo-status' });
+      const statusLine = el('p', {
+        className: 'drawer-subtitle algo-status',
+        role: 'status',
+        attrs: { 'aria-live': 'polite' },
+      });
 
       const refreshCompare = (): void => {
         const can = services.compare.canCompare();

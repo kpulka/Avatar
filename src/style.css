@@ -327,6 +327,18 @@ body, html {
   transform: translateY(-1px);
 }
 
+/* Inline SVG icons (src/ui/shared/icons.ts): sized by the builder, inherit text color */
+.btn-icon {
+  display: inline-flex;
+  align-items: center;
+}
+
+.btn-icon .icon,
+.dock-icon-btn .icon,
+.btn-exit-presentation .icon {
+  flex: none;
+}
+
 .btn-call {
   background: var(--accent-strong);
   color: var(--text-on-accent);
@@ -1311,12 +1323,24 @@ dialog.settings-dialog::backdrop {
   .user-status,
   .side-drawer,
   .studio-tab,
-  .segment-btn {
+  .segment-btn,
+  .toast,
+  .toast-stack,
+  .loader-overlay,
+  .btn-call,
+  .dock-btn,
+  .dock-icon-btn {
     transition: none !important;
     animation: none !important;
   }
-  .pulse-dot {
+  .pulse-dot,
+  .btn-call.active,
+  .spinner {
     animation: none !important;
+  }
+  .dock-btn:hover,
+  .dock-icon-btn:hover {
+    transform: none;
   }
 }
 

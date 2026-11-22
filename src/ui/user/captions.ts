@@ -10,13 +10,21 @@ export function createCaptions(): PanelDefinition {
   return {
     id: 'captions',
     title: t('panel.title.captions'),
-    icon: '💬',
+    icon: '',
     visibleIn: 'user',
     mount(ctx: PanelContext): PanelHandle {
       const { events, container } = ctx;
       const userText = el('span', { className: 'transcript-text', text: t('captions.empty') });
       const agentText = el('span', { className: 'transcript-text', text: t('captions.empty') });
-      const root = el('div', { className: 'cinema-captions user-captions' }, [
+      const root = el(
+        'div',
+        {
+          className: 'cinema-captions user-captions',
+          role: 'log',
+          ariaLabel: t('captions.regionAria'),
+          attrs: { 'aria-live': 'polite' },
+        },
+        [
         el('div', { className: 'transcript-box' }, [
           el('div', { className: 'transcript-line user-line' }, [
             el('span', { className: 'speaker-tag', text: t('captions.you') }),

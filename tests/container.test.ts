@@ -191,6 +191,22 @@ describe('createApp (container smoke, jsdom)', () => {
     expect(document.body.classList.contains('theme-light')).toBe(false);
   });
 
+  it('Esc przy otwartym dialogu nie przelacza trybu prezentacji (15-04, A10); h dziala', () => {
+    const app = createApp(setupDom());
+    const dialog = document.createElement('dialog');
+    dialog.setAttribute('open', '');
+    document.body.append(dialog);
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+    expect(document.body.classList.contains('presentation-mode')).toBe(false);
+
+    dialog.remove();
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+    expect(document.body.classList.contains('presentation-mode')).toBe(true);
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'h' }));
+    expect(document.body.classList.contains('presentation-mode')).toBe(false);
+    app.dispose();
+  });
+
   it('dispose() usuwa shell i nie rzuca', () => {
     const app = createApp(setupDom());
     app.start();

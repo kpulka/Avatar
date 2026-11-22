@@ -16,13 +16,14 @@ export function createStatusPill(): PanelDefinition {
   return {
     id: 'status-pill',
     title: t('panel.title.status'),
-    icon: '🟢',
+    icon: '',
     visibleIn: 'user',
     mount(ctx: PanelContext): PanelHandle {
       const { events, container } = ctx;
-      const state = el('span', { className: 'status-pill voice-idle', text: LABELS.idle });
+      // role=status makes the label flips (Listening / Speaking / ...) audible to screen readers.
+      const state = el('span', { className: 'status-pill voice-idle', text: LABELS.idle, role: 'status' });
       const root = el('div', { className: 'user-status' }, [
-        el('span', { className: 'pulse-dot' }),
+        el('span', { className: 'pulse-dot', attrs: { 'aria-hidden': 'true' } }),
         el('span', { className: 'brand-title', text: t('brand.title') }),
         state,
       ]);
