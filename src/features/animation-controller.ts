@@ -77,6 +77,9 @@ export class AnimationController implements AnimationService {
     const fc = this.faceController;
     if (!fc) return;
     // A LIVE turn from WSS is always visemes — A2F batch breaks TTFB (router 08-03).
+    // By design a pending deferred switch (e.g. to A2F requested mid-turn) is dropped here, so
+    // `animMode` (the user's choice) may diverge from the FaceController mode until the next
+    // non-live turn; the switch itself is a smooth turn-boundary switch, never a face snap.
     const source = resolveAnimationSource({ mode: this.animMode, liveTurn: true });
     if (fc.getAnimationMode() !== source) {
       fc.setAnimationMode(source);
@@ -131,7 +134,7 @@ export class AnimationController implements AnimationService {
         : 'Hello! I am delighted to speak with you and assist you today.';
     this.events.emit('transcript:user', t('animation.calibrationLabelPrefix', { lang: lang.toUpperCase() }));
     this.events.emit('transcript:agent', phrase);
-    this.faceController?.clearManualOverrides();
+    this.faceController?.clearManualOverrideMap();
     this.speak(phrase);
   }
 
@@ -146,7 +149,7 @@ export class AnimationController implements AnimationService {
   }
 
   public resetMorphs(): void {
-    this.faceController?.clearManualOverrides();
+    this.faceController?.resetFaceToNeutral();
   }
 
   public setCalibration(delta: Partial<CalibrationProfile>): void {

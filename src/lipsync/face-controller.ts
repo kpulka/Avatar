@@ -115,8 +115,8 @@ export class FaceController {
 
   /**
    * Switches the animation mode.
-   * - Without `deferToTurnEnd`: immediately (dev-switch) — clears the scheduler/frame buffer,
-   *   resets speech state and returns to IDLE.
+   * - Without `deferToTurnEnd`: immediately (dev-switch) — clears the scheduler/frame buffer and
+   *   eases out through RELAXING from the current pose (never a hard snap to neutral).
    * - With `deferToTurnEnd: true`: if speech is in progress (SPEAKING), the change is stored in
    *   `pendingMode` and applied at the turn boundary (end of speech or interruption) — without
    *   cutting the face mid-sentence (per-turn router).
@@ -130,24 +130,34 @@ export class FaceController {
       this.pendingMode = mode;
       return;
     }
-    this.applyModeImmediate(mode);
+    this.switchModeAtBoundary(mode);
   }
 
-  /** Immediate mode change: clears all speech state and the face returns to neutral. */
-  private applyModeImmediate(mode: AnimationMode): void {
+  /**
+   * The single mode-switch semantics (immediate and deferred requests both land here):
+   * both tracks are dropped, and unless the face is already IDLE it eases out through RELAXING
+   * from `currentWeights` — a switch can therefore never pop the face to neutral.
+   */
+  private switchModeAtBoundary(mode: AnimationMode): void {
     this.animationMode = mode;
     this.pendingMode = null;
     this.scheduler.clear();
     this.frameBuffer = [];
     this.framesMeta = null;
-    this.clearManualOverrides();
-    this.state = 'IDLE';
-    console.log(`[FaceController] Animation mode → ${mode} (immediate, IDLE)`);
+    if (this.state === 'IDLE') {
+      // Nothing to preserve; only a leftover dev pose (previewViseme / sliders) needs wiping.
+      if (this.manualOverrides.size > 0) this.resetFaceToNeutral();
+      console.log(`[FaceController] Animation mode → ${mode} (IDLE)`);
+      return;
+    }
+    this.clearManualOverrideMap();
+    this.state = 'RELAXING';
+    this.relaxStartedAt = performance.now();
+    console.log(`[FaceController] Animation mode → ${mode} (turn boundary, RELAXING)`);
   }
 
   /**
-   * Applies the deferred mode change (pendingMode) at the turn boundary: switches the mode
-   * and enters RELAXING (smooth return from the current pose, no snap).
+   * Applies the deferred mode change (pendingMode) at the turn boundary.
    * Returns true if the mode was actually switched.
    */
   private commitPendingMode(): boolean {
@@ -155,16 +165,7 @@ export class FaceController {
       this.pendingMode = null;
       return false;
     }
-    const target = this.pendingMode;
-    this.pendingMode = null;
-    this.animationMode = target;
-    this.scheduler.clear();
-    this.frameBuffer = [];
-    this.framesMeta = null;
-    this.manualOverrides.clear();
-    this.state = 'RELAXING';
-    this.relaxStartedAt = performance.now();
-    console.log(`[FaceController] Animation mode → ${target} (turn boundary, RELAXING)`);
+    this.switchModeAtBoundary(this.pendingMode);
     return true;
   }
 
@@ -184,7 +185,7 @@ export class FaceController {
     this.scheduler.clear();
     if (this.state === 'RELAXING' || this.state === 'IDLE') {
       this.state = 'SPEAKING';
-      this.clearManualOverrides();
+      this.clearManualOverrideMap();
     }
 
     this.frameBaseSec = baseSec;
@@ -242,7 +243,7 @@ export class FaceController {
    */
   public previewViseme(key: string | null): void {
     if (this.state === 'SPEAKING') return;
-    this.clearManualOverrides();
+    this.resetFaceToNeutral();
     if (!key) return;
     const shapes = this.resolveVisemeShapes(key);
     if (!shapes) return;
@@ -287,7 +288,7 @@ export class FaceController {
 
     if (this.state === 'RELAXING' || this.state === 'IDLE') {
       this.state = 'SPEAKING';
-      this.clearManualOverrides();
+      this.clearManualOverrideMap();
     }
 
     // Acoustic fallback (LIPS-07): the RMS-energy alignment drives ONLY the jaw
@@ -309,7 +310,7 @@ export class FaceController {
         });
       }
       this.state = 'SPEAKING';
-      this.clearManualOverrides();
+      this.clearManualOverrideMap();
       return; // do NOT run the per-character loop for the fallback
     }
 
@@ -384,7 +385,9 @@ export class FaceController {
    * Static mouth-pose preview for the chosen phoneme (for tests in the calibrator)
    */
   public testPhoneme(phonemeKey: 'A' | 'E' | 'O' | 'U' | 'M' | 'SZ' | 'F' | 'neutral'): void {
-    this.clearManualOverrides();
+    // A calibrator button must never cut a live turn (same guard as previewViseme).
+    if (this.state === 'SPEAKING') return;
+    this.resetFaceToNeutral();
 
     if (phonemeKey === 'neutral') {
       this.state = 'RELAXING';
@@ -461,9 +464,11 @@ export class FaceController {
     this.frameBuffer = [];
     // A deferred mode change is applied right at the interruption (turn boundary).
     if (this.commitPendingMode()) {
-      console.log('[FaceController] Facial interruption -> RELAXING (mode switched)');
+      console.log('[FaceController] Facial interruption -> mode switched');
       return;
     }
+    // IDLE stays IDLE (nothing to relax from); RELAXING re-anchors its timer; SPEAKING relaxes.
+    if (this.state === 'IDLE') return;
     this.state = 'RELAXING';
     this.relaxStartedAt = performance.now();
     console.log('[FaceController] Facial interruption -> RELAXING state');
@@ -692,7 +697,16 @@ export class FaceController {
     }
   }
 
-  public clearManualOverrides(): void {
+  /** Forgets the manual (HUD/preview) overrides without touching the driver. */
+  public clearManualOverrideMap(): void {
+    this.manualOverrides.clear();
+  }
+
+  /**
+   * Dev reset: forgets manual overrides AND zero-writes every non-blink shape.
+   * Never call this from a speech path — it pops the face for a frame; use clearManualOverrideMap().
+   */
+  public resetFaceToNeutral(): void {
     for (const shape of this.driver.listAvailableShapes()) {
       if (!shape.startsWith('eyeBlink')) {
         this.driver.applyWeight(shape, 0);
