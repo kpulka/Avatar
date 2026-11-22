@@ -161,11 +161,21 @@ const GATE_A_SCOPES: readonly GateAScope[] = [
     enforced: true,
     files: () => listFiles('src', ['.ts', '.css']),
   },
-  { name: 'tests', enforced: false, files: () => listFiles('tests', ['.ts']) },
+  {
+    name: 'tests',
+    // ON in 12-07: all describe/it titles and comments are English. No allowlist entry is
+    // needed: no test asserts on Polish text, and the two Polish regex literals in
+    // copy.test.ts are \uXXXX escapes.
+    enforced: true,
+    files: () => listFiles('tests', ['.ts']),
+  },
   {
     name: 'root',
-    enforced: false,
-    files: () => ['README.md', 'TODO_humanInTheLoop.md', 'index.html'].filter((f) => existsSync(join(ROOT, f))),
+    // ON in 12-07, with a documented EXCEPTION: README.md is not in this scope. Its content
+    // is still Polish and Phase 13 owns the rewrite (12-04 only repaired its links). Phase 13
+    // must add README.md back to this list when it lands; this exception is then removed.
+    enforced: true,
+    files: () => ['TODO_humanInTheLoop.md', 'index.html'].filter((f) => existsSync(join(ROOT, f))),
   },
 ];
 
