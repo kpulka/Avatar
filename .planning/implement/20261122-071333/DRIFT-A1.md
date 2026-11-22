@@ -31,3 +31,9 @@ container.ts: dispose ~337, unsubLegacyBridge ~349, avatar:loaded ~111, update c
 ## Notes
 - 14-04 unused sweep: `EnvironmentManager.setupRoomEnvironment` (environment.ts:17) has no production caller now (only test mock) → decide delete/keep.
 - 12-06: new Polish comment in src/scene/materials.ts covered by the translation task.
+
+# Drift B1 — after merge a8c8dc1 (12-01 language gate + docs renames)
+Checker: orchestrator inline grep. Verdict: DRIFT (LINE-SHIFT class — path renames).
+Docs renamed (git mv, history kept). Plans 16-01, 16-02, 16-07, 17-01, 17-02, 17-03 still cite OLD names → executors use the NEW path:
+docs/1-architektura-i-modele-3d.md → docs/1-architecture-and-3d-models.md · docs/2-integracja-elevenlabs-wss.md → docs/2-elevenlabs-wss-integration.md · docs/3-lip-sync-i-koartykulacja.md → docs/3-lip-sync-and-coarticulation.md · docs/4-audio-i-obsluga-przerwan.md → docs/4-audio-and-barge-in.md · docs/5-shadery-i-realizm.md → docs/5-shaders-and-realism.md · docs/6-analiza-opensource-i-rozwoj.md → docs/6-opensource-analysis-and-future.md · docs/A2F-LOCAL.md → docs/a2f-local-setup.md · docs/EN-visemes.md → docs/en-visemes.md
+12-04 references old names intentionally (Gate B skip-list must be emptied there). 12-01 added allowlist entry viseme-mappings.ts:320 (flag for 12-06).

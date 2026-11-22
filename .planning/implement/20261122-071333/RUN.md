@@ -32,3 +32,4 @@ Skipped per user; plans stop at checkpoint:human-* and are recorded as PARTIAL/B
 - A/render merged ff17385: 11.2-04/05/06 DONE (code); human verify DEFERRED (real GPU). Gate: build OK, 50 files / 275 tests. Deviation: tests/container.test.ts mocks extended outside lock. Headless swiftshader shots in 11.2 shots/.
 - Wave A complete. 11.2-03, 11.2-09 BLOCKED (real ElevenLabs recording; hero capture).
 - B started: 12-01 [haiku].
+- B/12-01 merged a8c8dc1 DONE [haiku]. Gate: build OK, 51 files / 281 tests. Docs renamed (8). Drift B1 recorded.
