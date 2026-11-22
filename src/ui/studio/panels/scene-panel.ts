@@ -4,6 +4,7 @@
  */
 import { PanelContext, PanelDefinition, PanelHandle } from '../panel-registry';
 import { el } from '../../shared/dom';
+import { setSkinSSSEnabled } from '../../../scene/skin-shader';
 
 export function createScenePanel(): PanelDefinition {
   return {
@@ -82,6 +83,11 @@ export function createScenePanel(): PanelDefinition {
         }
       }
 
+      // --- Skin subsurface scattering toggle (uniform flip, no shader recompile)
+      const sssToggle = el('input', { type: 'checkbox' }) as HTMLInputElement;
+      sssToggle.checked = true;
+      sssToggle.addEventListener('change', () => setSkinSSSEnabled(sssToggle.checked));
+
       root.append(
         el('div', { className: 'drawer-section' }, [
           el('span', { className: 'section-title', text: 'Model awatara:' }),
@@ -95,6 +101,9 @@ export function createScenePanel(): PanelDefinition {
             className: 'drawer-subtitle',
             text: 'Preset zmienia tło, światło, exposure i kadr (crossfade 280 ms; reduced-motion = natychmiast).',
           }),
+        ]),
+        el('div', { className: 'drawer-section' }, [
+          el('label', { className: 'engine-toggle' }, [sssToggle, el('span', { text: 'Skin subsurface scattering' })]),
         ])
       );
       container.append(root);

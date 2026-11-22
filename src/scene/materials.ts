@@ -1,6 +1,11 @@
 import * as THREE from 'three';
 import { injectSkinSSS, configureEyeCornea } from './skin-shader';
 
+/** Drops undefined entries: three warns "parameter has value of undefined" for each one. */
+function defined<T extends object>(params: T): T {
+  return Object.fromEntries(Object.entries(params).filter(([, v]) => v !== undefined)) as T;
+}
+
 /**
  * Konfiguruje maksymalną anizotropię dla wszystkich tekstur w hierarchii modelu (docs/5)
  */
@@ -43,6 +48,14 @@ export function enhanceAvatarMaterials(root: THREE.Object3D, renderer: THREE.Web
 
     const mesh = child as THREE.Mesh;
     const meshName = mesh.name.toLowerCase();
+
+    if (meshName.includes('cornea')) {
+      // The old opacity-0 shell rendered nothing but cost a sorted transparent draw; highlights come from the
+      // eyeball clearcoat. Keep the original material untouched.
+      mesh.visible = false;
+      return;
+    }
+
     const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
 
     const enhancedMaterials = materials.map((mat) => {
@@ -66,40 +79,50 @@ export function enhanceAvatarMaterials(root: THREE.Object3D, renderer: THREE.Web
         });
       }
 
-      // 2. Rogówka (przezroczysta powłoka zewnętrzna oka — refrakcja i blik, widoczna tęczówka pod spodem)
-      if (meshName.includes('cornea')) {
-        const corneaMat = new THREE.MeshPhysicalMaterial({
-          color: 0xffffff,
-          transparent: true,
-          opacity: 0.0,
-          depthWrite: false,
-        });
-        configureEyeCornea(corneaMat);
-        return corneaMat;
-      }
-
-      // 3. Gałki oczne (zachowujemy oryginalną kolorową teksturę tęczówki i źrenicy z pliku GLB!)
+      // 2. Gałki oczne (zachowujemy oryginalną kolorową teksturę tęczówki i źrenicy z pliku GLB!)
       if (meshName.includes('eyeball') || (meshName.includes('eye') && !meshName.includes('lash'))) {
         const standard = mat as THREE.MeshStandardMaterial;
-        const eyeMat = new THREE.MeshPhysicalMaterial({
-          map: standard.map ?? undefined,
-          color: standard.map ? 0xffffff : (standard.color ?? 0xffffff),
-        });
+        const eyeMat = new THREE.MeshPhysicalMaterial(
+          defined({
+            map: standard.map ?? undefined,
+            // Keep the GLB detail maps: iris relief and the wet highlight depend on them.
+            normalMap: standard.normalMap ?? undefined,
+            normalScale: standard.normalScale?.clone(),
+            roughnessMap: standard.roughnessMap ?? undefined,
+            color: standard.map ? 0xffffff : (standard.color ?? 0xffffff),
+          })
+        );
         configureEyeCornea(eyeMat);
         return eyeMat;
       }
 
-      // 4. Rzęsy (eyelashes) — przezroczyste z testem alfa
+      // 3. Lashes: alpha-to-coverage on the opaque pass (MSAA is on) gives soft, order-independent edges
       if (meshName.includes('eyelash') || meshName.includes('lash')) {
         const standard = mat as THREE.MeshStandardMaterial;
-        return new THREE.MeshStandardMaterial({
-          map: standard.map ?? undefined,
-          color: standard.color ?? new THREE.Color(0x111111),
-          transparent: true,
-          alphaTest: 0.5,
-          roughness: 0.8,
-          metalness: 0.0,
-        });
+        return new THREE.MeshStandardMaterial(
+          defined({
+            map: standard.map ?? undefined,
+            alphaMap: standard.alphaMap ?? undefined,
+            color: standard.color ?? new THREE.Color(0x111111),
+            transparent: false,
+            alphaToCoverage: true,
+            side: THREE.DoubleSide,
+            roughness: 0.8,
+            metalness: 0.0,
+          })
+        );
+      }
+
+      // 4. Hair / brows (must precede the skin catch-all). The shipped avatar.glb has no separate hair mesh
+      // (meshes: AvatarBody, AvatarEyelashes, AvatarHead, Avatar{Left,Right}{Cornea,Eyeball}, AvatarTeeth{Lower,Upper},
+      // outfit), so this only matters for other GLBs.
+      if (meshName.includes('hair') || meshName.includes('brow')) {
+        const hair = (mat as THREE.MeshStandardMaterial).clone();
+        hair.transparent = false;
+        hair.alphaToCoverage = true;
+        hair.depthWrite = true;
+        hair.side = THREE.DoubleSide;
+        return hair;
       }
 
       // 5. Skóra (głowa, twarz, szyja, ciało) — PBR z Wrap Diffuse SSS (REAL-04, docs/5)

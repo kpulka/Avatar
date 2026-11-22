@@ -1,4 +1,33 @@
-import { MeshPhysicalMaterial, Color } from 'three';
+import { MeshPhysicalMaterial, Color, Vector3 } from 'three';
+import type { Camera, DirectionalLight } from 'three';
+
+/** Shared by every skin material; updated once per frame (see StudioLighting.addToScene). */
+export const skinLightUniforms = {
+  /** Direction TO the key light in view space (same convention as three's direct light struct). */
+  uKeyLightDirView: { value: new Vector3(0, 0, 1) },
+  /** Key light colour multiplied by intensity. */
+  uKeyLightColor: { value: new Color(1, 1, 1) },
+  uSkinSSSEnabled: { value: 1 },
+};
+
+const _lightPos = new Vector3();
+const _targetPos = new Vector3();
+
+/** Copies the key light direction (view space) and colour into the shared skin uniforms. */
+export function updateSkinLightUniforms(key: DirectionalLight, camera: Camera): void {
+  key.getWorldPosition(_lightPos);
+  key.target.getWorldPosition(_targetPos);
+  skinLightUniforms.uKeyLightDirView.value
+    .subVectors(_lightPos, _targetPos)
+    .normalize()
+    .transformDirection(camera.matrixWorldInverse);
+  skinLightUniforms.uKeyLightColor.value.copy(key.color).multiplyScalar(key.intensity);
+}
+
+/** Toggles the SSS term without recompiling the shader. */
+export function setSkinSSSEnabled(on: boolean): void {
+  skinLightUniforms.uSkinSSSEnabled.value = on ? 1 : 0;
+}
 
 export interface SkinShaderOptions {
   wrapAmount?: number; // Współczynnik wrap diffuse [0.0, 1.0] (domyślnie 0.4)
@@ -25,6 +54,10 @@ export function injectSkinSSS(
     shader.uniforms.uSkinWrap = { value: wrap };
     shader.uniforms.uSkinSSSColor = { value: sssColor };
     shader.uniforms.uSkinSSSIntensity = { value: sssIntensity };
+    // Same objects (not copies) so the per-frame updates propagate.
+    shader.uniforms.uKeyLightDirView = skinLightUniforms.uKeyLightDirView;
+    shader.uniforms.uKeyLightColor = skinLightUniforms.uKeyLightColor;
+    shader.uniforms.uSkinSSSEnabled = skinLightUniforms.uSkinSSSEnabled;
 
     // 1. Definicja uniformów w frag shaderze
     shader.fragmentShader = shader.fragmentShader.replace(
@@ -34,6 +67,9 @@ export function injectSkinSSS(
       uniform float uSkinWrap;
       uniform vec3 uSkinSSSColor;
       uniform float uSkinSSSIntensity;
+      uniform vec3 uKeyLightDirView;
+      uniform vec3 uKeyLightColor;
+      uniform float uSkinSSSEnabled;
       `
     );
 
@@ -43,19 +79,17 @@ export function injectSkinSSS(
       `
       #include <lights_fragment_begin>
 
-      // Subsurface Scattering (Wrap Diffuse Approximation - docs/5)
-      float wrapTerm = uSkinWrap;
-      float NdotL = dot(geometryNormal, directLight.direction);
-      float wrapDiffuse = clamp((NdotL + wrapTerm) / (1.0 + wrapTerm), 0.0, 1.0);
-
-      // Krawędź cienia (terminator) zyskuje ciepłe rozproszenie hemoglobiny
-      float scatterEdge = smoothstep(-wrapTerm, wrapTerm, NdotL) * (1.0 - smoothstep(0.0, 0.5, NdotL));
-      vec3 sssContribution = uSkinSSSColor * scatterEdge * uSkinSSSIntensity * directLight.color;
-
-      reflectedLight.directDiffuse += sssContribution;
+      // Wrap-diffuse SSS from the KEY light. NOTE: the loop's directLight variable here would be the LAST light of the loop (rim).
+      float NdotLk = dot(normal, uKeyLightDirView);
+      float wrapDiffuse = clamp((NdotLk + uSkinWrap) / (1.0 + uSkinWrap), 0.0, 1.0);
+      float scatterEdge = smoothstep(-uSkinWrap, uSkinWrap, NdotLk) * (1.0 - smoothstep(0.0, 0.5, NdotLk));
+      float wrapGain = max(wrapDiffuse - clamp(NdotLk, 0.0, 1.0), 0.0); // light wrapping past the terminator
+      vec3 sss = material.diffuseColor * uSkinSSSColor * uKeyLightColor * uSkinSSSIntensity * (scatterEdge + wrapGain);
+      reflectedLight.directDiffuse += sss * uSkinSSSEnabled;
       `
     );
   };
+  material.customProgramCacheKey = () => 'skin-sss-v2';
 
   material.needsUpdate = true;
   return material;
