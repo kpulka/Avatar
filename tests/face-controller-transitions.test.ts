@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import { FaceController } from '../src/lipsync/face-controller';
 import { FaceDriver, FramesClip } from '../src/types/avatar';
 import { AudioEngine } from '../src/audio/audio-engine';
@@ -59,6 +59,7 @@ describe('FaceController transition matrix (16-CONTEXT §2)', () => {
   let engine: MockAudioEngine;
   let controller: FaceController;
   let audible = 0;
+  let wallMs = 0; // hand-driven wall clock injected as nowMs (no fake timers)
 
   /** Speaks one long vowel and renders until the jaw is clearly open (non-zero currentWeights). */
   function speakUntilJawOpen(): void {
@@ -70,19 +71,16 @@ describe('FaceController transition matrix (16-CONTEXT §2)', () => {
   }
 
   beforeEach(() => {
-    vi.useFakeTimers();
     audible = 0;
+    wallMs = 0;
     driver = new RecordingFaceDriver();
     engine = new MockAudioEngine();
     controller = new FaceController(driver, engine as unknown as AudioEngine, {
       audibleClock: () => audible,
+      nowMs: () => wallMs,
     });
     controller.setLipSyncEngine('char');
     controller.setCalibrationProfile({ syncOffsetMs: 0 });
-  });
-
-  afterEach(() => {
-    vi.useRealTimers();
   });
 
   it('row 3: interruption in IDLE stays IDLE with empty queues', () => {
@@ -168,16 +166,16 @@ describe('FaceController transition matrix (16-CONTEXT §2)', () => {
   it('row 19: double interruption stays RELAXING and re-anchors the relax timer (bounded at 2x)', () => {
     speakUntilJawOpen();
     controller.onInterruption();
-    vi.advanceTimersByTime(100);
+    wallMs += 100;
     controller.onInterruption(); // re-anchor at t=100
     expect(controller.getState()).toBe('RELAXING');
 
     // 100 ms after the re-anchor the relax must NOT be complete (a stale anchor would finish at 150 ms)
-    vi.advanceTimersByTime(100); // t=200 -> 100 ms since re-anchor (< 150)
+    wallMs += 100; // t=200 -> 100 ms since re-anchor (< 150)
     controller.render(0.016);
     expect(controller.getState()).toBe('RELAXING');
 
-    vi.advanceTimersByTime(60); // 160 ms since re-anchor
+    wallMs += 60; // 160 ms since re-anchor
     controller.render(0.016);
     expect(controller.getState()).toBe('IDLE');
   });
