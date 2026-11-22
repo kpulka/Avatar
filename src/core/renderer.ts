@@ -6,6 +6,8 @@ export interface RendererOptions {
 
 export class AppRenderer {
   public readonly instance: THREE.WebGLRenderer;
+  /** Upper bound for the pixel ratio (initial value); AdaptiveResolution never exceeds it. */
+  public readonly maxPixelRatio: number;
 
   constructor(options: RendererOptions) {
     this.instance = new THREE.WebGLRenderer({
@@ -25,12 +27,18 @@ export class AppRenderer {
     this.instance.shadowMap.type = THREE.PCFSoftShadowMap;
 
     // Budżet wydajności: max 2x DPR
-    this.instance.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    this.maxPixelRatio = Math.min(window.devicePixelRatio, 2);
+    this.instance.setPixelRatio(this.maxPixelRatio);
     this.setSize(window.innerWidth, window.innerHeight);
   }
 
   public setSize(width: number, height: number): void {
     this.instance.setSize(width, height, false);
+  }
+
+  public setPixelRatio(ratio: number): void {
+    this.instance.setPixelRatio(ratio);
+    this.setSize(window.innerWidth, window.innerHeight);
   }
 
   public render(scene: THREE.Scene, camera: THREE.Camera): void {

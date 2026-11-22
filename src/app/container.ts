@@ -3,6 +3,7 @@
  * rejestr paneli i StudioShell. `main.ts` pozostaje cienkim bootstrapem.
  */
 import { AppRenderer } from '../core/renderer';
+import { AdaptiveResolution } from '../core/adaptive-resolution';
 import { AppCamera } from '../core/camera';
 import { AppScene } from '../core/scene';
 import { StudioLighting } from '../scene/lighting';
@@ -293,6 +294,7 @@ export function createApp(canvas: HTMLCanvasElement): AppHandle {
   let rafId = 0;
   let frameCount = 0;
   let fpsWindowStart = performance.now();
+  const adaptiveRes = AdaptiveResolution.create(renderer.maxPixelRatio);
   const animate = (timestamp: number): void => {
     rafId = requestAnimationFrame(animate);
     const deltaMs = timestamp - lastTimestamp;
@@ -309,6 +311,10 @@ export function createApp(canvas: HTMLCanvasElement): AppHandle {
     if (elapsed >= 500) {
       const fps = Math.round((frameCount * 1000) / elapsed);
       telemetryManager.updateFps(fps, deltaMs);
+      if (!document.hidden) {
+        const nextRatio = adaptiveRes.update(fps, timestamp);
+        if (nextRatio !== null) renderer.setPixelRatio(nextRatio);
+      }
       frameCount = 0;
       fpsWindowStart = timestamp;
     }
