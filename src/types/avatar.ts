@@ -38,9 +38,6 @@ export interface FaceDriver {
   /** Returns the list of blendshapes available in the loaded model */
   listAvailableShapes(): string[];
 
-  /** Smooth return to the neutral pose (all weights 0) */
-  relaxToNeutral(durationMs?: number): void;
-
   /** Returns the list of speech-apparatus meshes */
   getSpeechMeshes(): THREE.Mesh[];
 
@@ -66,13 +63,27 @@ export interface FramesClip {
   fps: number;
   /** Shapes the stream OWNS — a missing key in a frame → 0 for those shapes. */
   shapes: string[];
-  /** true → procedural blink OFF + GazeSaccades does not write eyeLook* (A2F carries the eyes). */
+  /** true → procedural blink, gaze morphs and eyeball bones are OFF (A2F carries the eyes). */
   carriesEyes: boolean;
-  /** true → the additive EmotionLayer is OFF during the turn (A2E drives the expression). */
-  carriesEmotion: boolean;
-  /** A2E output (optional) — may feed the EmotionLayer after the turn ends. */
-  emotions?: Array<{ timeSec: number; weights: Record<string, number> }>;
 }
+
+/**
+ * Procedural eye-look morph weights [0..1] (ARKit eyeLook*) — data only. The gaze controller
+ * computes them; FaceController is the single module that writes them to the driver.
+ */
+export interface EyeLookWeights {
+  eyeLookInLeft: number;
+  eyeLookOutLeft: number;
+  eyeLookUpLeft: number;
+  eyeLookDownLeft: number;
+  eyeLookInRight: number;
+  eyeLookOutRight: number;
+  eyeLookUpRight: number;
+  eyeLookDownRight: number;
+}
+
+/** Source of procedural gaze weights (mirrors the blink provider); null = nothing to apply yet. */
+export type GazeProvider = () => Readonly<EyeLookWeights> | null;
 
 export type AnimationMode = 'viseme' | 'frames';
 

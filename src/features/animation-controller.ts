@@ -20,7 +20,7 @@ import { VisemeOverrideMap } from '../lipsync/viseme-overrides';
 import { TypedEventBus, Unsub } from '../app/events';
 import { AnimationService, AppEvents } from '../app/app-types';
 import { t } from '../app/copy';
-import { AnimationMode, FaceDriver, FramesClip } from '../types/avatar';
+import { AnimationMode, FaceDriver, FramesClip, GazeProvider } from '../types/avatar';
 import { SettingsStore } from '../app/store/settings-store';
 
 const DEMO_PHRASE = 'This is an A2F frames demo';
@@ -45,6 +45,7 @@ export class AnimationController implements AnimationService {
   private readonly speak: (text: string) => void;
 
   private faceController: FaceController | null = null;
+  private gazeProvider: GazeProvider | null = null;
   private animMode: AnimationMode;
   private calibration: CalibrationProfile;
   private readonly subscriptions: Unsub[] = [];
@@ -70,7 +71,14 @@ export class AnimationController implements AnimationService {
     fc.setCalibrationProfile(this.calibration);
     fc.setLipSyncEngine(this.store.getEffective<'phoneme' | 'char'>('lipSyncEngine'));
     fc.setAnimationMode(this.animMode);
+    fc.setGazeProvider(this.gazeProvider);
     this.faceController = fc;
+  }
+
+  /** Procedural gaze source (eyeLook* weights); survives avatar reloads. */
+  public setGazeProvider(provider: GazeProvider | null): void {
+    this.gazeProvider = provider;
+    this.faceController?.setGazeProvider(provider);
   }
 
   private handleAudioChunk(chunk: { alignment: Parameters<FaceController['onAudioChunk']>[0]; startTime: number; epoch: number }): void {

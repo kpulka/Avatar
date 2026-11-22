@@ -1,4 +1,4 @@
-import { FaceDriver } from '../types/avatar';
+import type { EyeLookWeights } from '../types/avatar';
 
 export interface GazeOptions {
   maxAngleRad?: number; // Maximum gaze angle (default 0.26 rad ~15°)
@@ -7,16 +7,7 @@ export interface GazeOptions {
   saccadeMaxAngleRad?: number; // Maximum saccade jump (default 0.087 rad ~5°)
 }
 
-export interface EyeGazeWeights {
-  eyeLookInLeft: number;
-  eyeLookOutLeft: number;
-  eyeLookUpLeft: number;
-  eyeLookDownLeft: number;
-  eyeLookInRight: number;
-  eyeLookOutRight: number;
-  eyeLookUpRight: number;
-  eyeLookDownRight: number;
-}
+export type EyeGazeWeights = EyeLookWeights;
 
 /**
  * Gaze and eye micro-saccade controller (REAL-02, docs/5)
@@ -91,16 +82,6 @@ export class GazeSaccades {
       eyeLookUpRight: lookY > 0 ? lookY : 0,
       eyeLookDownRight: lookY < 0 ? -lookY : 0,
     };
-  }
-
-  /**
-   * Applies the gaze weights to FaceDriver with a moderate weight so the eyelids naturally support the movement without distortion
-   */
-  public applyToDriver(driver: FaceDriver, currentTimeSec: number, dt: number): void {
-    const weights = this.compute(currentTimeSec, dt);
-    for (const [shape, val] of Object.entries(weights)) {
-      driver.applyWeight(shape, val * 0.35);
-    }
   }
 
   public getLookAngles(): { lookX: number; lookY: number } {

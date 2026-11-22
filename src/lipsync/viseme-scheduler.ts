@@ -25,6 +25,20 @@ const CLOSE_SAFETY_CAP = 0.85;
 /** Effective mouthPress of a full bilabial (M/B/P) under the balanced preset (Phase 11.2 SHOW-06). */
 const PRESS_REF = 0.35;
 
+/**
+ * Shape families visemes legitimately own. FaceController hands the scheduler ONLY these, so its
+ * foundation rule (no contribution -> decay to 0) cannot clobber eye (gaze/blink) or brow
+ * (emotion) regions.
+ */
+export const SPEECH_SHAPE_FAMILIES = ['jaw', 'mouth', 'tongue', 'cheek', 'nose'] as const;
+
+export function isSpeechShape(shape: string): boolean {
+  for (const family of SPEECH_SHAPE_FAMILIES) {
+    if (shape.startsWith(family)) return true;
+  }
+  return false;
+}
+
 export class VisemeScheduler {
   private queue: VisemeQueueItem[] = [];
   /** Coarticulation lambda base [1/s] — mirrors profile.coarticulationSpeed (LIPS-06);

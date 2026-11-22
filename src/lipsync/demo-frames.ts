@@ -122,7 +122,6 @@ export function buildDemoFrames(_sampleRate: number, durationSec: number, phrase
     fps: FPS,
     shapes: [...usedShapes],
     carriesEyes: false,
-    carriesEmotion: false,
   };
 }
 

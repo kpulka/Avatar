@@ -1,6 +1,14 @@
-import { FaceDriver, CharAlignment, PoseFrame, FramesClip, AnimationMode } from '../types/avatar';
+import {
+  FaceDriver,
+  CharAlignment,
+  PoseFrame,
+  FramesClip,
+  AnimationMode,
+  EyeLookWeights,
+  GazeProvider,
+} from '../types/avatar';
 import { AudioEngine } from '../audio/audio-engine';
-import { VisemeScheduler } from './viseme-scheduler';
+import { VisemeScheduler, isSpeechShape } from './viseme-scheduler';
 import { mapCharToShapes, charTokenFor } from './viseme-mappings';
 import { ensureG2pLoaded, isG2pReady, g2pAvailable } from './g2p/g2p-en';
 import { mergeCharAlignmentToPhonemes } from './g2p/phoneme-merge';
@@ -21,13 +29,34 @@ export type FaceState = 'IDLE' | 'SPEAKING' | 'RELAXING';
   *  (protects MetaPerson from the "lip on the nose" artifact). */
 const FRAME_CLOSE_CAP = 0.85;
 
+/**
+ * Share of the base emotion mixed in during SPEAKING — the ONE policy for both tracks
+ * (viseme and frames): brows/cheeks keep the expression subtle while the mouth is busy.
+ * Moves to anim-config in 16-04.
+ */
+export const EMOTION_MIX_SPEAKING = 0.3;
+
+/** Morph weight of the procedural gaze (the eyelids gently follow the eyeball bones). */
+const GAZE_MORPH_WEIGHT = 0.35;
+
+/** The eyeLook* morphs owned by the gaze provider (fixed key order, no per-frame Object.entries). */
+const EYE_LOOK_SHAPES: ReadonlyArray<keyof EyeLookWeights> = [
+  'eyeLookInLeft',
+  'eyeLookOutLeft',
+  'eyeLookUpLeft',
+  'eyeLookDownLeft',
+  'eyeLookInRight',
+  'eyeLookOutRight',
+  'eyeLookUpRight',
+  'eyeLookDownRight',
+];
+
 const clamp01 = (v: number): number => (v < 0 ? 0 : v > 1 ? 1 : v);
 
 /** Meta of the active clip in frames mode (08-CONTEXT v2). */
 interface FrameMeta {
   shapes: readonly string[];
   carriesEyes: boolean;
-  carriesEmotion: boolean;
 }
 
 export interface FaceControllerOptions {
@@ -68,6 +97,10 @@ export class FaceController {
 
   // Eyelid blinking function
   private blinkProvider: (() => { left: number; right: number }) | null = null;
+  // Procedural eye-look morph weights (data only — this class stays the single morph writer)
+  private gazeProvider: GazeProvider | null = null;
+  // Speech-owned shapes (jaw/mouth/tongue/cheek/nose) — the only shapes the viseme scheduler may drive
+  private readonly speechShapeList: string[];
 
   // Character-to-shape mapping function
   private charMapper: (chars: string[], index: number) => Map<string, number> = mapCharToShapes;
@@ -85,6 +118,7 @@ export class FaceController {
     // Mouth timing follows the time actually HEARD (output latency compensated), not the render position.
     this.audibleClock = options.audibleClock ?? createAudibleClock(engine.ctx);
     this.scheduler = new VisemeScheduler();
+    this.speechShapeList = driver.listAvailableShapes().filter(isSpeechShape);
     this.blinker = new ProceduralBlink();
     this.emotionLayer = new EmotionLayer();
     this.blinkProvider = () => this.blinker.update(this.engine.ctx.currentTime);
@@ -193,7 +227,6 @@ export class FaceController {
     this.framesMeta = {
       shapes: clip.shapes ?? [],
       carriesEyes: clip.carriesEyes === true,
-      carriesEmotion: clip.carriesEmotion === true,
     };
     console.log(
       `[FaceController] feedFrames: ${this.frameBuffer.length} frames, base=${baseSec.toFixed(3)}s, ` +
@@ -264,6 +297,26 @@ export class FaceController {
 
   public setBlinkProvider(provider: () => { left: number; right: number }): void {
     this.blinkProvider = provider;
+  }
+
+  /**
+   * Registers the procedural gaze source (eyeLook* weights, data only — mirrors the blink
+   * provider). FaceController applies them itself, so it stays the only morph writer.
+   */
+  public setGazeProvider(provider: GazeProvider | null): void {
+    this.gazeProvider = provider;
+  }
+
+  /**
+   * True while procedural eye writers (blink, gaze morphs AND the eyeball bones driven by the
+   * scene) may act — false when the active frames clip carries its own eyes (A2F).
+   */
+  public areProceduralEyesActive(): boolean {
+    return this.eyeWritersAllowed();
+  }
+
+  private eyeWritersAllowed(): boolean {
+    return !(this.animationMode === 'frames' && this.framesMeta?.carriesEyes === true);
   }
 
   public setEmotion(type: EmotionType): void {
@@ -478,9 +531,9 @@ export class FaceController {
    * Frames track — applies absolute frames (contract v2) on the ctx.currentTime axis.
    * Zero-order hold: keep the last frame with baseSec+timeSec <= now; no smoothing,
    * no addition. Safety: clamp 0..1 + mouthClose cap (FRAME_CLOSE_CAP). Stores
-   * currentWeights so RELAXING starts from the last pose. Emotions: when carriesEmotion,
-   * the frames carry the expression (A2E), so we do NOT mix; otherwise we add only
-   * the shapes NOT owned by the clip (e.g. brows).
+   * currentWeights so RELAXING starts from the last pose. Emotions: only the shapes NOT
+   * owned by the clip (e.g. brows) receive the base emotion, at EMOTION_MIX_SPEAKING —
+   * the same policy as the viseme track.
    */
   private updateFrames(nowSec: number, emotionWeights: Map<string, number>): void {
     const meta = this.framesMeta;
@@ -532,15 +585,13 @@ export class FaceController {
       this.driver.applyWeight(shape, w);
     }
 
-    // Emotions outside the clip — only when the frames do NOT carry their own expression.
-    if (!meta.carriesEmotion) {
-      for (const [shape, emWeight] of emotionWeights.entries()) {
-        if (shape.startsWith('eyeBlink')) continue;
-        if (meta.shapes.indexOf(shape) !== -1) continue; // absolute shape — no blending
-        const w = clamp01(emWeight);
-        this.currentWeights.set(shape, w);
-        this.driver.applyWeight(shape, w);
-      }
+    // Emotions outside the clip: same mix as the viseme track (one policy for both).
+    for (const [shape, emWeight] of emotionWeights.entries()) {
+      if (shape.startsWith('eyeBlink')) continue;
+      if (meta.shapes.indexOf(shape) !== -1) continue; // absolute shape — no blending
+      const w = clamp01(emWeight * EMOTION_MIX_SPEAKING);
+      this.currentWeights.set(shape, w);
+      this.driver.applyWeight(shape, w);
     }
 
     // End of turn: audio has finished -> frames consumed -> RELAXING from the last pose.
@@ -548,21 +599,42 @@ export class FaceController {
   }
 
   /**
-   * Main facial update loop, called from the Three.js renderer animation loop (dt in seconds)
+   * Main facial update loop, called from the Three.js renderer animation loop (dt in seconds).
+   *
+   * Write order per frame (the layer-composition contract, later writers win):
+   *   1. blink            eyeBlink*      (skipped when the frames clip carries its own eyes)
+   *   2. gaze morphs      eyeLook*       (via the gaze provider; same carriesEyes gate as blink)
+   *   3. scheduler        jaw/mouth/tongue/cheek/nose ONLY (speech subset — never eye/brow regions)
+   *   4. emotion mix      EMOTION_MIX_SPEAKING on speech shapes + the non-speech emotion shapes
+   *      (or, in frames mode: clip-absolute shapes first, then the same emotion mix on the rest)
+   *   5. manual overrides HUD sliders / previews, only while not SPEAKING
+   * Clocks: speech/frames use the audible audio clock, RELAXING the wall clock (see 16-03).
    */
   public render(dt: number): void {
     const nowSec = this.audibleClock();
 
     // 1. Procedural eyelid blinking — skipped when the active clip carries its own eyes
     //    (frames mode + carriesEyes, contract v2). In all other states blinking runs.
-    const framesCarryEyes = this.animationMode === 'frames' && this.framesMeta?.carriesEyes === true;
-    if (this.blinkProvider && !framesCarryEyes) {
+    const eyesAllowed = this.eyeWritersAllowed();
+    if (this.blinkProvider && eyesAllowed) {
       const blink = this.blinkProvider();
       this.driver.applyWeight('eyeBlinkLeft', blink.left);
       this.driver.applyWeight('eyeBlinkRight', blink.right);
     }
 
-    // 2. Update the emotion-layer weights (REAL-03)
+    // 2. Procedural gaze morphs (single-writer seam): applied here, never by the scene directly.
+    const gazeActive = this.gazeProvider !== null && eyesAllowed;
+    if (gazeActive) {
+      const gaze = this.gazeProvider!();
+      if (gaze) {
+        for (let i = 0; i < EYE_LOOK_SHAPES.length; i++) {
+          const shape = EYE_LOOK_SHAPES[i];
+          this.driver.applyWeight(shape, gaze[shape] * GAZE_MORPH_WEIGHT);
+        }
+      }
+    }
+
+    // Update the emotion-layer weights (REAL-03)
     const emotionWeights = this.emotionLayer.update(dt);
 
     // 3. Speech apparatus state machine
@@ -574,8 +646,9 @@ export class FaceController {
           break;
         }
 
-        const speechShapes = this.driver.listAvailableShapes();
-        const updatedWeights = this.scheduler.update(nowSec, dt, this.engine.getEpoch(), speechShapes);
+        // The scheduler only sees the speech subset, so its foundation rule (no contribution ->
+        // decay to 0) can never zero eye/brow regions owned by gaze or emotion.
+        const updatedWeights = this.scheduler.update(nowSec, dt, this.engine.getEpoch(), this.speechShapeList);
 
         const activeMouthClose = updatedWeights.get('mouthClose') ?? 0;
 
@@ -588,19 +661,22 @@ export class FaceController {
             // Suppress the smile on bilabial consonants M/B/P
             finalWeight = weight;
           } else {
-            // Subtle emotion influence during speech (30% of the emotion weight) to keep the expression balanced
-            finalWeight = Math.min(1.0, weight + emWeight * 0.3);
+            // Subtle emotion influence during speech to keep the expression balanced
+            finalWeight = Math.min(1.0, weight + emWeight * EMOTION_MIX_SPEAKING);
           }
 
           this.currentWeights.set(shape, finalWeight);
           this.driver.applyWeight(shape, finalWeight);
         }
 
-        // Overlay emotions not part of the speech visemes (e.g. brows)
+        // Emotion shapes outside the speech subset (brows, eyeWide, ...): the scheduler does not
+        // own them, so they get the same emotion mix as speech shapes. eyeLook* belongs to gaze.
         for (const [shape, emWeight] of emotionWeights.entries()) {
-          if (!updatedWeights.has(shape) && !shape.startsWith('eyeBlink')) {
-            this.driver.applyWeight(shape, emWeight);
-          }
+          if (isSpeechShape(shape) || shape.startsWith('eyeBlink')) continue;
+          if (gazeActive && shape.startsWith('eyeLook')) continue;
+          const w = clamp01(emWeight * EMOTION_MIX_SPEAKING);
+          this.currentWeights.set(shape, w);
+          this.driver.applyWeight(shape, w);
         }
 
         // If the viseme queue has run out and the audio stopped playing -> transition to relaxation
@@ -623,6 +699,7 @@ export class FaceController {
 
         for (const shape of availableShapes) {
           if (shape.startsWith('eyeBlink')) continue;
+          if (gazeActive && shape.startsWith('eyeLook')) continue; // gaze owns these this frame
 
           const current = this.currentWeights.get(shape) ?? 0;
           const emTarget = emotionWeights.get(shape) ?? 0;
