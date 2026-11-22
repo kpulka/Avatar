@@ -37,3 +37,26 @@ Checker: orchestrator inline grep. Verdict: DRIFT (LINE-SHIFT class — path ren
 Docs renamed (git mv, history kept). Plans 16-01, 16-02, 16-07, 17-01, 17-02, 17-03 still cite OLD names → executors use the NEW path:
 docs/1-architektura-i-modele-3d.md → docs/1-architecture-and-3d-models.md · docs/2-integracja-elevenlabs-wss.md → docs/2-elevenlabs-wss-integration.md · docs/3-lip-sync-i-koartykulacja.md → docs/3-lip-sync-and-coarticulation.md · docs/4-audio-i-obsluga-przerwan.md → docs/4-audio-and-barge-in.md · docs/5-shadery-i-realizm.md → docs/5-shaders-and-realism.md · docs/6-analiza-opensource-i-rozwoj.md → docs/6-opensource-analysis-and-future.md · docs/A2F-LOCAL.md → docs/a2f-local-setup.md · docs/EN-visemes.md → docs/en-visemes.md
 12-04 references old names intentionally (Gate B skip-list must be emptied there). 12-01 added allowlist entry viseme-mappings.ts:320 (flag for 12-06).
+
+# Drift B2 — after merge 98802f5 (12-05 copy.ts registry + 12-06 src EN)
+Checker: haiku, read-only. Verdict: DRIFT (15 SEMANTIC, 28 LINE-SHIFT groups in 14/15/16/17).
+
+## SEMANTIC
+1. **15-02**: copy.ts ALREADY EXISTS (12-05: 261 keys, EN values) + tests/copy.test.ts; retrofit done → reconcile keys, do NOT recreate. Row-for-row count gate vs 15-CONTEXT §4.3 would fail (148 keys not in 15 docs) → gate on "every 15 slot exists", not equality.
+2. **15-02 gate (d)** zero-diacritics: animation-controller.ts:~130 functional PL calibration sentence → exempt via existing tests/language.test.ts allowlist (as 12-06).
+3. **15-02 task 6 / 15-CONTEXT M3**: index.html lang="en" + webgl-fallback uses t('webgl.*') → already done, skip.
+4. **15-CONTEXT §4.3, 15-DRAFT-ui-spec, 15-05**: "values Polish until Phase 12" → values are EN; use copy.ts values.
+5. **15-05** "Spróbuj ponownie" → reuse `panel.retry` ('Try again') or add `errors.connection.retry`.
+6. **15-05** "Reset WSZYSTKICH głosek" → `visemes.resetAll` exists; add EN `visemes.resetAllConfirmTitle/Body`.
+7. **15-05** "Pokaż kolejność", **15-06** "Skrót: Ctrl+Shift+D" → add new EN slots.
+8. **15-05/15-06** cite slot IDs absent from copy.ts (errors.connection.*, errors.micDenied/micFailed, session.micInUserSettings, settings.studioMode(Hint), chip.active, compare.cancel/trackA, conversation.start, poc.phases, inspector.categoryTitles, loader.hide, ui.modal.open/close, animation.slider.*, boot.loadingModel, captions.regionAria, visemes.shapeLabels) → add as new EN slots.
+9. **14-02 MODULE_RULES**: add `'app/copy.ts': { layer: 'app-contracts', importableBy: ['features','ui','app-root'] }` (19 edges ui/features → copy.ts; copy.ts imports nothing). 14-CONTEXT §1.1 counts stale.
+10. **16-01, 16-02, 16-07**: docs paths → docs/4-audio-and-barge-in.md, docs/3-lip-sync-and-coarticulation.md (see B1).
+11. **16-07** "docs edited in Polish, keep Polish" → docs are EN; edit in English.
+12. **17-01, 17-02, 17-03, 17-05**: docs/EN-visemes.md → docs/en-visemes.md (case-sensitive on CI!).
+13. **17-06**: 12 landed → write EN; add `chip.simplifiedLipsync` = 'Simplified lip-sync'.
+14. **13-04**: 12 docs waves landed → execute task 1.
+15. **14-CONTEXT**: app-types.ts header now EN (doc note only).
+
+## LINE-SHIFT
+24 src files changed line counts (user-settings, session-panel, visemes-panel, studio-shell, status-pill, container, animation-controller, …). Re-anchor by content, never by line. Any anchor quoting a Polish comment/string → search the English equivalent.
