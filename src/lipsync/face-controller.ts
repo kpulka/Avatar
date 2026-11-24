@@ -533,64 +533,13 @@ export class FaceController {
       return;
     }
 
-    const profile = this.scheduler.getCalibrationProfile();
-
-    switch (phonemeKey) {
-      case 'A':
-        this.setManualOverride('jawOpen', 0.55 * profile.jawScale);
-        this.setManualOverride('mouthLowerDownLeft', 0.15);
-        this.setManualOverride('mouthLowerDownRight', 0.15);
-        break;
-
-      case 'E':
-        this.setManualOverride('jawOpen', 0.16 * profile.jawScale);
-        this.setManualOverride('mouthSmileLeft', 0.35 * profile.smileScale);
-        this.setManualOverride('mouthSmileRight', 0.35 * profile.smileScale);
-        this.setManualOverride('mouthUpperUpLeft', 0.15);
-        this.setManualOverride('mouthUpperUpRight', 0.15);
-        this.setManualOverride('mouthLowerDownLeft', 0.15);
-        this.setManualOverride('mouthLowerDownRight', 0.15);
-        break;
-
-      case 'O':
-        this.setManualOverride('jawOpen', 0.28 * profile.jawScale);
-        this.setManualOverride('mouthFunnel', 0.45 * profile.funnelScale);
-        this.setManualOverride('mouthPucker', 0.40 * profile.puckerScale);
-        break;
-
-      case 'U':
-        this.setManualOverride('jawOpen', 0.16 * profile.jawScale);
-        this.setManualOverride('mouthPucker', 0.65 * profile.puckerScale);
-        this.setManualOverride('mouthFunnel', 0.20 * profile.funnelScale);
-        break;
-
-      case 'M':
-        // Lip closure (M / B / P): lips meet along their natural line, no chin pulled up under the nose
-        this.setManualOverride('mouthClose', profile.closeScale);
-        this.setManualOverride('jawOpen', 0.04);
-        this.setManualOverride('mouthPressLeft', 0.12);
-        this.setManualOverride('mouthPressRight', 0.12);
-        break;
-
-      case 'SZ':
-        // Hushing (SZ / CZ): lips pushed forward into a rounded tunnel, teeth close together and visible
-        this.setManualOverride('jawOpen', 0.12 * profile.jawScale);
-        this.setManualOverride('mouthFunnel', 0.65 * profile.funnelScale);
-        this.setManualOverride('mouthPucker', 0.25 * profile.puckerScale);
-        this.setManualOverride('mouthUpperUpLeft', 0.25 * profile.teethExposureScale);
-        this.setManualOverride('mouthUpperUpRight', 0.25 * profile.teethExposureScale);
-        this.setManualOverride('mouthLowerDownLeft', 0.22 * profile.teethExposureScale);
-        this.setManualOverride('mouthLowerDownRight', 0.22 * profile.teethExposureScale);
-        break;
-
-      case 'F':
-        // Labiodental (F / V): upper incisors rest on the rolled-in lower lip!
-        this.setManualOverride('jawOpen', 0.10 * profile.jawScale);
-        this.setManualOverride('mouthRollLower', 0.70 * profile.rollScale);
-        this.setManualOverride('mouthUpperUpLeft', 0.55 * profile.teethExposureScale);
-        this.setManualOverride('mouthUpperUpRight', 0.55 * profile.teethExposureScale);
-        this.setManualOverride('mouthShrugLower', 0.20);
-        break;
+    // The calibrator vocabulary (A/E/O/U/M/SZ/F) reads the SAME tables as live speech (single source
+    // of truth, 17-02): M and F come from the phoneme table, A/E/O/U/SZ from the character table.
+    // Table values are effective targets; the profile scale is applied exactly as the scheduler does it.
+    const shapes = defaultVisemeShapes(phonemeKey);
+    if (!shapes) return;
+    for (const [shape, value] of shapes.entries()) {
+      this.setManualOverride(shape, value * this.scheduler.scaleForShape(shape));
     }
   }
 

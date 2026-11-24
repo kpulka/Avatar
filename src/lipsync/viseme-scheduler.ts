@@ -173,7 +173,7 @@ export class VisemeScheduler {
    * Taste multiplier from the calibration profile for a single shape (LIPS-06).
    * Viseme table values are effective; the profile is a light taste correction around 1.0.
    */
-  private scaleForShape(shape: string): number {
+  public scaleForShape(shape: string): number {
     const p = this.profile;
     if (shape === 'mouthClose' || shape === 'mouthPressLeft' || shape === 'mouthPressRight') {
       // MetaPerson safety: above ~0.85 the mouthClose morph pulls the lower lip onto the nose.
