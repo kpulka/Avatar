@@ -171,11 +171,10 @@ const GATE_A_SCOPES: readonly GateAScope[] = [
   },
   {
     name: 'root',
-    // ON in 12-07, with a documented EXCEPTION: README.md is not in this scope. Its content
-    // is still Polish and Phase 13 owns the rewrite (12-04 only repaired its links). Phase 13
-    // must add README.md back to this list when it lands; this exception is then removed.
+    // ON in 12-07. README.md entered enforced scope in Phase 13 (13-01) once the English
+    // rewrite landed; the former README exemption is removed.
     enforced: true,
-    files: () => ['TODO_humanInTheLoop.md', 'index.html'].filter((f) => existsSync(join(ROOT, f))),
+    files: () => ['README.md', 'TODO_humanInTheLoop.md', 'index.html'].filter((f) => existsSync(join(ROOT, f))),
   },
 ];
 
