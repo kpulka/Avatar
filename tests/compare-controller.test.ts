@@ -207,7 +207,7 @@ describe('CompareController', () => {
   });
 
   it('an interruption cancels the replay before predict starts', async () => {
-    let release: (() => void) | null = null;
+    let release = null as (() => void) | null;
     const harness = makeHarness({
       sleep: () =>
         new Promise<void>((resolve) => {
@@ -232,7 +232,7 @@ describe('CompareController', () => {
   });
 
   it('a new audio:chunk (LIVE turn) cancels the replay — hardStop is the safety net', async () => {
-    let release: (() => void) | null = null;
+    let release = null as (() => void) | null;
     const harness = makeHarness({
       sleep: () =>
         new Promise<void>((resolve) => {
@@ -314,8 +314,8 @@ describe('CompareController', () => {
   });
 
   it.each([
-    { initialMode: 'viseme' as const, random: () => 0.1, finalMode: 'frames', finalState: 'playing-b' },
-    { initialMode: 'frames' as const, random: () => 0.9, finalMode: 'viseme', finalState: 'playing-a' },
+    { initialMode: 'viseme' as const, random: (): number => 0.1, finalMode: 'frames', finalState: 'playing-b' },
+    { initialMode: 'frames' as const, random: (): number => 0.9, finalMode: 'viseme', finalState: 'playing-a' },
   ])('keeps the final lane active until its audio finishes ($finalMode)', async ({ initialMode, random, finalMode, finalState }) => {
     const releases: Array<() => void> = [];
     const harness = makeHarness({ initialMode, random, sleep: () => new Promise<void>(resolve => releases.push(resolve)) });

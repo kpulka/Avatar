@@ -67,7 +67,7 @@ class MockAudioContext {
   public createGain() {
     return { gain: { value: 1, setValueAtTime: vi.fn() }, connect: vi.fn() };
   }
-  public createBuffer(channels: number, length: number, sampleRate: number) {
+  public createBuffer(_channels: number, length: number, sampleRate: number) {
     return { duration: length / sampleRate, copyToChannel: vi.fn() };
   }
   public createBufferSource() {

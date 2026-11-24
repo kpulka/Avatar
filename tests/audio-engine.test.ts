@@ -7,14 +7,14 @@ class MockAudioBuffer {
   public duration: number;
   private channelData: Float32Array;
 
-  constructor(channels: number, length: number, sampleRate: number) {
+  constructor(_channels: number, length: number, sampleRate: number) {
     this.length = length;
     this.sampleRate = sampleRate;
     this.duration = length / sampleRate;
     this.channelData = new Float32Array(length);
   }
 
-  public copyToChannel(source: Float32Array, channel: number): void {
+  public copyToChannel(source: Float32Array, _channel: number): void {
     this.channelData.set(source);
   }
 }

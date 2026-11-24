@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import {
   PanelContext,
   PanelDefinition,
+  PanelHandle,
   PanelRegistry,
 } from '../src/ui/studio/panel-registry';
 

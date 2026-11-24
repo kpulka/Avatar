@@ -14,11 +14,11 @@ import { createUiFixture } from './helpers/ui-fixtures';
 function makeController(overrides: Partial<Record<string, unknown>> = {}) {
   const events = new TypedEventBus<AppEvents>();
   const backend = {
-    onError: () => undefined,
+    onError: (_err: Error) => undefined,
     onStateChange: () => undefined,
     onUserTranscript: () => undefined,
     onAgentResponse: () => undefined,
-    onAgentCorrection: () => undefined,
+    onAgentCorrection: (_text: string) => undefined,
     onAudioChunk: () => undefined,
     onInterruption: () => undefined,
     getIsRunning: () => false,
