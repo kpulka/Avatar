@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { mapCharToShapes } from '../src/lipsync/viseme-mappings';
+import { mapCharToShapes, charPathSpan } from '../src/lipsync/viseme-mappings';
 
 describe('Viseme Mappings (EN & ARKit)', () => {
   it('detects and maps digraphs with lookahead', () => {
@@ -40,6 +40,20 @@ describe('Viseme Mappings (EN & ARKit)', () => {
     const hardC = mapCharToShapes(['c', 'a', 't'], 0);
     expect(hardC.get('jawOpen')).toBeCloseTo(0.35);
     expect(hardC.has('mouthSmileLeft')).toBe(false);
+  });
+
+  it('charPathSpan: a consonant digraph consumes two letters, everything else one (17-01)', () => {
+    expect(charPathSpan(['t', 'h', 'e'], 0)).toBe(2);
+    expect(charPathSpan(['t', 'h', 'e'], 1)).toBe(1); // the H itself is not a digraph start
+    expect(charPathSpan(['s', 'h', 'i', 'p'], 0)).toBe(2);
+    expect(charPathSpan(['s', 'i', 'n', 'g'], 2)).toBe(2); // ng
+    expect(charPathSpan(['c', 'a', 't'], 0)).toBe(1);
+    expect(charPathSpan([' ', 't'], 0)).toBe(1);
+  });
+
+  it('charPathSpan keeps the vowel of the soft-i digraphs (si/zi/ni/ci) as its own viseme', () => {
+    expect(charPathSpan(['s', 'i', 't'], 0)).toBe(1);
+    expect(charPathSpan(['n', 'i', 'c', 'e'], 0)).toBe(1);
   });
 
   it('maps vowels with proper jaw and mouth pucker', () => {

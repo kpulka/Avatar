@@ -321,6 +321,20 @@ export function charTokenFor(chars: string[], index: number): string | null {
   return upper;
 }
 
+// Digraphs whose second letter is a vowel (PL softness markers: "si", "zi", "ni", "ci"). The vowel
+// is still spoken, so the character path must keep enqueueing it as its own viseme.
+const VOWEL_SECOND_DIGRAPHS = new Set(['SI', 'ZI', 'NI', 'CI']);
+
+/**
+ * How many alignment characters the character path consumes at `index`: 2 for a consonant
+ * digraph (th/sh/ch/ph/wh/qu/ng, sz/cz/rz/dz...), otherwise 1. The caller enqueues ONE viseme for
+ * the digraph and skips the second letter (otherwise "the" pulses TH, then a stray H, then E).
+ */
+export function charPathSpan(chars: string[], index: number): 1 | 2 {
+  const token = charTokenFor(chars, index);
+  return token !== null && token.length === 2 && !VOWEL_SECOND_DIGRAPHS.has(token) ? 2 : 1;
+}
+
 /**
  * Default shapes for a character-path token (without context — for C the hard variant is used).
  * Used by the Viseme Editor and the preview (viseme-overrides).

@@ -11,7 +11,7 @@ import {
 } from '../types/avatar';
 import { AudioEngine } from '../audio/audio-engine';
 import { VisemeScheduler, isSpeechShape } from './viseme-scheduler';
-import { mapCharToShapes, charTokenFor } from './viseme-mappings';
+import { mapCharToShapes, charTokenFor, charPathSpan } from './viseme-mappings';
 import { ensureG2pLoaded, isG2pReady, g2pAvailable } from './g2p/g2p-en';
 import { mergeCharAlignmentToPhonemes } from './g2p/phoneme-merge';
 import { mapPhonemeToShapes } from './g2p/phoneme-visemes';
@@ -481,7 +481,11 @@ export class FaceController {
     for (let i = 0; i < alignment.chars.length; i++) {
       const char = alignment.chars[i];
       const startMs = alignment.char_start_times_ms[i] ?? 0;
-      const durationMs = alignment.char_durations_ms[i] ?? 50;
+      // A consonant digraph (th, sh, ch ...) is ONE viseme: it spans both letters and the second
+      // letter is skipped, so it never fires a phantom pulse of its own.
+      const span = charPathSpan(alignment.chars, i);
+      const durationMs =
+        (alignment.char_durations_ms[i] ?? 50) + (span === 2 ? (alignment.char_durations_ms[i + 1] ?? 0) : 0);
 
       // An override from the Viseme Editor (character path) takes precedence over the character table.
       let shapes: Map<string, number>;
@@ -503,6 +507,7 @@ export class FaceController {
         startTimeSec: chunkStartTimeSec + startMs / 1000 + syncOffsetSec,
         durationSec: Math.max(viseme.minDurationSec, durationMs / 1000),
       });
+      i += span - 1; // skip the second letter of a digraph
     }
   }
 
