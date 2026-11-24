@@ -97,7 +97,8 @@ export function createApp(canvas: HTMLCanvasElement): AppHandle {
   const telemetryManager = new TelemetryManager();
 
   const hostRoot = document.getElementById('ui-root') ?? document.getElementById('app') ?? document.body;
-  hostRoot.append(el('div', { className: 'vignette-overlay' }));
+  const vignette = el('div', { className: 'vignette-overlay' });
+  hostRoot.append(vignette);
   const toast = createToast(hostRoot);
   // The retry of an avatar load failure falls back to the synchronous demo avatar (known good).
   const loaderUi = createLoader(hostRoot, {
@@ -379,6 +380,10 @@ export function createApp(canvas: HTMLCanvasElement): AppHandle {
       unsubSceneTheme();
       unsubSceneAttr();
       unsubSceneReload();
+      embedBridge.dispose();
+      // Closes the AudioContext (created by AudioEngine in this function), exactly once.
+      audioEngine.dispose();
+      vignette.remove();
       shell.destroy();
       compareController.dispose();
       lastTurnBuffer.dispose();
@@ -391,9 +396,6 @@ export function createApp(canvas: HTMLCanvasElement): AppHandle {
       environment.dispose();
       loader.dispose();
       renderer.dispose();
-      // The context is created by AudioEngine in this function, so this function owns closing it.
-      // close() rejects when the context is already closed; nothing to do then.
-      void audioEngine.ctx.close().catch(() => undefined);
     },
   };
 }

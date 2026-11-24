@@ -131,4 +131,18 @@ describe('EmbedBridge', () => {
     expect(onSay).toHaveBeenCalledOnce();
     expect(onSay).toHaveBeenCalledWith('x'.repeat(500));
   });
+
+  it('dispose() removes the window message listener and is idempotent', () => {
+    const onConnect = vi.fn();
+    const bridge = new EmbedBridge({ onConnect }, { devMode: false });
+
+    send(connect, 'https://widget.example');
+    expect(onConnect).toHaveBeenCalledOnce();
+
+    bridge.dispose();
+    send(connect, 'https://widget.example');
+    expect(onConnect).toHaveBeenCalledOnce();
+
+    expect(() => bridge.dispose()).not.toThrow();
+  });
 });

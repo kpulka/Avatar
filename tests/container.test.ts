@@ -112,6 +112,10 @@ vi.mock('../src/audio/audio-engine', () => ({
     getTailTime = vi.fn(() => 0);
     getActiveNodesCount = vi.fn(() => 0);
     unlock = vi.fn(async () => undefined);
+    // Like the real engine: it owns the context it created and closes it on dispose.
+    dispose = vi.fn(() => {
+      void this.ctx.close();
+    });
   },
 }));
 vi.mock('../src/audio/speech-backend', () => ({
@@ -143,6 +147,7 @@ vi.mock('../src/prod/embed-bridge', () => ({
     notifyStateChange = vi.fn();
     notifyTranscript = vi.fn();
     notifyReady = vi.fn();
+    dispose = vi.fn();
   },
 }));
 vi.mock('../src/prod/telemetry', () => ({
@@ -329,6 +334,13 @@ describe('createApp (container smoke, jsdom)', () => {
     bus.on('toast', () => undefined); // the bug this regression guards against: no Unsub collected
     app.dispose();
     expect(bus.handlerCount()).toBe(1);
+  });
+
+  it('dispose() removes the vignette overlay it created', () => {
+    const app = createApp(setupDom());
+    expect(document.querySelectorAll('.vignette-overlay')).toHaveLength(1);
+    app.dispose();
+    expect(document.querySelector('.vignette-overlay')).toBeNull();
   });
 
   it('dispose() removes the shell and does not throw', () => {

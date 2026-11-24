@@ -19,15 +19,12 @@ node -e "const l=require('./package-lock.json');const c={};for(const[k,m]of Obje
 | Package | Version | Scope | License | Declared in |
 |---|---|---|---|---|
 | `three` | 0.174.0 | runtime | MIT | `dependencies` |
-| `@elevenlabs/client` | 1.23.0 | runtime | MIT | `dependencies` (not imported by `src/`; see note) |
 | `cmu-pronouncing-dictionary` | 3.0.0 | build time and tests | ISC | `devDependencies` (data is used to build `src/lipsync/g2p/dict-en-pruned.json`) |
 | `@types/three` | 0.174.0 | development | MIT | `devDependencies` |
 | `typescript` | 5.9.3 | development | Apache-2.0 | `devDependencies` |
-| `vite` | 6.4.3 | development | MIT | `devDependencies` |
-| `vitest` | 4.1.11 | development | MIT | `devDependencies` |
+| `vite` | 6.4.6 | development | MIT | `devDependencies` |
+| `vitest` | 4.1.12 | development | MIT | `devDependencies` |
 | `jsdom` | 29.1.1 | development | MIT | `devDependencies` |
-
-Note on `@elevenlabs/client`: it is declared as a runtime dependency but no file under `src/` imports it. It is listed for completeness; this file does not claim it is used.
 
 ## Transitive dependencies
 
