@@ -38,6 +38,7 @@ describe('reconnect failures', () => {
     }
     expect(FakeSocket.instances).toHaveLength(6);
     expect(onError).toHaveBeenCalledTimes(1);
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access -- test double / mock typing: the value comes from an untyped mock or JSON fixture
     expect(defined(onError.mock.calls[0])[0].message).toContain('5 attempts');
     expect(client.getState()).toBe('disconnected');
   });
@@ -77,6 +78,7 @@ describe('reconnect failures', () => {
     new RawWssClient('agent', { onError }).connect();
     defined(FakeSocket.instances[0]).fail(4001, 'invalid agent');
     expect(onError).toHaveBeenCalledTimes(1);
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access -- test double / mock typing: the value comes from an untyped mock or JSON fixture
     expect(defined(onError.mock.calls[0])[0].message).toContain('invalid agent');
     expect(vi.getTimerCount()).toBe(0);
   });

@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-const captured = vi.hoisted(() => ({ callbacks: {} as Record<string, (...args: any[]) => void>, connect: vi.fn(), micStart: vi.fn(), micStop: vi.fn() }));
+// eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion -- test double / mock typing: the value comes from an untyped mock or JSON fixture
+const captured = vi.hoisted(() => ({ callbacks: {} as Record<string, (...args: unknown[]) => void>, connect: vi.fn(), micStart: vi.fn(), micStop: vi.fn() }));
 vi.mock('../src/audio/raw-wss-client', () => ({
   RawWssClient: class {
     connect = captured.connect; disconnect = vi.fn(); sendUserAudio = vi.fn();

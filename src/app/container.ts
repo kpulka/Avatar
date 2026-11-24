@@ -365,6 +365,7 @@ export function createApp(canvas: HTMLCanvasElement): AppHandle {
       sceneController.loadDefaultAvatar();
       rafId = requestAnimationFrame(animate);
       embedBridge.notifyReady();
+      // eslint-disable-next-line no-console -- trace log, not a diagnostic: kept as console.log on purpose (warn/error are the diagnostic channels)
       console.log('Avatar application initialized successfully.');
     },
     dispose(): void {

@@ -44,7 +44,7 @@ export function createUiFixture(options: FixtureOptions = {}): UiFixture {
   document.body.append(host);
 
   const events = new TypedEventBus<AppEvents>();
-  const store = new SettingsStore(createMemoryStorage() as unknown as Storage);
+  const store = new SettingsStore(createMemoryStorage());
   for (const key of options.locks ?? []) store.setLock(key, true);
 
   const spies = {

@@ -73,7 +73,7 @@ export function parseA2fJson(json: string): A2fParseResult {
   try {
     payload = JSON.parse(json);
   } catch (e) {
-    throw new Error(`A2F: invalid JSON — ${(e as Error).message}`);
+    throw new Error(`A2F: invalid JSON — ${(e as Error).message}`, { cause: e });
   }
   return parseA2fPayload(payload as A2fPayload);
 }

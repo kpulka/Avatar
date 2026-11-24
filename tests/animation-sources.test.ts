@@ -29,6 +29,7 @@ describe('AnimationSourceRegistry (open ids)', () => {
     const apply = vi.fn();
     registry.register({ id: 'synth', label: 'Synthetic', short: 'SYNTH', available: () => true, apply });
     expect(registry.list().map((s) => s.short)).toEqual(['LIVE', 'A2F', 'SYNTH']);
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-return -- test double / mock typing: the value comes from an untyped mock or JSON fixture
     registry.get('synth')!.apply({ setSource: (mode) => apply(mode) });
     expect(apply).toHaveBeenCalled();
   });
@@ -72,9 +73,11 @@ describe('FaceController track sources (16-06: third source without editing inte
     const adapter: FaceTrackSource = {
       kind: 'frames',
       start: vi.fn((ctx) => {
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- test double / mock typing: the value comes from an untyped mock or JSON fixture
         startedWith = ctx;
       }),
       feed: vi.fn((payload, epoch) => {
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-argument -- test double / mock typing: the value comes from an untyped mock or JSON fixture
         startedWith!.feedFrames(payload as FramesClip, 0, epoch);
       }),
       stop: vi.fn(() => startedWith!.interrupt()),
@@ -83,9 +86,11 @@ describe('FaceController track sources (16-06: third source without editing inte
 
     expect(controller.startTrack('SYNTH')).toBe(true);
     expect(controller.getAnimationMode()).toBe('frames');
+    // eslint-disable-next-line @typescript-eslint/unbound-method -- test double / mock typing: the value comes from an untyped mock or JSON fixture
     expect(adapter.start).toHaveBeenCalledTimes(1);
 
     expect(controller.feedTrack('SYNTH', clip, 0)).toBe(true);
+    // eslint-disable-next-line @typescript-eslint/unbound-method -- test double / mock typing: the value comes from an untyped mock or JSON fixture
     expect(adapter.feed).toHaveBeenCalledWith(clip, 0); // dispatch table hit
     expect(controller.getState()).toBe('SPEAKING');
 
@@ -95,6 +100,7 @@ describe('FaceController track sources (16-06: third source without editing inte
     expect(driver.w['mouthFunnel']).toBeCloseTo(0.2, 9);
 
     expect(controller.stopTrack('SYNTH')).toBe(true);
+    // eslint-disable-next-line @typescript-eslint/unbound-method -- test double / mock typing: the value comes from an untyped mock or JSON fixture
     expect(adapter.stop).toHaveBeenCalledTimes(1);
     expect(controller.getState()).toBe('RELAXING');
   });

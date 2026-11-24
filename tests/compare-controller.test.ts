@@ -183,10 +183,10 @@ describe('CompareController', () => {
     // 2 chunki × 2 tory
     expect(harness.engine.playChunk).toHaveBeenCalledTimes(4);
     const calls = harness.engine.playChunk.mock.calls;
-    expect(Array.from(defined(calls[0])[0] as Uint8Array)).toEqual([1, 2, 3, 4]);
-    expect(Array.from(defined(calls[2])[0] as Uint8Array)).toEqual([1, 2, 3, 4]);
-    expect(Array.from(defined(calls[1])[0] as Uint8Array)).toEqual([5, 6, 7, 8]);
-    expect(Array.from(defined(calls[3])[0] as Uint8Array)).toEqual([5, 6, 7, 8]);
+    expect(Array.from(defined(calls[0])[0])).toEqual([1, 2, 3, 4]);
+    expect(Array.from(defined(calls[2])[0])).toEqual([1, 2, 3, 4]);
+    expect(Array.from(defined(calls[1])[0])).toEqual([5, 6, 7, 8]);
+    expect(Array.from(defined(calls[3])[0])).toEqual([5, 6, 7, 8]);
     expect(defined(calls[0])[1]).toBe(defined(calls[2])[1]);
 
     expect(harness.faceController.onAudioChunk).toHaveBeenCalledTimes(2);

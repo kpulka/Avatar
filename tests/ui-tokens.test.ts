@@ -65,7 +65,7 @@ describe('design tokens (src/style.css)', () => {
     const rootProps = new Set(customProps(ROOT_BODY));
     expect(props.filter((p) => !rootProps.has(p))).toEqual([]);
     // Light theme is a token swap only: no selector like `body.theme-light .foo`.
-    expect(CSS).not.toMatch(/body\.theme-light\s+[.#a-z\[]/i);
+    expect(CSS).not.toMatch(/body\.theme-light\s+[.#a-z[]/i);
   });
 
   it('(e) dead selectors from the 15-CONTEXT C1 audit are gone', () => {

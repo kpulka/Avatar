@@ -48,7 +48,7 @@ export function createVisemesPanel(): PanelDefinition {
       let selectedKey: string | null = null;
       let record: VisemeOverrideMap = store.getEffective<VisemeOverrideMap>('visemeOverrides') ?? {};
 
-      const groupSelect = el('select', { className: 'viseme-group-select', ariaLabel: t('visemes.groupAria') }) as HTMLSelectElement;
+      const groupSelect = el('select', { className: 'viseme-group-select', ariaLabel: t('visemes.groupAria') });
       groupSelect.append(
         el('option', { value: 'en', text: t('visemes.groupEn') }),
         el('option', { value: 'char', text: t('visemes.groupChar') })
@@ -58,7 +58,7 @@ export function createVisemesPanel(): PanelDefinition {
         placeholder: t('visemes.searchPlaceholder'),
         ariaLabel: t('visemes.searchAria'),
         type: 'text',
-      }) as HTMLInputElement;
+      });
 
       const chipsEl = el('div', { className: 'viseme-chip-list' });
       const detailName = el('strong', { text: t('visemes.pickViseme') });
@@ -122,7 +122,7 @@ export function createVisemesPanel(): PanelDefinition {
             id: uid('viseme-shape'),
             type: 'range',
             attrs: { min: '0', max: '1', step: '0.01' },
-          }) as HTMLInputElement;
+          });
           input.value = String(shapeVal(ref.key, control.shapes[0]));
           input.addEventListener('input', () => {
             const value = parseFloat(input.value);

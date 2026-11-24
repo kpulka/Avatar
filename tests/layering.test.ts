@@ -3,20 +3,21 @@
  * module under src/ and fails on any edge the contract in tests/layering-rules.ts does not allow,
  * on module-level import cycles, and on top-level DOM / storage access in the domain layers.
  *
- * The rules are data (layering-rules.ts); this file is the checker. The checkers are pure
- * functions so the negative self-tests can feed them synthetic edges and sources.
+ * The rules are data (layering-rules.ts) and the per-edge decision is a pure function
+ * (layering-check.ts, shared with the ESLint rule in eslint.config.ts, 18-04); this file walks the
+ * tree and asserts. The checkers are pure so the negative self-tests can feed them synthetic edges
+ * and sources.
  */
 import { readdirSync, readFileSync } from 'node:fs';
 import { dirname, join, posix, relative, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import ts from 'typescript';
 import { describe, expect, it } from 'vitest';
+import { type Edge, findViolations, layerOf } from './layering-check';
 import {
-  DIR_LAYER,
   EXCEPTIONS,
   LAYER_MAY_IMPORT,
   LAYER_ORDER,
-  Layer,
   MODULE_RULES,
   SIDE_EFFECT_EXEMPTIONS,
   SIDE_EFFECT_FREE_DIRS,
@@ -24,11 +25,6 @@ import {
 } from './layering-rules';
 
 const SRC = join(dirname(fileURLToPath(import.meta.url)), '..', 'src');
-
-interface Edge {
-  from: string;
-  to: string;
-}
 
 // ---------------------------------------------------------------- source walking & import parsing
 
@@ -82,30 +78,6 @@ function collectModules(): { files: string[]; edges: Edge[]; unresolved: string[
 }
 
 // ---------------------------------------------------------------- the checkers (pure)
-
-export function layerOf(module: string): Layer | undefined {
-  const rule = MODULE_RULES[module];
-  if (rule) return rule.layer;
-  const top = module.split('/')[0] ?? '';
-  return DIR_LAYER[top];
-}
-
-export function findViolations(edges: readonly Edge[]): string[] {
-  const out: string[] = [];
-  for (const { from, to } of edges) {
-    const fromLayer = layerOf(from);
-    const toLayer = layerOf(to);
-    if (!fromLayer) { out.push(`${from}: module is not classified (add it to MODULE_RULES / DIR_LAYER)`); continue; }
-    if (!toLayer) { out.push(`${from} -> ${to}: target is not classified`); continue; }
-    const excepted = EXCEPTIONS.some((e) => e.from === from && e.to === to);
-    const layerAllows = fromLayer === toLayer || LAYER_MAY_IMPORT[fromLayer].includes(toLayer);
-    const importableBy = MODULE_RULES[to]?.importableBy;
-    const targetAllows = !importableBy || fromLayer === toLayer || importableBy.includes(fromLayer);
-    if (!excepted && !layerAllows) out.push(`${from} (${fromLayer}) -> ${to} (${toLayer}): layer may not import layer`);
-    else if (!excepted && !targetAllows) out.push(`${from} (${fromLayer}) -> ${to}: importable only by ${importableBy?.join(', ')}`);
-  }
-  return out;
-}
 
 /** Module-level import cycles (each reported once as `a -> b -> a`). */
 export function findCycles(edges: readonly Edge[]): string[] {

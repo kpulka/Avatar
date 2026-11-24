@@ -14,6 +14,7 @@ function collectSources(dir: string, out: string[] = []): string[] {
 
 function leafKeys(obj: object, acc: string[] = []): string[] {
   for (const [key, value] of Object.entries(obj)) {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-argument -- test double / mock typing: the value comes from an untyped mock or JSON fixture
     if (value !== null && typeof value === 'object') leafKeys(value, acc);
     else acc.push(key);
   }
@@ -88,6 +89,7 @@ describe('dead code stays removed (16-04)', () => {
       const code = readFileSync(file, 'utf-8')
         .replace(/\/\*[\s\S]*?\*\//g, '')
         .replace(/\/\/.*$/gm, '');
+      // eslint-disable-next-line no-control-regex -- test double / mock typing: the value comes from an untyped mock or JSON fixture
       expect(code, file).not.toMatch(/0\.85/);
     }
   });

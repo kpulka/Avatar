@@ -82,7 +82,7 @@ export class RawWssClient {
     socket.onmessage = (event: MessageEvent) => {
       if (this.ws !== socket) return;
       try {
-        const msg = JSON.parse(event.data) as ServerToClientMsg;
+        const msg = JSON.parse(event.data as string) as ServerToClientMsg;
         this.handleServerMessage(msg, socket);
       } catch (err) {
         console.warn('[RawWssClient] Message parsing error:', err);
@@ -229,6 +229,7 @@ export class RawWssClient {
 
     // Exponential backoff: 1s, 2s, 4s, 8s, max 16s
     const delay = Math.min(1000 * Math.pow(2, this.reconnectAttempts - 1), 16000);
+    // eslint-disable-next-line no-console -- trace log, not a diagnostic: kept as console.log on purpose (warn/error are the diagnostic channels)
     console.log(`[RawWssClient] Reconnecting in ${delay}ms (attempt ${this.reconnectAttempts})...`);
 
     this.reconnectTimer = window.setTimeout(() => {

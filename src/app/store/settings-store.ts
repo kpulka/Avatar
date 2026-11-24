@@ -56,7 +56,7 @@ export class SettingsStore {
   }
 
   private loadInitialState(): SettingsStateV1 {
-    let raw: string | null = null;
+    let raw: string | null;
     try {
       raw = this.storage.getItem(BLOB_KEY);
     } catch {

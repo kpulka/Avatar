@@ -13,9 +13,9 @@ function fakeContext(container: unknown): PanelContext {
     events: { on: () => () => undefined, emit: vi.fn() } as unknown as PanelContext['events'],
     services: {} as PanelContext['services'],
     ui: {
-      toast: noopHandle() as unknown as PanelContext['ui']['toast'],
+      toast: noopHandle(),
       loader: noopHandle() as unknown as PanelContext['ui']['loader'],
-      modal: { open: vi.fn(), close: vi.fn(), isOpen: vi.fn(), destroy: vi.fn() } as unknown as PanelContext['ui']['modal'],
+      modal: { open: vi.fn(), close: vi.fn(), isOpen: vi.fn(), destroy: vi.fn() },
     },
     container: container as HTMLElement,
   };

@@ -77,6 +77,7 @@ export class ElevenAgentsSpeechBackend implements SpeechBackend {
         const match = /^pcm_(\d+)$/.exec(f);
         if (match && Number(match[1]) > 0) {
           this.agentOutputSampleRate = Number(match[1]);
+          // eslint-disable-next-line no-console -- trace log, not a diagnostic: kept as console.log on purpose (warn/error are the diagnostic channels)
           console.log(`[SpeechBackend] Agent audio format: ${f} -> ${this.agentOutputSampleRate} Hz`);
         } else {
           console.warn(`[SpeechBackend] unsupported agent output format '${f}' - keeping ${this.agentOutputSampleRate} Hz (expected pcm_<rate>).`);
@@ -123,6 +124,7 @@ export class ElevenAgentsSpeechBackend implements SpeechBackend {
       },
 
       onInterruption: (reason = 'user_interrupted') => {
+        // eslint-disable-next-line no-console -- trace log, not a diagnostic: kept as console.log on purpose (warn/error are the diagnostic channels)
         console.log(`[SpeechBackend] Interruption from the server: ${reason}`);
         this.audioEngine.hardStop();
         this.onInterruption(reason);
@@ -135,6 +137,7 @@ export class ElevenAgentsSpeechBackend implements SpeechBackend {
       },
 
       onAgentResponse: (text: string) => {
+        // eslint-disable-next-line no-console -- trace log, not a diagnostic: kept as console.log on purpose (warn/error are the diagnostic channels)
         console.log(`[SpeechBackend] Agent response: ${text}`);
         this.onAgentResponse(text);
       },
@@ -197,6 +200,7 @@ export class ElevenAgentsSpeechBackend implements SpeechBackend {
     this.onStateChange('listening');
   }
 
+  // eslint-disable-next-line @typescript-eslint/require-await -- SpeechBackend.stop() is Promise-returning; async keeps a throw a rejection
   public async stop(): Promise<void> {
     this.startGeneration++;
     if (!this.isRunning) return;
@@ -210,10 +214,12 @@ export class ElevenAgentsSpeechBackend implements SpeechBackend {
 
   public setMuted(muted: boolean): void {
     this.isMuted = muted;
+    // eslint-disable-next-line no-console -- trace log, not a diagnostic: kept as console.log on purpose (warn/error are the diagnostic channels)
     console.log(`[SpeechBackend] Microphone: ${muted ? 'muted' : 'active'}`);
   }
 
   public triggerInterruption(reason = 'client_interrupted'): void {
+    // eslint-disable-next-line no-console -- trace log, not a diagnostic: kept as console.log on purpose (warn/error are the diagnostic channels)
     console.log(`[SpeechBackend] Forced interruption: ${reason}`);
     this.audioEngine.hardStop();
     this.onInterruption(reason);
@@ -303,6 +309,7 @@ export class ElevenAgentsSpeechBackend implements SpeechBackend {
 
     // Dump of the first chunk of the utterance — a look at the times (after the rescale).
     if (index === 0) {
+      // eslint-disable-next-line no-console -- trace log, not a diagnostic: kept as console.log on purpose (warn/error are the diagnostic channels)
       console.log(
         '[AlignDiag] first-chunk',
         JSON.stringify({
@@ -323,6 +330,7 @@ export class ElevenAgentsSpeechBackend implements SpeechBackend {
       ` start=${scheduledStartTime.toFixed(3)}s` +
       (flags.length ? ` ⚠ ${flags.join(' | ')}` : ' ✓');
     if (flags.length) console.warn(log);
+    // eslint-disable-next-line no-console -- trace log, not a diagnostic: kept as console.log on purpose (warn/error are the diagnostic channels)
     else if (index < 4) console.log(log);
   }
 

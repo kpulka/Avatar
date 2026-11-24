@@ -9,18 +9,26 @@
     "preview": "vite preview",
     "test": "vitest run",
     "typecheck": "tsc --noEmit -p tsconfig.test.json",
-    "build:dict": "node scripts/build-dict-en.mjs"
+    "build:dict": "node scripts/build-dict-en.mjs",
+    "lint": "eslint src tests --max-warnings 0",
+    "format": "prettier --write src tests eslint.config.ts vite.config.ts",
+    "format:check": "prettier --check src tests eslint.config.ts vite.config.ts"
   },
   "dependencies": {
     "@elevenlabs/client": "^1.23.0",
     "three": "^0.174.0"
   },
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
     "@types/node": "^22.20.5",
     "@types/three": "^0.174.0",
     "cmu-pronouncing-dictionary": "^3.0.0",
+    "eslint": "^10.15.0",
+    "jiti": "^2.7.0",
     "jsdom": "^29.1.1",
+    "prettier": "^3.10.1",
     "typescript": "^5.7.3",
+    "typescript-eslint": "^8.74.0",
     "vite": "^6.2.0",
     "vitest": "^4.1.11"
   }

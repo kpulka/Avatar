@@ -68,7 +68,9 @@ describe('RawWssClient', () => {
 
     // Should send conversation_initiation_client_data
     expect(mockWs.sentData).toHaveLength(1);
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- test double / mock typing: the value comes from an untyped mock or JSON fixture
     const sent = JSON.parse(defined(mockWs.sentData[0]));
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access -- test double / mock typing: the value comes from an untyped mock or JSON fixture
     expect(sent.type).toBe('conversation_initiation_client_data');
     expect(client.getState()).toBe('connected');
   });
@@ -162,6 +164,7 @@ describe('RawWssClient', () => {
     socket.close(1008, 'rejected');
 
     expect(onError).toHaveBeenCalledTimes(1);
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access -- test double / mock typing: the value comes from an untyped mock or JSON fixture
     expect(defined(onError.mock.calls[0])[0].message).toContain('WebSocket connection error');
     expect(client.getState()).toBe('disconnected');
   });

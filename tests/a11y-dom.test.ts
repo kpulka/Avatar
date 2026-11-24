@@ -230,8 +230,10 @@ describe('SVG icons', () => {
 
   it('user layer sources contain no emoji', async () => {
     const { readFileSync, readdirSync } = await import('node:fs');
+    // eslint-disable-next-line @typescript-eslint/unbound-method -- test double / mock typing: the value comes from an untyped mock or JSON fixture
     const { join } = await import('node:path');
     const dir = join(process.cwd(), 'src', 'ui', 'user');
+    // eslint-disable-next-line no-misleading-character-class -- test double / mock typing: the value comes from an untyped mock or JSON fixture
     const emoji = /[\u{1F300}-\u{1FAFF}\u{2699}\u{FE0F}]/u;
     const offenders = readdirSync(dir)
       .filter((name) => name.endsWith('.ts'))

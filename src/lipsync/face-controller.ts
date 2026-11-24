@@ -263,12 +263,14 @@ export class FaceController {
     if (this.state === 'IDLE') {
       // Nothing to preserve; only a leftover dev pose (previewViseme / sliders) needs wiping.
       if (this.manualOverrides.size > 0) this.resetFaceToNeutral();
+      // eslint-disable-next-line no-console -- trace log, not a diagnostic: kept as console.log on purpose (warn/error are the diagnostic channels)
       console.log(`[FaceController] Animation mode → ${mode} (IDLE)`);
       return;
     }
     this.clearManualOverrideMap();
     this.state = 'RELAXING';
     this.relaxStartedAt = this.nowMs();
+    // eslint-disable-next-line no-console -- trace log, not a diagnostic: kept as console.log on purpose (warn/error are the diagnostic channels)
     console.log(`[FaceController] Animation mode → ${mode} (turn boundary, RELAXING)`);
   }
 
@@ -311,6 +313,7 @@ export class FaceController {
       shapeSet: new Set(ownedShapes),
       carriesEyes: clip.carriesEyes === true,
     };
+    // eslint-disable-next-line no-console -- trace log, not a diagnostic: kept as console.log on purpose (warn/error are the diagnostic channels)
     console.log(
       `[FaceController] feedFrames: ${this.frameBuffer.length} frames, base=${baseSec.toFixed(3)}s, ` +
         `shapes=${this.framesMeta.shapes.length}, eyes=${this.framesMeta.carriesEyes}`
@@ -558,6 +561,7 @@ export class FaceController {
     this.frameBuffer = [];
     // A deferred mode change is applied right at the interruption (turn boundary).
     if (this.commitPendingMode()) {
+      // eslint-disable-next-line no-console -- trace log, not a diagnostic: kept as console.log on purpose (warn/error are the diagnostic channels)
       console.log('[FaceController] Facial interruption -> mode switched');
       return;
     }
@@ -565,6 +569,7 @@ export class FaceController {
     if (this.state === 'IDLE') return;
     this.state = 'RELAXING';
     this.relaxStartedAt = this.nowMs();
+    // eslint-disable-next-line no-console -- trace log, not a diagnostic: kept as console.log on purpose (warn/error are the diagnostic channels)
     console.log('[FaceController] Facial interruption -> RELAXING state');
   }
 
@@ -701,7 +706,7 @@ export class FaceController {
 
         for (const [shape, weight] of updatedWeights.entries()) {
           // Overlay the emotion (e.g. a smile) unless the lips must seal tightly (mouthClose)
-          let finalWeight = weight;
+          let finalWeight: number;
           const emWeight = emotionWeights.get(shape) ?? 0;
 
           if (shape.startsWith('mouthSmile') && activeMouthClose > emotion.smileSuppressClose) {

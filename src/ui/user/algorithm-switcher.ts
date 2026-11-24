@@ -92,7 +92,7 @@ export function createAlgorithmSwitcher(): PanelDefinition {
       });
 
       const blindLabel = el('span', { text: t('algo.blind') });
-      const blindToggle = el('input', { type: 'checkbox' }) as HTMLInputElement;
+      const blindToggle = el('input', { type: 'checkbox' });
       const blindRow = el('label', { className: 'engine-toggle' }, [blindToggle, blindLabel]);
 
       // Track chips: rendered per registry source (two today), labelled A / B; read-only indicators
@@ -166,7 +166,7 @@ export function createAlgorithmSwitcher(): PanelDefinition {
 
       const refreshCompare = (): void => {
         const can = services.compare.canCompare();
-        (compareButton as HTMLButtonElement).disabled = !can;
+        (compareButton).disabled = !can;
         if (!can && services.compare.getState() === 'idle') {
           statusLine.textContent = t('algo.empty');
         }

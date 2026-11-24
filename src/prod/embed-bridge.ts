@@ -115,8 +115,10 @@ export class EmbedBridge {
 
     window.addEventListener('message', (event: MessageEvent) => {
       if (!this.isSourceTrusted(event.source)) return;
-      const data = event.data;
-      if (!data || typeof data !== 'object') return;
+      // event.data is untrusted input from another window: treat it as unknown and narrow it.
+      const raw: unknown = event.data;
+      if (!raw || typeof raw !== 'object') return;
+      const data = raw as { type?: unknown; text?: unknown };
 
       if (!this.isOriginTrusted(event.origin)) {
         console.warn(

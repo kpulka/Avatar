@@ -56,7 +56,7 @@ export function createAnimationPanel(): PanelDefinition {
       const root = el('div', { className: 'panel panel-animation' });
 
       // 0. Lip-sync engine (A/B)
-      const engineSelect = el('select', { className: 'engine-select', ariaLabel: t('animation.engineLabel') }) as HTMLSelectElement;
+      const engineSelect = el('select', { className: 'engine-select', ariaLabel: t('animation.engineLabel') });
       engineSelect.append(
         el('option', { value: 'phoneme-en', text: t('animation.engineEn') }),
         el('option', { value: 'phoneme-pl', text: t('animation.enginePl') }),
@@ -77,7 +77,7 @@ export function createAnimationPanel(): PanelDefinition {
       );
 
       // 0b. Animation source
-      const sourceSelect = el('select', { className: 'engine-select', ariaLabel: t('animation.sourceLabel') }) as HTMLSelectElement;
+      const sourceSelect = el('select', { className: 'engine-select', ariaLabel: t('animation.sourceLabel') });
       sourceSelect.append(
         el('option', { value: 'viseme', text: t('animation.sourceViseme') }),
         el('option', { value: 'frames', text: t('animation.sourceFrames') })
@@ -173,12 +173,12 @@ export function createAnimationPanel(): PanelDefinition {
             max: String(spec.max),
             step: String(spec.step),
           },
-        }) as HTMLInputElement;
+        });
         input.addEventListener('input', () => {
           const value = parseFloat(input.value);
           valueLabel.textContent = spec.format(value);
           setActivePreset(null);
-          services.animation.setCalibration({ [spec.key]: value } as Partial<CalibrationProfile>);
+          services.animation.setCalibration({ [spec.key]: value });
         });
         sliderInputs.set(spec.key, input);
         sliderLabels.set(spec.key, valueLabel);

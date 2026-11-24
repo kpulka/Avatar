@@ -67,8 +67,8 @@ export function createConversationDock(): PanelDefinition {
         primary.title = running ? t('dock.end') : t('dock.start'); // tooltip for the icon-only collapse (<=1152px)
         primary.querySelector('.btn-label')!.textContent = running ? t('dock.end') : t('dock.start');
         setIcon(primary, running ? 'phoneOff' : 'phone');
-        (mute as HTMLButtonElement).disabled = !running;
-        (interrupt as HTMLButtonElement).disabled = !running;
+        (mute).disabled = !running;
+        (interrupt).disabled = !running;
       });
 
       const unsubMuted = events.on('voice:muted', (muted) => {
