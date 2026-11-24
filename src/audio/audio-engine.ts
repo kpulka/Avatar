@@ -1,5 +1,8 @@
 import { pcmBytesToFloat32 } from './pcm-resampler';
 
+/** ~80 ms prebuffer to absorb network jitter before the first scheduled chunk. */
+const PREBUFFER_SEC = 0.08;
+
 /**
  * Web Audio Engine for seamless (gapless) playback of raw PCM (docs/4)
  */
@@ -10,7 +13,6 @@ export class AudioEngine {
   private activeNodes: AudioBufferSourceNode[] = [];
   private tailTime = 0;
   private epoch = 0;
-  private prebufferSeconds = 0.08; // ~80ms prebuffer to absorb network jitter
 
   constructor(existingCtx?: AudioContext) {
     if (existingCtx) {
@@ -51,7 +53,7 @@ export class AudioEngine {
 
     const now = this.ctx.currentTime;
     // Gapless: start at max(now + prebuffer, end of the existing queue)
-    const startTime = Math.max(now + this.prebufferSeconds, this.tailTime);
+    const startTime = Math.max(now + PREBUFFER_SEC, this.tailTime);
     this.tailTime = startTime + buffer.duration;
 
     const source = this.ctx.createBufferSource();
@@ -116,21 +118,5 @@ export class AudioEngine {
 
   public setVolume(volume: number): void {
     this.masterGain.gain.setValueAtTime(Math.max(0, Math.min(1, volume)), this.ctx.currentTime);
-  }
-
-  public setAdaptivePrebuffer(enabled: boolean, targetSec = 0.08): void {
-    this.prebufferSeconds = targetSec;
-    if (!enabled) {
-      this.prebufferSeconds = 0.08;
-    }
-  }
-
-  public bumpPrebufferForJitter(): void {
-    this.prebufferSeconds = Math.min(0.2, this.prebufferSeconds + 0.04);
-    console.log(`[AudioEngine] Adaptive prebuffer raised to: ${this.prebufferSeconds.toFixed(3)}s`);
-  }
-
-  public getPrebufferSeconds(): number {
-    return this.prebufferSeconds;
   }
 }

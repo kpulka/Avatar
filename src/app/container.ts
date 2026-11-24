@@ -14,6 +14,7 @@ import { ElevenAgentsSpeechBackend } from '../audio/speech-backend';
 import { resolveAgentId } from '../audio/agent-config';
 import { HeadMicroMovements } from '../realism/head-micro-movements';
 import { GazeSaccades } from '../realism/gaze-saccades';
+import { ANIM_DEFAULTS } from '../lipsync/anim-config';
 import { EmbedBridge } from '../prod/embed-bridge';
 import { TelemetryManager } from '../prod/telemetry';
 import { TypedEventBus } from './events';
@@ -152,6 +153,13 @@ export function createApp(canvas: HTMLCanvasElement): AppHandle {
     speak: (text) => speechBackend.triggerDemoSpeech(text),
   });
   const telemetryController = new TelemetryController(telemetryManager, events);
+
+  // Gaze: the scene computes the weights, FaceController applies them (single morph writer);
+  // an A2F clip that carries its own eyes switches off the procedural eyes (morphs AND bones).
+  animationController.setGazeProvider(() => sceneController.getGazeWeights());
+  sceneController.setProceduralEyesGate(
+    () => animationController.getFaceController()?.areProceduralEyesActive() ?? true
+  );
 
   // ---- A/B comparison (F11): last-turn buffer + source registry
   const lastTurnBuffer = new LastTurnBuffer({ events });
@@ -302,10 +310,11 @@ export function createApp(canvas: HTMLCanvasElement): AppHandle {
     rafId = requestAnimationFrame(animate);
     const deltaMs = timestamp - lastTimestamp;
     lastTimestamp = timestamp;
-    const dt = Math.min(0.1, deltaMs / 1000);
+    const dt = Math.min(ANIM_DEFAULTS.frame.dtCapSec, deltaMs / 1000);
 
-    sceneController.update(dt, timestamp);
+    // Face morphs first, so renderer.render (inside sceneController.update) draws this frame's pose.
     animationController.update(dt);
+    sceneController.update(dt, timestamp);
     scenePresetController.update(dt);
 
     // FPS for telemetry — 500 ms window.

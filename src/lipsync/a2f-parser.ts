@@ -15,6 +15,7 @@
 
 import { PoseFrame, FramesClip } from '../types/avatar';
 import { normalizeShapeName } from '../avatar/shape-normalizer';
+import { clamp01 } from './anim-config';
 
 /** Canonical (camelCase) names of the 52 ARKit blendshapes — the parser whitelist. */
 export const ARKIT_52: readonly string[] = [
@@ -59,7 +60,6 @@ export interface A2fPayload {
     blendshapes?: Record<string, number>;
   }>;
   carriesEyes?: boolean;
-  emotions?: Array<{ timeSec: number; weights: Record<string, number> }>;
 }
 
 export interface A2fParseResult {
@@ -134,21 +134,14 @@ export function parseA2fPayload(payload: A2fPayload): A2fParseResult {
   const explicitEyes = payload.carriesEyes;
   const carriesEyes =
     explicitEyes !== undefined ? explicitEyes === true : sawEyeShape;
-  // The presence of an emotions track (A2E) means the frames carry their own expression
-  // → the additive EmotionLayer must be OFF during the turn (08-CONTEXT v2).
-  const carriesEmotion = Array.isArray(payload.emotions) && payload.emotions.length > 0;
-
   return {
     clip: {
       frames,
       fps: typeof payload.fps === 'number' ? payload.fps : 60,
       shapes,
       carriesEyes,
-      carriesEmotion,
-      emotions: payload.emotions,
     },
     unknownShapes,
   };
 }
 
-const clamp01 = (v: number): number => (v < 0 ? 0 : v > 1 ? 1 : v);

@@ -77,13 +77,13 @@ snapshot-tested so every change is a conscious one.
 ## Extension points
 
 - **New source**: register through `registerTrackSource(id, adapter)` — the source
-  declares `kind: 'viseme' | 'frames'` and gets the same state machine, epoch and
+  declares `kind: 'viseme' | 'frames'` (`FaceTrackSource`: `start` / `feed` / `stop`, driven through `startTrack` / `feedTrack` / `stopTrack`) and gets the same state machine, epoch and
   safety for free. A test registers a synthetic third source end-to-end without
   touching FaceController internals.
 - **New region** (AvatarDirector): the region-ownership map (face/bones/head → owners)
   is documented at the source registry; a body region adds its own owner, never a
   second writer to the face.
-- **Per-turn policy**: `resolveAnimationRouter` is the single policy point — today
+- **Per-turn policy**: `resolveAnimationSource` is the single policy point — today
   LIVE turns always resolve to the viseme track; streaming A2F (future) changes the
   policy, not the engine.
 
@@ -94,7 +94,7 @@ snapshot-tested so every change is a conscious one.
 | State machine, epoch, layer order | `src/lipsync/face-controller.ts` |
 | Viseme smoothing (λ, easing, clamps) | `src/lipsync/viseme-scheduler.ts` |
 | All tuning constants | `src/lipsync/anim-config.ts` |
-| A2F frames contract (PascalCase→camelCase, carriesEyes/carriesEmotion) | `src/lipsync/a2f-parser.ts` |
+| A2F frames contract (PascalCase→camelCase, carriesEyes) | `src/lipsync/a2f-parser.ts` |
 | Source registry + AvatarDirector seam | `src/lipsync/animation-sources.ts` |
 | Per-turn policy | `src/lipsync/animation-router.ts` |
 | Tests: matrix / races / clocks / allocations | `tests/face-controller-*.test.ts`, `tests/race-condition-epoch.test.ts`, `tests/hot-path-allocations.test.ts` |

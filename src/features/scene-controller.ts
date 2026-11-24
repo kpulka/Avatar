@@ -14,7 +14,7 @@ import { MetaPersonLoader } from '../avatar/meta-person-loader';
 import { createTestAvatar } from '../avatar/test-avatar-generator';
 import { HeadMicroMovements } from '../realism/head-micro-movements';
 import { GazeSaccades } from '../realism/gaze-saccades';
-import { FaceDriver, LoadedAvatar } from '../types/avatar';
+import { EyeLookWeights, FaceDriver, LoadedAvatar } from '../types/avatar';
 import { TypedEventBus } from '../app/events';
 import { AppEvents, SceneService } from '../app/app-types';
 
@@ -35,6 +35,10 @@ export class SceneController implements SceneService {
   private faceDriver: FaceDriver | null = null;
   private avatarInfo: { name: string; shapesCount: number; speechMeshes: number } | null = null;
   private faceY = 0;
+  /** Last gaze morph weights (computed here, APPLIED by FaceController — single writer). */
+  private gazeWeights: EyeLookWeights | null = null;
+  /** Gate for the procedural eyeball bones; false when an A2F clip carries its own eyes. */
+  private proceduralEyesGate: () => boolean = () => true;
 
   constructor(private readonly deps: SceneControllerDeps) {}
 
@@ -52,6 +56,16 @@ export class SceneController implements SceneService {
 
   public getFaceDriver(): FaceDriver | null {
     return this.faceDriver;
+  }
+
+  /** Latest gaze weights for the FaceController gaze provider (null before the first frame). */
+  public getGazeWeights(): Readonly<EyeLookWeights> | null {
+    return this.gazeWeights;
+  }
+
+  /** Sets the carriesEyes gate for the eyeball bones (same gate FaceController uses for blink/gaze). */
+  public setProceduralEyesGate(gate: () => boolean): void {
+    this.proceduralEyesGate = gate;
   }
 
   public loadDefaultAvatar(): void {
@@ -131,11 +145,13 @@ export class SceneController implements SceneService {
 
     this.deps.camera.update();
 
+    // Gaze weights are computed here but written to the morphs by FaceController (single writer).
     if (this.faceDriver) {
-      this.deps.gaze.applyToDriver(this.faceDriver, timestampMs / 1000, dt);
+      this.gazeWeights = this.deps.gaze.compute(timestampMs / 1000, dt);
     }
 
-    if (root) {
+    // Eyeball bones: skipped when the active A2F clip carries its own eyes.
+    if (root && this.proceduralEyesGate()) {
       const leftEye =
         root.userData?.leftEye ||
         root.getObjectByName('LeftEye') ||

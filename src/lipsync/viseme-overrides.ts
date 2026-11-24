@@ -9,7 +9,7 @@
  */
 
 import { mapPhonemeToShapes } from './g2p/phoneme-visemes';
-import { charTokenFor, charDefaultShapesForToken } from './viseme-mappings';
+import { charDefaultShapesForToken } from './viseme-mappings';
 
 /** Speech-apparatus shapes editable in the Viseme Editor (no eyes/brows). */
 export const EDITOR_SHAPES = [
@@ -194,5 +194,3 @@ export function defaultVisemeShapes(key: string): Map<string, number> | null {
 export function isEditableViseme(key: string): boolean {
   return defaultVisemeShapes(key) !== null;
 }
-
-export { charTokenFor };

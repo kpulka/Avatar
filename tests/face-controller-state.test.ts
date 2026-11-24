@@ -15,9 +15,6 @@ class MockFaceDriver implements FaceDriver {
   public listAvailableShapes(): string[] {
     return ['jawOpen', 'mouthClose', 'mouthFunnel', 'mouthPucker', 'mouthSmileLeft', 'mouthSmileRight', 'eyeBlinkLeft', 'eyeBlinkRight'];
   }
-  public relaxToNeutral(): void {
-    this.appliedWeights = {};
-  }
   public getSpeechMeshes(): never[] {
     return [];
   }
@@ -66,7 +63,7 @@ describe('FaceController State Machine', () => {
     );
 
     expect(controller.getState()).toBe('SPEAKING');
-    expect(controller.getQueueLength()).toBe(2);
+    expect(controller.getVisemeQueueLength()).toBe(2);
   });
 
   it('rejects chunks with outdated epoch', () => {
@@ -83,7 +80,7 @@ describe('FaceController State Machine', () => {
     );
 
     expect(controller.getState()).toBe('IDLE');
-    expect(controller.getQueueLength()).toBe(0);
+    expect(controller.getVisemeQueueLength()).toBe(0);
   });
 
   it('transitions immediately to RELAXING on interruption and clears queue', () => {
@@ -97,12 +94,12 @@ describe('FaceController State Machine', () => {
       0
     );
 
-    expect(controller.getQueueLength()).toBe(3);
+    expect(controller.getVisemeQueueLength()).toBe(3);
 
     controller.onInterruption();
 
     expect(controller.getState()).toBe('RELAXING');
-    expect(controller.getQueueLength()).toBe(0);
+    expect(controller.getVisemeQueueLength()).toBe(0);
   });
 
   it('energy-fallback moves only the jaw (jawOpen > 0, rest 0)', () => {
@@ -121,7 +118,7 @@ describe('FaceController State Machine', () => {
 
     expect(controller.getState()).toBe('SPEAKING');
     // Only the window with energy > 0.02 enters the queue
-    expect(controller.getQueueLength()).toBe(1);
+    expect(controller.getVisemeQueueLength()).toBe(1);
 
     // Render at window start: jawOpen active, other speech shapes = 0
     controller.render(0.016);

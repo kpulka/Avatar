@@ -1,4 +1,7 @@
 import { CalibrationProfile, DEFAULT_CALIBRATION_PROFILE } from './calibration';
+import { ANIM_DEFAULTS } from './anim-config';
+
+const { viseme: visemeConfig, common } = ANIM_DEFAULTS;
 
 export interface VisemeQueueItem {
   epoch: number;
@@ -9,9 +12,9 @@ export interface VisemeQueueItem {
 }
 
 export interface SchedulerOptions {
-  lambda?: number; // Reaction speed of the mouth muscles (default 18 [1/s])
-  blendInSec?: number; // Blend-in time (default 35ms)
-  blendOutSec?: number; // Blend-out time (default 45ms)
+  lambda?: number; // Reaction speed of the mouth muscles [1/s] (default: profile.coarticulationSpeed)
+  blendInSec?: number; // Blend-in time (default viseme.blendInSec)
+  blendOutSec?: number; // Blend-out time (default viseme.blendOutSec)
   calibrationProfile?: Partial<CalibrationProfile>;
 }
 
@@ -19,11 +22,19 @@ export interface SchedulerOptions {
  * Speech viseme scheduling and coarticulation engine (docs/3)
  */
 
-/** Hard ceiling of the effective mouthClose — protects MetaPerson from the "lip on the nose" deformation. */
-const CLOSE_SAFETY_CAP = 0.85;
+/**
+ * Shape families visemes legitimately own. FaceController hands the scheduler ONLY these, so its
+ * foundation rule (no contribution -> decay to 0) cannot clobber eye (gaze/blink) or brow
+ * (emotion) regions.
+ */
+export const SPEECH_SHAPE_FAMILIES = ['jaw', 'mouth', 'tongue', 'cheek', 'nose'] as const;
 
-/** Effective mouthPress of a full bilabial (M/B/P) under the balanced preset (Phase 11.2 SHOW-06). */
-const PRESS_REF = 0.35;
+export function isSpeechShape(shape: string): boolean {
+  for (const family of SPEECH_SHAPE_FAMILIES) {
+    if (shape.startsWith(family)) return true;
+  }
+  return false;
+}
 
 export class VisemeScheduler {
   private queue: VisemeQueueItem[] = [];
@@ -37,13 +48,17 @@ export class VisemeScheduler {
   // Smoothed weights of the current frame (shape -> weight)
   private readonly currentWeights: Map<string, number> = new Map();
 
+  // Per-frame scratch structures, reused (cleared, never reallocated) so update() allocates nothing.
+  private readonly scratchTargets: Map<string, number> = new Map();
+  private readonly scratchUpdated: Map<string, number> = new Map();
+
   constructor(options: SchedulerOptions = {}) {
     if (options.calibrationProfile) {
       this.profile = { ...this.profile, ...options.calibrationProfile };
     }
-    this.lambda = options.lambda ?? this.profile.coarticulationSpeed ?? 18;
-    this.blendInSec = options.blendInSec ?? 0.035;
-    this.blendOutSec = options.blendOutSec ?? 0.045;
+    this.lambda = options.lambda ?? this.profile.coarticulationSpeed;
+    this.blendInSec = options.blendInSec ?? visemeConfig.blendInSec;
+    this.blendOutSec = options.blendOutSec ?? visemeConfig.blendOutSec;
   }
 
   public setCalibrationProfile(profile: Partial<CalibrationProfile>): void {
@@ -62,16 +77,14 @@ export class VisemeScheduler {
   }
 
   public clear(): void {
-    this.queue = [];
-  }
-
-  public purgeStaleEpochs(activeEpoch: number): void {
-    this.queue = this.queue.filter((item) => item.epoch === activeEpoch);
+    this.queue.length = 0;
   }
 
   /**
    * Main coarticulation step, invoked every frame (dt in seconds)
    * Returns the map of updated weights for all speech keys.
+   * BORROWED: the returned Map is a reused scratch instance — valid until the next update() call;
+   * copy it if you need to keep it.
    */
   public update(
     nowSec: number,
@@ -79,13 +92,19 @@ export class VisemeScheduler {
     activeEpoch: number,
     speechShapes: string[]
   ): Map<string, number> {
-    const targets = new Map<string, number>();
+    const targets = this.scratchTargets;
+    targets.clear();
 
-    // 1. Drop expired queue items
-    this.queue = this.queue.filter((item) => {
-      if (item.epoch !== activeEpoch) return false;
-      return nowSec <= item.startTimeSec + item.durationSec + this.blendOutSec;
-    });
+    // 1. Drop expired queue items — in-place compaction (write index), no filter() copy.
+    const queue = this.queue;
+    let write = 0;
+    for (let read = 0; read < queue.length; read++) {
+      const item = queue[read];
+      if (item.epoch !== activeEpoch) continue;
+      if (nowSec > item.startTimeSec + item.durationSec + this.blendOutSec) continue;
+      queue[write++] = item;
+    }
+    queue.length = write;
 
     let activeMouthClose = 0;
     let activePress = 0;
@@ -118,17 +137,18 @@ export class VisemeScheduler {
     // 3. Priority mouth closure: mouthClose AND lip press (press) damp jawOpen (LIPS-02).
     // Bilabials M/B/P have a low mouthClose (MetaPerson), so closeRatio alone would weaken
     // the jaw damping after the previous vowel — press (Phase 11.2 SHOW-06) complements it.
-    if (activeMouthClose > 0.15 || activePress > 0.15) {
+    if (activeMouthClose > visemeConfig.closeJawThreshold || activePress > visemeConfig.closeJawThreshold) {
       const currentJaw = targets.get('jawOpen') ?? 0;
       const closeRatio = activeMouthClose / this.profile.closeScale;
-      const pressRatio = activePress / PRESS_REF;
+      const pressRatio = activePress / visemeConfig.pressRef;
       const closure = Math.min(1, Math.max(closeRatio, pressRatio));
-      targets.set('jawOpen', currentJaw * Math.max(0, 1 - closure * 0.95));
+      targets.set('jawOpen', currentJaw * Math.max(0, 1 - closure * visemeConfig.closeJawFactor));
     }
 
     // 4. FPS-independent smoothing (exponential damping): alpha = 1 - exp(-lambda * dt)
     // Lambda is PER MUSCLE GROUP (closures fast, smile slow), base = coarticulationSpeed.
-    const updated = new Map<string, number>();
+    const updated = this.scratchUpdated;
+    updated.clear();
 
     for (const shape of speechShapes) {
       if (shape.startsWith('eyeBlink')) continue;
@@ -140,8 +160,8 @@ export class VisemeScheduler {
       const current = this.currentWeights.get(shape) ?? 0.0;
       const next = current + (target - current) * alpha;
 
-      // If the weight is minimal (< 0.001), reset it to a hard 0
-      const finalWeight = next < 0.001 ? 0 : next;
+      // If the weight is minimal (< snapEpsilon), reset it to a hard 0
+      const finalWeight = next < common.snapEpsilon ? 0 : next;
       this.currentWeights.set(shape, finalWeight);
       updated.set(shape, finalWeight);
     }
@@ -158,7 +178,7 @@ export class VisemeScheduler {
     if (shape === 'mouthClose' || shape === 'mouthPressLeft' || shape === 'mouthPressRight') {
       // MetaPerson safety: above ~0.85 the mouthClose morph pulls the lower lip onto the nose.
       // Hard ceiling — independent of the slider (default presets are set lower).
-      return Math.min(p.closeScale, CLOSE_SAFETY_CAP);
+      return Math.min(p.closeScale, common.mouthCloseCap);
     }
     if (shape === 'jawOpen') return p.jawScale;
     if (shape.startsWith('mouthSmile')) return p.smileScale;
@@ -172,14 +192,15 @@ export class VisemeScheduler {
   /**
    * Smoothing lambda per muscle group. Base = this.lambda — a mirror of
    * coarticulationSpeed from the profile (the constructor and setCalibrationProfile
-   * keep both in sync; default 18). Short EN consonants (closures of 40-80 ms)
+   * keep both in sync). Short EN consonants (closures of 40-80 ms)
    * must have time to reach their shape, while the speech smile should return slowly (docs/3).
    */
   private lambdaForShape(shape: string): number {
-    const cs = this.lambda; // base = the profile's coarticulationSpeed, default 18
-    if (shape === 'mouthClose' || shape === 'mouthPressLeft' || shape === 'mouthPressRight') return cs * 1.7;
-    if (shape === 'jawOpen' || shape === 'tongueOut') return cs * 1.55;
-    if (shape.startsWith('mouthSmile')) return cs * 0.45;
+    const cs = this.lambda; // base = the profile's coarticulationSpeed
+    const tiers = visemeConfig.lambdaTiers;
+    if (shape === 'mouthClose' || shape === 'mouthPressLeft' || shape === 'mouthPressRight') return cs * tiers.closure;
+    if (shape === 'jawOpen' || shape === 'tongueOut') return cs * tiers.jawTongue;
+    if (shape.startsWith('mouthSmile')) return cs * tiers.smile;
     return cs; // pucker, funnel, roll, shrug, upperUp, lowerDown
   }
 
@@ -214,6 +235,6 @@ export class VisemeScheduler {
 
   public resetAll(): void {
     this.currentWeights.clear();
-    this.queue = [];
+    this.queue.length = 0;
   }
 }

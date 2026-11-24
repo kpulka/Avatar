@@ -1,11 +1,14 @@
 import { Object3D } from 'three';
+import { ANIM_DEFAULTS } from '../lipsync/anim-config';
+
+const { head: headConfig, breath: breathConfig } = ANIM_DEFAULTS;
 
 export interface MicroMovementOptions {
-  maxYawRad?: number; // Maximum yaw angle (default 0.012 rad < 0.7°)
-  maxPitchRad?: number; // Maximum pitch angle (default 0.008 rad < 0.5°)
-  maxRollRad?: number; // Maximum roll angle (default 0.004 rad < 0.25°)
-  breathingFreqHz?: number; // Breathing frequency (default 0.22 Hz, ~4.5s cycle)
-  breathingAmplitudeY?: number; // Chest rise amplitude (default 0.002 m)
+  maxYawRad?: number; // Maximum yaw angle (default head.ampYawRad)
+  maxPitchRad?: number; // Maximum pitch angle (default head.ampPitchRad)
+  maxRollRad?: number; // Maximum roll angle (default head.ampRollRad)
+  breathingFreqHz?: number; // Breathing frequency (default breath.freqHz)
+  breathingAmplitudeY?: number; // Chest rise amplitude (default breath.ampM)
 }
 
 /**
@@ -30,11 +33,11 @@ export class HeadMicroMovements {
   private isChestBaseSet = false;
 
   constructor(options: MicroMovementOptions = {}) {
-    this.maxYaw = options.maxYawRad ?? 0.012; // very subtle left/right drift (< 0.7°)
-    this.maxPitch = options.maxPitchRad ?? 0.008; // subtle tilt (< 0.5°), WITHOUT rhythmic nodding
-    this.maxRoll = options.maxRollRad ?? 0.004; // (< 0.25°)
-    this.breathingFreq = options.breathingFreqHz ?? 0.22; // ~4.5s breathing cycle
-    this.breathingAmpY = options.breathingAmplitudeY ?? 0.002; // chest rise (2 mm)
+    this.maxYaw = options.maxYawRad ?? headConfig.ampYawRad; // very subtle left/right drift
+    this.maxPitch = options.maxPitchRad ?? headConfig.ampPitchRad; // subtle tilt, WITHOUT rhythmic nodding
+    this.maxRoll = options.maxRollRad ?? headConfig.ampRollRad;
+    this.breathingFreq = options.breathingFreqHz ?? breathConfig.freqHz;
+    this.breathingAmpY = options.breathingAmplitudeY ?? breathConfig.ampM;
   }
 
   /**
@@ -102,9 +105,9 @@ export class HeadMicroMovements {
 
       // Chest rise on inhalation
       chestTarget.position.y = this.baseChestPosition.y + offsetY;
-      // Chest expansion (the chest circumference grows by ~2% on inhalation)
-      chestTarget.scale.x = this.baseChestScale.x * (1 + breathNorm * 0.02);
-      chestTarget.scale.z = this.baseChestScale.z * (1 + breathNorm * 0.035);
+      // Chest expansion (the chest circumference grows on inhalation)
+      chestTarget.scale.x = this.baseChestScale.x * (1 + breathNorm * breathConfig.chestScaleX);
+      chestTarget.scale.z = this.baseChestScale.z * (1 + breathNorm * breathConfig.chestScaleZ);
     }
   }
 

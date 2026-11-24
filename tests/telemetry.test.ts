@@ -1,14 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { TelemetryManager } from '../src/prod/telemetry';
-import { AudioEngine } from '../src/audio/audio-engine';
-
-class MockAudioContext {
-  public currentTime = 0;
-  public state = 'running';
-  public createGain() {
-    return { gain: { value: 1, setValueAtTime: vi.fn() }, connect: vi.fn() };
-  }
-}
 
 describe('Telemetry & Resilience (ROB-02)', () => {
   beforeEach(() => {
@@ -39,22 +30,5 @@ describe('Telemetry & Resilience (ROB-02)', () => {
     const report = telemetry.getReport();
     expect(report.bargeInCount).toBe(2);
     expect(telemetry.getFormattedSessionDuration()).toBe('01:05');
-  });
-
-  it('dynamically adapts prebuffer window in AudioEngine during network jitter', () => {
-    const mockCtx = new MockAudioContext();
-    const engine = new AudioEngine(mockCtx as unknown as AudioContext);
-
-    expect(engine.getPrebufferSeconds()).toBe(0.08);
-
-    // Network jitter occurs
-    engine.bumpPrebufferForJitter();
-    expect(engine.getPrebufferSeconds()).toBe(0.12);
-
-    engine.bumpPrebufferForJitter();
-    expect(engine.getPrebufferSeconds()).toBe(0.16);
-
-    engine.bumpPrebufferForJitter();
-    expect(engine.getPrebufferSeconds()).toBe(0.2); // clamp do 0.20s
   });
 });

@@ -20,7 +20,7 @@ import { VisemeOverrideMap } from '../lipsync/viseme-overrides';
 import { TypedEventBus, Unsub } from '../app/events';
 import { AnimationService, AppEvents } from '../app/app-types';
 import { t } from '../app/copy';
-import { AnimationMode, FaceDriver, FramesClip } from '../types/avatar';
+import { AnimationMode, FaceDriver, FramesClip, GazeProvider } from '../types/avatar';
 import { SettingsStore } from '../app/store/settings-store';
 
 const DEMO_PHRASE = 'This is an A2F frames demo';
@@ -45,6 +45,7 @@ export class AnimationController implements AnimationService {
   private readonly speak: (text: string) => void;
 
   private faceController: FaceController | null = null;
+  private gazeProvider: GazeProvider | null = null;
   private animMode: AnimationMode;
   private calibration: CalibrationProfile;
   private readonly subscriptions: Unsub[] = [];
@@ -70,13 +71,23 @@ export class AnimationController implements AnimationService {
     fc.setCalibrationProfile(this.calibration);
     fc.setLipSyncEngine(this.store.getEffective<'phoneme' | 'char'>('lipSyncEngine'));
     fc.setAnimationMode(this.animMode);
+    fc.setGazeProvider(this.gazeProvider);
     this.faceController = fc;
+  }
+
+  /** Procedural gaze source (eyeLook* weights); survives avatar reloads. */
+  public setGazeProvider(provider: GazeProvider | null): void {
+    this.gazeProvider = provider;
+    this.faceController?.setGazeProvider(provider);
   }
 
   private handleAudioChunk(chunk: { alignment: Parameters<FaceController['onAudioChunk']>[0]; startTime: number; epoch: number }): void {
     const fc = this.faceController;
     if (!fc) return;
     // A LIVE turn from WSS is always visemes — A2F batch breaks TTFB (router 08-03).
+    // By design a pending deferred switch (e.g. to A2F requested mid-turn) is dropped here, so
+    // `animMode` (the user's choice) may diverge from the FaceController mode until the next
+    // non-live turn; the switch itself is a smooth turn-boundary switch, never a face snap.
     const source = resolveAnimationSource({ mode: this.animMode, liveTurn: true });
     if (fc.getAnimationMode() !== source) {
       fc.setAnimationMode(source);
@@ -131,7 +142,7 @@ export class AnimationController implements AnimationService {
         : 'Hello! I am delighted to speak with you and assist you today.';
     this.events.emit('transcript:user', t('animation.calibrationLabelPrefix', { lang: lang.toUpperCase() }));
     this.events.emit('transcript:agent', phrase);
-    this.faceController?.clearManualOverrides();
+    this.faceController?.clearManualOverrideMap();
     this.speak(phrase);
   }
 
@@ -146,7 +157,7 @@ export class AnimationController implements AnimationService {
   }
 
   public resetMorphs(): void {
-    this.faceController?.clearManualOverrides();
+    this.faceController?.resetFaceToNeutral();
   }
 
   public setCalibration(delta: Partial<CalibrationProfile>): void {

@@ -139,7 +139,7 @@ vi.mock('../src/realism/head-micro-movements', () => ({ HeadMicroMovements: clas
 vi.mock('../src/realism/gaze-saccades', () => ({
   GazeSaccades: class {
     setPointer = vi.fn();
-    applyToDriver = vi.fn();
+    compute = vi.fn(() => null);
     applyToEyeObjects = vi.fn();
   },
 }));

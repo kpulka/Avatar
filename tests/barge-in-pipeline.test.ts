@@ -24,9 +24,6 @@ class MockFaceDriver implements FaceDriver {
       'eyeBlinkRight',
     ];
   }
-  public relaxToNeutral(): void {
-    this.appliedWeights = {};
-  }
   public getSpeechMeshes(): never[] {
     return [];
   }
@@ -68,12 +65,14 @@ describe('Barge-in Pipeline (INT-01 & INT-02)', () => {
   let mockCtx: MockAudioContext;
   let engine: AudioEngine;
   let controller: FaceController;
+  let wallMs = 0; // hand-driven wall clock (injected nowMs) — no fake timers
 
   beforeEach(() => {
+    wallMs = 0;
     driver = new MockFaceDriver();
     mockCtx = new MockAudioContext();
     engine = new AudioEngine(mockCtx as unknown as AudioContext);
-    controller = new FaceController(driver, engine);
+    controller = new FaceController(driver, engine, { nowMs: () => wallMs });
   });
 
   it('immediately stops audio and starts facial relaxation upon interruption', () => {
@@ -96,7 +95,7 @@ describe('Barge-in Pipeline (INT-01 & INT-02)', () => {
     );
 
     expect(controller.getState()).toBe('SPEAKING');
-    expect(controller.getQueueLength()).toBe(5);
+    expect(controller.getVisemeQueueLength()).toBe(5);
 
     // 3. The interruption event occurs (barge-in)
     engine.hardStop();
@@ -109,17 +108,13 @@ describe('Barge-in Pipeline (INT-01 & INT-02)', () => {
 
     // Verify INT-02: the expression moves to RELAXING, the viseme queue is cleared
     expect(controller.getState()).toBe('RELAXING');
-    expect(controller.getQueueLength()).toBe(0);
+    expect(controller.getVisemeQueueLength()).toBe(0);
 
-    // 4. After 160ms in RELAXING the face reaches IDLE
-    vi.useFakeTimers();
-    vi.setSystemTime(performance.now() + 160);
-
+    // 4. After the relax duration (160 ms on the injected wall clock) the face reaches IDLE
+    wallMs += 160;
     controller.render(0.016);
 
     expect(controller.getState()).toBe('IDLE');
     expect(controller.getCurrentWeight('jawOpen')).toBe(0);
-
-    vi.useRealTimers();
   });
 });

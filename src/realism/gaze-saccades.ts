@@ -1,22 +1,16 @@
-import { FaceDriver } from '../types/avatar';
+import type { EyeLookWeights } from '../types/avatar';
+import { ANIM_DEFAULTS } from '../lipsync/anim-config';
+
+const { gaze: gazeConfig } = ANIM_DEFAULTS;
 
 export interface GazeOptions {
-  maxAngleRad?: number; // Maximum gaze angle (default 0.26 rad ~15°)
-  minSaccadeIntervalSec?: number; // Minimum interval between saccades (default 0.5s)
-  maxSaccadeIntervalSec?: number; // Maximum interval between saccades (default 2.0s)
-  saccadeMaxAngleRad?: number; // Maximum saccade jump (default 0.087 rad ~5°)
+  maxAngleRad?: number; // Maximum gaze angle (default gaze.maxAngleRad)
+  minSaccadeIntervalSec?: number; // Minimum interval between saccades (default gaze.saccadeMinSec)
+  maxSaccadeIntervalSec?: number; // Maximum interval between saccades (default gaze.saccadeMaxSec)
+  saccadeMaxAngleRad?: number; // Maximum saccade jump (default gaze.saccadeAmpRad)
 }
 
-export interface EyeGazeWeights {
-  eyeLookInLeft: number;
-  eyeLookOutLeft: number;
-  eyeLookUpLeft: number;
-  eyeLookDownLeft: number;
-  eyeLookInRight: number;
-  eyeLookOutRight: number;
-  eyeLookUpRight: number;
-  eyeLookDownRight: number;
-}
+export type EyeGazeWeights = EyeLookWeights;
 
 /**
  * Gaze and eye micro-saccade controller (REAL-02, docs/5)
@@ -35,19 +29,31 @@ export class GazeSaccades {
   private currentX = 0;
   private currentY = 0;
 
+  // Reused result object (BORROWED by callers until the next compute()) — no per-frame allocation.
+  private readonly weights: EyeGazeWeights = {
+    eyeLookInLeft: 0,
+    eyeLookOutLeft: 0,
+    eyeLookUpLeft: 0,
+    eyeLookDownLeft: 0,
+    eyeLookInRight: 0,
+    eyeLookOutRight: 0,
+    eyeLookUpRight: 0,
+    eyeLookDownRight: 0,
+  };
+
   // Saccade state
   private nextSaccadeTimeSec = 1.0;
   private saccadeOffsetX = 0;
   private saccadeOffsetY = 0;
   private isSaccading = false;
   private saccadeStartTimeSec = 0;
-  private saccadeDurationSec = 0.04; // 40ms
+  private saccadeDurationSec = gazeConfig.saccadeDefaultDurationSec;
 
   constructor(options: GazeOptions = {}) {
-    this.maxAngle = options.maxAngleRad ?? 0.26; // 15 degrees
-    this.minInterval = options.minSaccadeIntervalSec ?? 0.5;
-    this.maxInterval = options.maxSaccadeIntervalSec ?? 2.0;
-    this.saccadeMaxAngle = options.saccadeMaxAngleRad ?? 0.087; // 5 degrees
+    this.maxAngle = options.maxAngleRad ?? gazeConfig.maxAngleRad;
+    this.minInterval = options.minSaccadeIntervalSec ?? gazeConfig.saccadeMinSec;
+    this.maxInterval = options.maxSaccadeIntervalSec ?? gazeConfig.saccadeMaxSec;
+    this.saccadeMaxAngle = options.saccadeMaxAngleRad ?? gazeConfig.saccadeAmpRad;
   }
 
   /**
@@ -60,14 +66,15 @@ export class GazeSaccades {
   }
 
   /**
-   * Main gaze computation step
+   * Main gaze computation step.
+   * BORROWED result: the same object is mutated and returned every call — copy it to keep it.
    */
   public compute(currentTimeSec: number, dt: number): EyeGazeWeights {
     // 1. Check and update micro-saccades
     this.updateSaccade(currentTimeSec);
 
-    // 2. Gaze smoothing (exponential damping: alpha = 1 - exp(-15 * dt))
-    const alpha = 1 - Math.exp(-15 * dt);
+    // 2. Gaze smoothing (exponential damping: alpha = 1 - exp(-lambda * dt))
+    const alpha = 1 - Math.exp(-gazeConfig.lambda * dt);
     const targetWithSaccadeX = this.targetX + this.saccadeOffsetX;
     const targetWithSaccadeY = this.targetY + this.saccadeOffsetY;
 
@@ -78,29 +85,19 @@ export class GazeSaccades {
     const lookX = Math.max(-1, Math.min(1, this.currentX));
     const lookY = Math.max(-1, Math.min(1, this.currentY));
 
-    return {
-      // Left eye (seen from the front: cursor to the right -> left eye outwards / towards the ear)
-      eyeLookInLeft: lookX < 0 ? -lookX : 0,
-      eyeLookOutLeft: lookX > 0 ? lookX : 0,
-      eyeLookUpLeft: lookY > 0 ? lookY : 0,
-      eyeLookDownLeft: lookY < 0 ? -lookY : 0,
+    const w = this.weights;
+    // Left eye (seen from the front: cursor to the right -> left eye outwards / towards the ear)
+    w.eyeLookInLeft = lookX < 0 ? -lookX : 0;
+    w.eyeLookOutLeft = lookX > 0 ? lookX : 0;
+    w.eyeLookUpLeft = lookY > 0 ? lookY : 0;
+    w.eyeLookDownLeft = lookY < 0 ? -lookY : 0;
 
-      // Right eye (cursor to the right -> right eye inwards / towards the nose)
-      eyeLookInRight: lookX > 0 ? lookX : 0,
-      eyeLookOutRight: lookX < 0 ? -lookX : 0,
-      eyeLookUpRight: lookY > 0 ? lookY : 0,
-      eyeLookDownRight: lookY < 0 ? -lookY : 0,
-    };
-  }
-
-  /**
-   * Applies the gaze weights to FaceDriver with a moderate weight so the eyelids naturally support the movement without distortion
-   */
-  public applyToDriver(driver: FaceDriver, currentTimeSec: number, dt: number): void {
-    const weights = this.compute(currentTimeSec, dt);
-    for (const [shape, val] of Object.entries(weights)) {
-      driver.applyWeight(shape, val * 0.35);
-    }
+    // Right eye (cursor to the right -> right eye inwards / towards the nose)
+    w.eyeLookInRight = lookX > 0 ? lookX : 0;
+    w.eyeLookOutRight = lookX < 0 ? -lookX : 0;
+    w.eyeLookUpRight = lookY > 0 ? lookY : 0;
+    w.eyeLookDownRight = lookY < 0 ? -lookY : 0;
+    return w;
   }
 
   public getLookAngles(): { lookX: number; lookY: number } {
@@ -118,14 +115,14 @@ export class GazeSaccades {
     rightEye?: { rotation: { x: number; y: number }; isBone?: boolean; type?: string } | null
   ): void {
     const { lookX, lookY } = this.getLookAngles();
-    const yaw = lookX * (this.maxAngle * 0.9);
-    const pitch = -lookY * (this.maxAngle * 0.75);
+    const yaw = lookX * (this.maxAngle * gazeConfig.boneYawScale);
+    const pitch = -lookY * (this.maxAngle * gazeConfig.bonePitchScale);
 
     if (leftEye) {
       const isSkeletonBone = Boolean(leftEye.isBone || leftEye.type === 'Bone');
       if (isSkeletonBone) {
         leftEye.rotation.y = yaw;
-        leftEye.rotation.x = 0.061 + pitch;
+        leftEye.rotation.x = gazeConfig.boneRestOffset + pitch;
       } else {
         leftEye.rotation.y = -Math.PI / 2 + yaw;
         leftEye.rotation.x = -pitch;
@@ -135,7 +132,7 @@ export class GazeSaccades {
       const isSkeletonBone = Boolean(rightEye.isBone || rightEye.type === 'Bone');
       if (isSkeletonBone) {
         rightEye.rotation.y = yaw;
-        rightEye.rotation.x = 0.061 + pitch;
+        rightEye.rotation.x = gazeConfig.boneRestOffset + pitch;
       } else {
         rightEye.rotation.y = -Math.PI / 2 + yaw;
         rightEye.rotation.x = -pitch;
@@ -148,7 +145,9 @@ export class GazeSaccades {
       if (currentTimeSec >= this.nextSaccadeTimeSec) {
         this.isSaccading = true;
         this.saccadeStartTimeSec = currentTimeSec;
-        this.saccadeDurationSec = 0.035 + Math.random() * 0.015; // 35 - 50 ms
+        this.saccadeDurationSec =
+          gazeConfig.saccadeDurationMinSec +
+          Math.random() * (gazeConfig.saccadeDurationMaxSec - gazeConfig.saccadeDurationMinSec);
 
         // Random micro-jump of the eye < 5 degrees
         const angle = Math.random() * Math.PI * 2;
@@ -173,7 +172,7 @@ export class GazeSaccades {
   public forceSaccade(currentTimeSec: number, offsetX = 0.1, offsetY = 0.1): void {
     this.isSaccading = true;
     this.saccadeStartTimeSec = currentTimeSec;
-    this.saccadeDurationSec = 0.04;
+    this.saccadeDurationSec = gazeConfig.saccadeDefaultDurationSec;
     this.saccadeOffsetX = offsetX;
     this.saccadeOffsetY = offsetY;
   }

@@ -14,9 +14,6 @@ class MockFaceDriver implements FaceDriver {
   public listAvailableShapes(): string[] {
     return ['jawOpen', 'mouthClose', 'mouthFunnel', 'eyeBlinkLeft', 'eyeBlinkRight'];
   }
-  public relaxToNeutral(): void {
-    this.appliedWeights = {};
-  }
   public getSpeechMeshes(): never[] {
     return [];
   }
@@ -82,13 +79,13 @@ describe('Race Condition & Epoch Invalidation (INT-01)', () => {
       start0,
       0
     );
-    expect(controller.getQueueLength()).toBe(1);
+    expect(controller.getVisemeQueueLength()).toBe(1);
 
     // 2. Interruption (barge-in) occurs: the epoch moves to 1
     engine.hardStop();
     controller.onInterruption();
     expect(engine.getEpoch()).toBe(1);
-    expect(controller.getQueueLength()).toBe(0);
+    expect(controller.getVisemeQueueLength()).toBe(0);
 
     // 3. A late network packet from epoch 0 reaches the client (network jitter)
     const delayedPcm = new Uint8Array(22050);
@@ -108,7 +105,7 @@ describe('Race Condition & Epoch Invalidation (INT-01)', () => {
       10.5,
       0 // epoch 0
     );
-    expect(controller.getQueueLength()).toBe(0);
+    expect(controller.getVisemeQueueLength()).toBe(0);
 
     // 4. A new, valid chunk from epoch 1 is accepted
     const newPcm = new Uint8Array(22050);
@@ -125,7 +122,7 @@ describe('Race Condition & Epoch Invalidation (INT-01)', () => {
       newStart,
       1 // epoch 1
     );
-    expect(controller.getQueueLength()).toBe(3);
+    expect(controller.getVisemeQueueLength()).toBe(3);
     expect(controller.getState()).toBe('SPEAKING');
   });
 });

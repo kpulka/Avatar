@@ -36,7 +36,6 @@ interface FaceDriver {
   // mapping from [docs/3] — the only function the viseme scheduler knows
   applyTargets(weights: Record<string, number>): void;
   listAvailableShapes(): string[]; // validation on load
-  relaxToNeutral(durationMs: number): void;
 }
 
 // Model provider — implementations: MetaPersonGlb, (alt) CustomGlb, (alt) VideoAvatarStream

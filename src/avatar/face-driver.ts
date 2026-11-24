@@ -67,50 +67,6 @@ export class ArKitBlendshapeDriver implements FaceDriver {
     return this.availableShapes;
   }
 
-  public relaxToNeutral(durationMs = 150): void {
-    if (durationMs <= 0) {
-      // Immediate zeroing
-      for (const mesh of this.speechMeshes) {
-        if (mesh.morphTargetInfluences) {
-          mesh.morphTargetInfluences.fill(0);
-        }
-      }
-      return;
-    }
-
-    // Smooth fade to 0 (frame loop or interpolation)
-    const startTime = performance.now();
-    const initialWeights: Map<THREE.Mesh, Float32Array> = new Map();
-
-    for (const mesh of this.speechMeshes) {
-      if (mesh.morphTargetInfluences) {
-        initialWeights.set(mesh, new Float32Array(mesh.morphTargetInfluences));
-      }
-    }
-
-    const step = () => {
-      const elapsed = performance.now() - startTime;
-      const progress = Math.min(1, elapsed / durationMs);
-      // Cosine ease out
-      const factor = 1 - Math.sin((progress * Math.PI) / 2);
-
-      for (const mesh of this.speechMeshes) {
-        const startValues = initialWeights.get(mesh);
-        if (startValues && mesh.morphTargetInfluences) {
-          for (let i = 0; i < mesh.morphTargetInfluences.length; i++) {
-            mesh.morphTargetInfluences[i] = startValues[i] * factor;
-          }
-        }
-      }
-
-      if (progress < 1) {
-        requestAnimationFrame(step);
-      }
-    };
-
-    requestAnimationFrame(step);
-  }
-
   public getSpeechMeshes(): THREE.Mesh[] {
     return this.speechMeshes;
   }
