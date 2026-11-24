@@ -52,3 +52,10 @@ public/models/*.glb
 
 # Owner decision 2026-11-19 (Phase 11.2 O-1): the showcase avatar ships with the repo.
 !public/models/avatar.glb
+
+# --- Local tooling (not project sources) ---
+# Claude Code agent worktrees and per-user settings
+.claude/worktrees/
+.claude/settings.local.json
+# Ad-hoc config backups
+*.bak-*

@@ -21,7 +21,7 @@ one accent (sky), restrained radii, generous 4px-grid spacing, motion that whisp
 (150–280 ms). The UI never competes with the face. Light theme is a true second
 skin (same tokens, swapped values), not a partial override.
 
-Principles: tokens only · 12px floor · ≥36px targets · calm feedback (inline over
+Principles: tokens only · 12px floor · ≥44px targets (`--target-min`) · calm feedback (inline over
 toast) · honest states · keyboard parity.
 
 ---
@@ -132,9 +132,9 @@ Every other selector uses semantic tokens exclusively → flips for free. Accept
 | Component | Contract |
 |---|---|
 | **Toast** | `role=status` (success/info) / `role=alert` (error); single-slot REPLACED only by equal-or-higher severity; error toasts get visible × close button and persist until closed; routine events (mute, barge-in, agent change) DO NOT toast — inline only (S6 policy in §4) |
-| **Modal** | visible × close button (top-right, 36px); `aria-labelledby` → title id; native Esc closes and does NOT double-fire presentation toggle (A10: global handler skips when `dialog[open]`); fallback path (no `<dialog>)` gets focus trap + Esc |
+| **Modal** | visible × close button (top-right, 44px); `aria-labelledby` → title id; native Esc closes and does NOT double-fire presentation toggle (A10: global handler skips when `dialog[open]`); fallback path (no `<dialog>)` gets focus trap + Esc |
 | **Loader** | `role=status`; z=45 (above dock 40, below overlay 100); positioned top-center (clear of bottom dock, S2); removed on success AND on `avatar:error` (S1) |
-| **Dock** | 40px min height; Interrupt disabled when idle (S12); Mute disabled pre-session; SVG icons + text (M4) |
+| **Dock** | 44px min height; Interrupt disabled when idle (S12); Mute disabled pre-session; SVG icons + text (M4) |
 | **Captions** | 3-line clamp + fade (S3); `aria-live=polite` (A1); applies `agent_response_correction` replacing stale text (S4); unselectable→selectable (V7 opt-out on captions only) |
 | **Status pill** | 4 states + `error` state (consumes `voice:error`, A3); `aria-live=polite`; decorative dot `aria-hidden` (A11) |
 | **Algo switcher / compare** | A/B chips with active-track highlight; blind mode hides order until reveal button; cancel affordance while running (S8); A2F-unavailable → disabled option with tooltip reason (S13) |
@@ -202,7 +202,7 @@ never clipped; studio shell scrollable.
 - **Associations**: every `<label for>`↔id; a2f URL input labelled; volume slider labelled.
 - **Reduced motion**: single guard block covers ALL animations incl. `.pulse-border` (A9) and `.spinner`.
 - **Esc semantics**: closes topmost dialog first; presentation toggle only when no dialog open.
-- **Targets**: ≥36px all interactive (dock 40px).
+- **Targets**: ≥44px for every interactive control (`--target-min`, amended 2026-11-24 to match REQUIREMENTS UIX-02; pinned by `tests/ui-typography-targets.test.ts`).
 - Acceptance = keyboard-only pass checklist in 15-VERIFICATION §4.
 
 ---

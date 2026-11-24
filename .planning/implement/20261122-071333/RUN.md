@@ -66,3 +66,11 @@ Skipped per user; plans stop at checkpoint:human-* and are recorded as PARTIAL/B
 
 Gate after both merges: `npm run verify` exit 0, 78 files / 855 tests.
 Drift: the UIX agent applied 44px (REQUIREMENTS UIX-02). `15-DRAFT-ui-spec.md` still says 36/40px, so the owner should amend the spec. Both executor worktrees were created from `master` and the agents rebased onto `implement/v1.1-refactor` themselves; future dispatch prompts must state the base branch.
+
+## Decisions taken by the orchestrator (owner delegated, 2026-11-24)
+
+- **44px targets kept.** REQUIREMENTS UIX-02 wins over the draft spec, so `15-DRAFT-ui-spec.md` was amended to 44px. The token contrast changes are kept because WCAG AA requires them.
+- **18-06 hygiene:** `scripts/make-demo-clip.mjs` (the 11.2-03 tool; key read from the environment) is committed. `.claude/worktrees/`, `.claude/settings.local.json` and `*.bak-*` are gitignored. The config backup was kept on disk, not deleted.
+- **18-05 Pages demo: deferred.** It needs the 11.2-03 clip, and generating that clip spends ElevenLabs quota, which stays an owner action.
+- **LICENSE wording:** left for the owner because it is a legal choice.
+- **CI:** branch pushed and draft PR opened against `master` to get the first GitHub run (ci.yml triggers on pull_request). Not merged.
