@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { mapCharToShapes, charPathSpan } from '../src/lipsync/viseme-mappings';
+import { mapCharToShapes, charPathSpan, charTokenFor, POLISH_CHAR_CONTEXT } from '../src/lipsync/viseme-mappings';
 
 describe('Viseme Mappings (EN & ARKit)', () => {
   it('detects and maps digraphs with lookahead', () => {
@@ -54,6 +54,39 @@ describe('Viseme Mappings (EN & ARKit)', () => {
   it('charPathSpan keeps the vowel of the soft-i digraphs (si/zi/ni/ci) as its own viseme', () => {
     expect(charPathSpan(['s', 'i', 't'], 0)).toBe(1);
     expect(charPathSpan(['n', 'i', 'c', 'e'], 0)).toBe(1);
+  });
+
+  describe('Polish digraph window (T-6, pinned before the 17-04 PL G2P)', () => {
+    it('ch: English context keeps the affricate funnel, Polish context is the velar fricative [x]', () => {
+      const chata = ['c', 'h', 'a', 't', 'a'];
+      const en = mapCharToShapes(chata, 0);
+      const pl = mapCharToShapes(chata, 0, POLISH_CHAR_CONTEXT);
+      expect(en.get('mouthFunnel')).toBeCloseTo(0.45); // unchanged (English "church")
+      expect(pl.has('mouthFunnel')).toBe(false); // 17-04 fix: no church-funnel for Polish ch
+      expect(pl.get('jawOpen')).toBeCloseTo(0.3);
+    });
+
+    it('the Polish ch context affects ONLY the ch digraph', () => {
+      const same = (chars: string[], index: number) =>
+        expect([...mapCharToShapes(chars, index, POLISH_CHAR_CONTEXT).entries()]).toEqual([...mapCharToShapes(chars, index).entries()]);
+      same(['s', 'z', 'y'], 0); // sz
+      same(['c', 'z', 'y'], 0); // cz
+      same(['t', 'h', 'e'], 0); // th
+      same(['a'], 0);
+    });
+
+    it('known limitation of the FALLBACK path (fixed by the phoneme-pl engine): dzi is a dz digraph + a separate i', () => {
+      // dziekuje: the char path sees DZ then I; the phoneme path consumes the softness-i (g2p-pl.test.ts).
+      const chars = ['d', 'z', 'i', 'e', 'k', 'u', 'j', 'e'];
+      expect(charTokenFor(chars, 0)).toBe('DZ');
+      expect(charPathSpan(chars, 0)).toBe(2);
+      expect(charTokenFor(chars, 2)).toBe('I'); // the i is enqueued on its own
+    });
+
+    it('known limitation of the FALLBACK path: zi in "zima" still gets the soft-digraph shape', () => {
+      expect(charTokenFor(['z', 'i', 'm', 'a'], 0)).toBe('ZI');
+      expect(charPathSpan(['z', 'i', 'm', 'a'], 0)).toBe(1);
+    });
   });
 
   it('maps vowels with proper jaw and mouth pucker', () => {
