@@ -52,10 +52,6 @@ export function createSessionPanel(): PanelDefinition {
         store.setUser('volume', value);
       });
 
-      const micSelect = el('select', { className: 'engine-select' }) as HTMLSelectElement;
-      micSelect.append(el('option', { value: '', text: t('settings.defaultDevice') }));
-      micSelect.disabled = true;
-
       // --- Telemetry
       const telemetryFields = {
         fps: el('strong', { text: '--' }),
@@ -152,8 +148,7 @@ export function createSessionPanel(): PanelDefinition {
           el('span', { className: 'section-title', text: t('session.audioTitle') }),
           el('label', { attrs: { for: volumeSlider.id } }, [el('span', { text: t('settings.volumeLabel') }), volumeValue]),
           volumeSlider,
-          micSelect,
-          el('p', { className: 'drawer-subtitle', text: t('session.micComingSoon') }),
+          el('p', { className: 'drawer-subtitle', text: t('session.micInUserSettings') }),
         ]),
         el('div', { className: 'drawer-section' }, [
           el('span', { className: 'section-title', text: t('session.telemetryTitle') }),

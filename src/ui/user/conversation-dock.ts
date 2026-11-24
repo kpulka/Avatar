@@ -30,7 +30,12 @@ export function createConversationDock(): PanelDefinition {
         void services.conversation.toggle();
       });
 
-      const mute = el('button', { className: 'dock-btn btn-subtle', type: 'button', ariaLabel: t('dock.muteAria') }, [
+      const mute = el('button', {
+        className: 'dock-btn btn-subtle',
+        type: 'button',
+        ariaLabel: t('dock.muteAria'),
+        attrs: { 'aria-pressed': 'false' },
+      }, [
         iconSlot('mic'),
         el('span', { className: 'btn-label', text: t('dock.mute') }),
       ]);
@@ -46,6 +51,10 @@ export function createConversationDock(): PanelDefinition {
       ]);
       interrupt.addEventListener('click', () => services.conversation.interrupt());
 
+      // S12: nothing to mute or interrupt before a session exists.
+      mute.disabled = true;
+      interrupt.disabled = true;
+
       root.append(primary, mute, interrupt);
       container.append(root);
 
@@ -55,12 +64,15 @@ export function createConversationDock(): PanelDefinition {
         primary.setAttribute('aria-label', running ? t('dock.end') : t('dock.start'));
         primary.querySelector('.btn-label')!.textContent = running ? t('dock.end') : t('dock.start');
         setIcon(primary, running ? 'phoneOff' : 'phone');
+        (mute as HTMLButtonElement).disabled = !running;
+        (interrupt as HTMLButtonElement).disabled = !running;
       });
 
       const unsubMuted = events.on('voice:muted', (muted) => {
         mute.setAttribute('aria-label', muted ? t('dock.unmuteAria') : t('dock.muteAria'));
         mute.querySelector('.btn-label')!.textContent = muted ? t('dock.unmute') : t('dock.mute');
         setIcon(mute, muted ? 'micOff' : 'mic');
+        mute.setAttribute('aria-pressed', muted ? 'true' : 'false');
       });
 
       return {

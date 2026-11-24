@@ -30,6 +30,7 @@ import { LastTurnBuffer } from '../features/last-turn-buffer';
 import { CompareController } from '../features/compare-controller';
 import { ScenePresetController, ScenePresetHost } from '../features/scene-preset-controller';
 import { createDefaultAnimationSources } from '../lipsync/animation-sources';
+import { createConnectionBanner } from '../ui/user/connection-banner';
 import { createToast } from '../ui/shared/toast';
 import { createLoader } from '../ui/shared/loader';
 import { createModal } from '../ui/shared/modal';
@@ -103,7 +104,11 @@ export function createApp(canvas: HTMLCanvasElement): AppHandle {
   const hostRoot = document.getElementById('ui-root') ?? document.getElementById('app') ?? document.body;
   hostRoot.append(el('div', { className: 'vignette-overlay' }));
   const toast = createToast(hostRoot);
-  const loaderUi = createLoader(hostRoot);
+  // The retry of an avatar load failure falls back to the synchronous demo avatar (known good).
+  const loaderUi = createLoader(hostRoot, {
+    onRetry: () => sceneController.loadDemo(),
+    retryLabel: t('errors.avatarRetry'),
+  });
   const modal = createModal(hostRoot);
   const unsubToast = events.on('toast', (payload) => toast.show(payload.message, payload.type));
   // The loader disappears when the avatar is ready — also on the fallback path (demo avatar),
@@ -120,10 +125,10 @@ export function createApp(canvas: HTMLCanvasElement): AppHandle {
       fraction === null ? t('loader.avatar') : t('loader.avatarProgress', { percent: Math.round(fraction * 100) })
     );
   });
-  const unsubAvatarError = events.on('avatar:error', ({ message }) => {
+  // S1: a double failure keeps the loader pill visible as an error with a retry (demo avatar), no dead end.
+  const unsubAvatarError = events.on('avatar:error', () => {
     avatarReady = true;
-    loaderUi.hide();
-    events.emit('toast', { message, type: 'error' });
+    loaderUi.error(t('errors.avatarBody'));
   });
 
   const ui: PanelUi = { toast, loader: loaderUi, modal };
@@ -239,6 +244,7 @@ export function createApp(canvas: HTMLCanvasElement): AppHandle {
   registry.register(createStatusPill());
   registry.register(createConversationDock());
   registry.register(createCaptions());
+  registry.register(createConnectionBanner());
   registry.register(createAlgorithmSwitcher());
   registry.register(createUserSettings());
   for (const panel of registry.list('user')) {

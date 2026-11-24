@@ -54,12 +54,15 @@ vi.mock('../src/avatar/meta-person-loader', async () => {
   const THREE = await import('three');
   return {
     MetaPersonLoader: class {
-      load = vi.fn(async () => ({
+      load = vi.fn(async () => {
+        if ((globalThis as { __failAvatarLoad?: boolean }).__failAvatarLoad) throw new Error('avatar.glb missing');
+        return {
         root: new THREE.Group(),
         faceDriver: { listAvailableShapes: () => [] },
         speechMeshes: [],
         morphTargetDictionary: {},
-      }));
+        };
+      });
       dispose = vi.fn();
     },
   };
@@ -205,6 +208,33 @@ describe('createApp (container smoke, jsdom)', () => {
     window.dispatchEvent(new KeyboardEvent('keydown', { key: 'h' }));
     expect(document.body.classList.contains('presentation-mode')).toBe(false);
     app.dispose();
+  });
+
+  it('podwojna porazka ladowania awatara: loader pokazuje blad z retry (demo), bez martwego punktu (15-05, S1)', async () => {
+    const { createTestAvatar } = await import('../src/avatar/test-avatar-generator');
+    (globalThis as { __failAvatarLoad?: boolean }).__failAvatarLoad = true;
+    vi.mocked(createTestAvatar).mockImplementationOnce(() => {
+      throw new Error('demo failed');
+    });
+    vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    try {
+      const app = createApp(setupDom());
+      app.start();
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      const loader = document.querySelector('.loader-overlay') as HTMLElement;
+      expect(loader.classList.contains('hidden')).toBe(false);
+      expect(loader.classList.contains('loader-error')).toBe(true);
+      const retry = loader.querySelector('button.loader-retry') as HTMLButtonElement;
+      expect(retry.classList.contains('hidden')).toBe(false);
+      retry.click(); // retry = demo avatar (createTestAvatar works again)
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      expect(loader.classList.contains('hidden')).toBe(true);
+      expect(loader.classList.contains('loader-error')).toBe(false);
+      app.dispose();
+    } finally {
+      delete (globalThis as { __failAvatarLoad?: boolean }).__failAvatarLoad;
+    }
   });
 
   it('dispose() usuwa shell i nie rzuca', () => {

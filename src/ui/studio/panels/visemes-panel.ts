@@ -40,7 +40,7 @@ export function createVisemesPanel(): PanelDefinition {
     visibleIn: 'studio',
     region: 'left',
     mount(ctx: PanelContext): PanelHandle {
-      const { store, services, container } = ctx;
+      const { store, services, container, ui } = ctx;
       const root = el('div', { className: 'panel panel-visemes' });
 
       let group: 'en' | 'char' = 'en';
@@ -183,13 +183,31 @@ export function createVisemesPanel(): PanelDefinition {
         selectViseme(ref ?? { key: selectedKey, label: selectedKey });
       });
 
-      resetAllButton.addEventListener('click', () => {
+      const wipeAll = (): void => {
         record = {};
         selectedKey = null;
         notifyRecord();
         renderChips();
         clearDetail();
         services.animation.previewViseme(null);
+      };
+
+      // S5: wiping every persisted override is destructive, so it goes through a confirm dialog.
+      resetAllButton.addEventListener('click', () => {
+        const accept = el('button', { className: 'btn btn-primary', type: 'button', text: t('visemes.resetAllConfirmAccept') });
+        const cancel = el('button', { className: 'btn btn-secondary', type: 'button', text: t('visemes.resetAllConfirmCancel') });
+        accept.addEventListener('click', () => {
+          ui.modal.close();
+          wipeAll();
+        });
+        cancel.addEventListener('click', () => ui.modal.close());
+        ui.modal.open(
+          t('visemes.resetAllConfirmTitle'),
+          el('div', { className: 'confirm-body' }, [
+            el('p', { text: t('visemes.resetAllConfirmBody') }),
+            el('div', { className: 'drawer-actions' }, [accept, cancel]),
+          ])
+        );
       });
 
       renderChips();

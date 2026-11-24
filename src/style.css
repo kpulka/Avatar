@@ -473,6 +473,82 @@ body, html {
   text-align: right;
 }
 
+/* Compare block: actions row, track chips, blind reveal (15-05) */
+.compare-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--space-2);
+}
+
+.compare-tracks {
+  display: flex;
+  gap: var(--space-2);
+  justify-content: flex-end;
+}
+
+.compare-chip {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 2px var(--space-3);
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--border-ctrl);
+  background: var(--surface-ctrl);
+  color: var(--text-ctrl);
+  font-size: var(--text-label);
+  font-weight: var(--fw-semibold);
+  transition: var(--transition-ctrl);
+}
+
+.compare-chip.active {
+  background: var(--accent-strong);
+  border-color: var(--accent);
+  color: var(--text-on-accent);
+  box-shadow: 0 0 10px var(--accent-glow);
+}
+
+.segment-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Connection error banner (consumes voice:error) */
+.conn-error {
+  position: fixed;
+  top: 72px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: var(--z-dock);
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  max-width: min(560px, calc(100vw - 32px));
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--danger-border);
+  background: var(--glass-bg);
+  box-shadow: var(--shadow-panel);
+  font-size: var(--text-label);
+}
+
+.conn-error-text {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.conn-error-title {
+  color: var(--danger);
+  font-size: var(--text-body);
+}
+
+.confirm-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
 .cinema-captions {
   position: fixed;
   bottom: 28px;
@@ -495,8 +571,32 @@ body, html {
   padding: var(--space-3) var(--space-5);
   display: flex;
   flex-direction: column;
+  justify-content: flex-end;
   gap: var(--space-1);
   width: 100%;
+  /* S3: long transcripts never grow over the avatar; older content fades out at the top */
+  max-height: 7.2rem;
+  overflow: hidden;
+  -webkit-mask-image: linear-gradient(transparent 0, var(--bg-page) 12%);
+  mask-image: linear-gradient(transparent 0, var(--bg-page) 12%);
+}
+
+.transcript-line .transcript-text {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+  overflow: hidden;
+}
+
+/* S4: barge-in acknowledgement on the agent line */
+.transcript-line.caption-flash {
+  animation: caption-flash 0.6s ease-out;
+}
+
+@keyframes caption-flash {
+  0% { background-color: var(--accent-soft); }
+  100% { background-color: transparent; }
 }
 
 .transcript-line {
@@ -1335,6 +1435,7 @@ dialog.settings-dialog::backdrop {
   }
   .pulse-dot,
   .btn-call.active,
+  .transcript-line.caption-flash,
   .spinner {
     animation: none !important;
   }

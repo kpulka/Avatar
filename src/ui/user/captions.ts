@@ -41,6 +41,13 @@ export function createCaptions(): PanelDefinition {
       const unsubUser = events.on('transcript:user', (text) => {
         userText.textContent = text;
       });
+      // S4: a barge-in is acknowledged by a short flash on the agent line (CSS, reduced-motion aware).
+      const agentLine = root.querySelector('.agent-line') as HTMLElement;
+      const unsubInterrupt = events.on('speech:interruption', () => {
+        agentLine.classList.remove('caption-flash');
+        void agentLine.offsetWidth; // restart the animation on back-to-back interruptions
+        agentLine.classList.add('caption-flash');
+      });
       const unsubAgent = events.on('transcript:agent', (text) => {
         agentText.textContent = text;
       });
@@ -49,6 +56,7 @@ export function createCaptions(): PanelDefinition {
         destroy(): void {
           unsubUser();
           unsubAgent();
+          unsubInterrupt();
           root.remove();
         },
       };

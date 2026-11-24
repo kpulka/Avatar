@@ -89,6 +89,10 @@ export function createUiFixture(options: FixtureOptions = {}): UiFixture {
       testPhoneme: vi.fn(),
       demoSpeech: vi.fn(),
       runA2fDemo: vi.fn(async () => undefined),
+      applyVisemeOverrides: vi.fn(),
+      previewViseme: vi.fn(),
+      setManualOverride: vi.fn(),
+      resetMorphs: vi.fn(),
     },
     animationSources: {
       list: () => [
