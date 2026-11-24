@@ -98,10 +98,8 @@ npm run build       # tsc (strict) + vite production build
 417 tests in 66 files, measured 2026-11-24 with `npx vitest run --dir tests`. There is no separate typecheck script; `npm run build` runs `tsc` first.
 
 <!-- 18-03: CI badge here — [![CI](https://github.com/kpulka/Avatar/actions/workflows/ci.yml/badge.svg)](https://github.com/kpulka/Avatar/actions/workflows/ci.yml) -->
-<!-- 18-02: License badge + section here — MIT (link to LICENSE). -->
-
 ## License
 
-No `LICENSE` file is in the repository yet. Licensing is part of Phase 18.
-<!-- 18-02: "MIT — see [LICENSE](LICENSE). Dependency licenses: all permissive
-     (MIT / Apache-2.0 / BSD / ISC); see THIRD-PARTY-NOTICES.md." -->
+Copyright (c) 2026 kpulka. All rights reserved. This project is **All Rights Reserved**: no license is granted to use, copy, modify or distribute it. See [LICENSE](LICENSE) for the terms. Commercial use requires written permission from the owner, requested through [github.com/kpulka](https://github.com/kpulka).
+
+Third-party dependencies keep their own licenses. All 157 lock-file entries declare permissive licenses (MIT, Apache-2.0, BSD, ISC and similar), as recorded in [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md) (audited 2026-11-24).

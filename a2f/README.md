@@ -26,23 +26,24 @@ a2f/
 |---|---|---|---|
 | GPU + driver | NVIDIA, CUDA-capable, VRAM ≥ 4 GB | RTX 3090 24 GB, driver 595.79 | ✓ |
 | CUDA Toolkit | **12.8–12.9** (`>=12.8, <13.0`; 12.9 recommended) | ✅ **12.9.1 installed alongside 13.2** (`C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.9`; CUDA_PATH user = v12.9) | set `CUDA_PATH` to v12.9 in the build session |
-| TensorRT | **>=10.13, <11.0** | ❌ missing | log in to developer.nvidia.com → TensorRT 10.13.x **Windows x86_64 ZIP** → extract to `C:\TensorRT-10.13` |
+| TensorRT | **>=10.13, <11.0** | ✅ **10.13.3.9** via pip, no NVIDIA login (recorded in `.planning/STATE.md`, 2026-09-12; method in `docs/a2f-local-setup.md` §4) | none (the manual ZIP route in the table's original plan is not needed) |
 | Python (SDK tooling) | **>=3.8, <=3.10.x** | ✅ **3.10.20 (uv) + `a2f/.venv`** | done |
 | Visual Studio | MSBuild VS2022+ (C++) | ❓ | VS2022 + "Desktop development with C++" |
 | git + git-lfs | SDK clone / data | — | check `preflight` |
 | HF account | A2E click-through (gated) + token | — | `hf auth login` (Read gated) |
 | Containers | Podman Desktop (instead of Docker) — only for the Phase 10 image | Podman Desktop | OK; Docker not needed |
 
-> Key blocker: **CUDA 13.2 vs the `<13.0` requirement**. The SDK README builds against CUDA 12.x.
-> Path: install CUDA Toolkit **12.9** (the installer allows several versions side by side),
-> TensorRT **10.13** (compatible with 12.9), and at build time set `CUDA_PATH`/`-DCUDA_PATH` to 12.9
-> and `TENSORRT_ROOT_DIR` to 10.x. Verify whether the SDK version on main supports CUDA 13 —
-> if so, this blocker goes away (check the README after `git clone`).
+> Historical note (2026-09-02): the table above was written when CUDA 13.2 was the suspected blocker
+> against the SDK's `<13.0` requirement. That is no longer the state. The SDK was built on CUDA 13.2
+> with a local workaround (`a2f/scripts/build-sdk.ps1`, `docs/a2f-local-setup.md` §4).
+>
+> **Current blocker (recorded in `.planning/STATE.md`, 2026-11-18):** `OutOfMemory` while the TensorRT
+> engines are built (`gen_sample_data.py`). A retry needs the owner's consent because it is a heavy job.
+> Not yet in the repo: `tools/extract_rig.py` (postponed per STATE), `wrapper/` and `fixtures/` (target layout above).
 
 ## Steps (09-01)
 
-> **Status 2026-09-11:** SDK clone ✅, `git lfs pull` ✅, Python dependencies ✅, `fetch_deps` ✅.
-> Missing: TensorRT (TODO item 2.2) → `build.bat`, HF login (item 3) → `download_models`/`gen_testdata`.
+> **Status (2026-11-24, from the 2026-09-11 and 2026-09-12 records in `.planning/STATE.md`):** SDK clone ✅, `git lfs pull` ✅, Python dependencies ✅, `fetch_deps` ✅, TensorRT 10.13.3.9 ✅ (pip route), SDK built ✅, A2F models downloaded without a token ✅. Open: the TensorRT engine build hits OutOfMemory (needs owner consent to retry), and the gated A2E model still needs a Hugging Face token.
 > Full instructions: [`docs/a2f-local-setup.md`](../docs/a2f-local-setup.md).
 
 1. `powershell -ExecutionPolicy Bypass -File a2f/scripts/preflight.ps1` — readiness report.

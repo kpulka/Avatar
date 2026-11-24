@@ -1,6 +1,6 @@
 # EN visemes — English visemes (working document)
 
-> **Status:** working draft • **Goal:** make every viseme have a **recognizable, distinct** mouth pose — right now some visemes are "twin-like" similar and it is not visible what the avatar is "saying".
+> **Status:** working draft • **Goal:** make every viseme have a **recognizable, distinct** mouth pose. Before Phase 17 some visemes were "twin-like" (section 5); the Phase 17 status notes below record what changed. Whether the result reads well is a live-UAT question, not something this document can settle.
 > **How to use:** articulation description → proposed parameters of our blendshapes → test in the **Viseme Editor** (✏️) on the model → come back and add "what worked" in the **test** column.
 > **Related:** code `src/lipsync/g2p/phoneme-visemes.ts` (EN table), `src/lipsync/g2p/phoneme-merge.ts`, Editor: `src/lipsync/viseme-overrides.ts`.
 
