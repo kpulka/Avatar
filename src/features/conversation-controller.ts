@@ -36,6 +36,7 @@ export class ConversationController implements ConversationService {
 
   private setupBackendCallbacks(): void {
     this.speechBackend.onError = (err) => {
+      this.events.emit('voice:error', err.message);
       this.events.emit('toast', { message: err.message, type: 'error' });
       void this.stop().catch(() => undefined);
     };
@@ -51,6 +52,12 @@ export class ConversationController implements ConversationService {
     };
 
     this.speechBackend.onAgentResponse = (text) => {
+      this.events.emit('transcript:agent', text);
+      this.embedBridge.notifyTranscript('agent', text);
+    };
+
+    // After a barge-in the server sends the text that was actually spoken: it REPLACES the stale caption.
+    this.speechBackend.onAgentCorrection = (text) => {
       this.events.emit('transcript:agent', text);
       this.embedBridge.notifyTranscript('agent', text);
     };
@@ -115,22 +122,18 @@ export class ConversationController implements ConversationService {
 
   public async toggle(): Promise<void> {
     if (this.speechBackend.getIsRunning() || this.startPromise) {
+      // 15-05 de-spam: session lifecycle is shown by the dock button + status pill, not by a toast.
       await this.stop();
-      this.events.emit('toast', { message: t('toast.conversationEnded'), type: 'success' });
       return;
     }
-    this.events.emit('toast', { message: t('toast.conversationStarting'), type: 'success' });
     await this.start().catch(() => undefined);
   }
 
   public toggleMute(): void {
     const muted = !this.speechBackend.getIsMuted();
     this.speechBackend.setMuted(muted);
+    // 15-05 de-spam: the mute state is shown by the dock button (label, icon, aria-pressed).
     this.events.emit('voice:muted', muted);
-    this.events.emit('toast', {
-      message: muted ? t('toast.micMuted') : t('toast.micUnmuted'),
-      type: 'success',
-    });
   }
 
   public isMuted(): boolean {
@@ -144,11 +147,8 @@ export class ConversationController implements ConversationService {
   public interrupt(): void {
     this.audioEngine.hardStop();
     this.events.emit('speech:interruption', 'client_interrupted');
+    // 15-05 de-spam: barge-in feedback is the caption flash + the face relaxing, not a popup.
     this.events.emit('voice:state', 'listening');
-    this.events.emit('toast', {
-      message: t('toast.bargeIn'),
-      type: 'success',
-    });
   }
 
   public say(text: string): void {

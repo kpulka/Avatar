@@ -33,6 +33,8 @@ export class ElevenAgentsSpeechBackend implements SpeechBackend {
   public onInterruption: (reason: string) => void = () => {};
   public onUserTranscript: (text: string) => void = () => {};
   public onAgentResponse: (text: string) => void = () => {};
+  /** Corrected agent text after a barge-in (what was actually spoken); replaces the stale caption. */
+  public onAgentCorrection: (text: string) => void = () => {};
   public onStateChange: (state: 'listening' | 'speaking' | 'thinking' | 'idle') => void = () => {};
 
   private readonly wssClient: RawWssClient;
@@ -154,6 +156,10 @@ export class ElevenAgentsSpeechBackend implements SpeechBackend {
       onAgentResponse: (text: string) => {
         console.log(`[SpeechBackend] Agent response: ${text}`);
         this.onAgentResponse(text);
+      },
+
+      onAgentCorrection: (text: string) => {
+        this.onAgentCorrection(text);
       },
 
       onVadScore: (score: number) => {
