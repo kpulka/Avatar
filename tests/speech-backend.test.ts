@@ -45,6 +45,39 @@ describe('ElevenAgentsSpeechBackend sample rates', () => {
     expect(engine.playChunk).toHaveBeenCalledWith(expect.anything(), 24000, 0);
   });
 
+  it('anchors the alignment on the detected speech (leading silence is not smeared into the first word)', () => {
+    const { backend } = makeBackend();
+    captured.callbacks.onMetadata({ outputFormat: 'pcm_16000' });
+    // 1 s of audio: 300 ms silence, then a loud tone
+    const int16 = new Int16Array(16000);
+    for (let i = 4800; i < 16000; i++) int16[i] = 8000;
+    let binary = '';
+    new Uint8Array(int16.buffer).forEach((b) => { binary += String.fromCharCode(b); });
+    captured.callbacks.onAudioChunk({ audio_base_64: btoa(binary), alignment: {
+      chars: ['h', 'e', 'l', 'l', 'o'], char_start_times_ms: [0, 100, 200, 300, 400], char_durations_ms: [100, 100, 100, 100, 100],
+    } });
+    const alignment = vi.mocked(backend.onAudioChunk).mock.calls.at(-1)![1];
+    expect(alignment.source).toBe('elevenlabs');
+    expect(alignment.char_start_times_ms[0]).toBeGreaterThanOrEqual(280);
+    const last = alignment.chars.length - 1;
+    expect(alignment.char_start_times_ms[last] + alignment.char_durations_ms[last]).toBeCloseTo(1000, 0);
+  });
+
+  it('malformed alignment falls back to the energy alignment', () => {
+    const { backend } = makeBackend();
+    captured.callbacks.onMetadata({ outputFormat: 'pcm_16000' });
+    captured.callbacks.onAudioChunk({ audio_base_64: btoa('\0'.repeat(3200)), alignment: {
+      chars: ['a', 'b'], char_start_times_ms: [0], char_durations_ms: [20],
+    } });
+    expect(vi.mocked(backend.onAudioChunk).mock.calls.at(-1)![1].source).toBe('energy-fallback');
+  });
+
+  it('a pcm_0 metadata format is ignored (a zero sample rate would break the analysis)', () => {
+    const { backend } = makeBackend();
+    captured.callbacks.onMetadata({ outputFormat: 'pcm_0' });
+    expect(backend.getOutputSampleRate()).toBe(16000);
+  });
+
   it('recognises pcm_22050 and pcm_8000', () => {
     const { backend } = makeBackend();
     captured.callbacks.onMetadata({ outputFormat: 'pcm_22050' });

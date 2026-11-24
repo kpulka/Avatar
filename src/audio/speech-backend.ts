@@ -4,7 +4,8 @@ import { MicCapture } from './mic-capture';
 import { AudioEngine } from './audio-engine';
 import { base64ToPcmBytes, int16ToBase64 } from './pcm-resampler';
 import { AudioEventPayload } from '../types/audio';
-import { generateEnergyFallbackAlignment } from './energy-fallback';
+import { generateEnergyFallbackAlignment, detectSpeechBounds } from './energy-fallback';
+import { normalizeAlignmentPayload } from './alignment-normalize';
 import { rescaleAlignmentToAudio } from './alignment-rescale';
 
 export class MicAccessError extends Error {
@@ -19,6 +20,13 @@ export class MicAccessError extends Error {
     this.name = 'MicAccessError';
     this.reason = reason;
   }
+}
+
+/** End of the last character minus the start of the first (ms) — the span the text claims to cover. */
+function alignmentSpanMs(alignment: CharAlignment): number {
+  const n = alignment.chars.length;
+  if (n === 0 || alignment.char_durations_ms.length !== n) return 0;
+  return (alignment.char_start_times_ms[n - 1] ?? 0) + (alignment.char_durations_ms[n - 1] ?? 0);
 }
 
 export class ElevenAgentsSpeechBackend implements SpeechBackend {
@@ -67,7 +75,7 @@ export class ElevenAgentsSpeechBackend implements SpeechBackend {
         const f = format.outputFormat;
         if (!f) return;
         const match = /^pcm_(\d+)$/.exec(f);
-        if (match) {
+        if (match && Number(match[1]) > 0) {
           this.agentOutputSampleRate = Number(match[1]);
           console.log(`[SpeechBackend] Agent audio format: ${f} -> ${this.agentOutputSampleRate} Hz`);
         } else {
@@ -85,49 +93,22 @@ export class ElevenAgentsSpeechBackend implements SpeechBackend {
 
         this.onStateChange('speaking');
 
-        // 1. Check and normalize the alignment metadata (handles payload.alignment, normalized_alignment, characters etc.)
-        const rawAlign = (payload.alignment ?? (payload as any).normalized_alignment ?? (payload as any).alignments) as any;
-        let alignment: CharAlignment | null = null;
-
-        if (rawAlign) {
-          const rawChars = rawAlign.chars ?? rawAlign.characters;
-          if (Array.isArray(rawChars) && rawChars.length > 0) {
-            let startTimes: number[] = [];
-            let durations: number[] = [];
-
-            if (Array.isArray(rawAlign.char_start_times_ms)) {
-              startTimes = rawAlign.char_start_times_ms;
-            } else if (Array.isArray(rawAlign.character_start_times_seconds)) {
-              startTimes = rawAlign.character_start_times_seconds.map((s: number) => s * 1000);
-            }
-
-            if (Array.isArray(rawAlign.char_durations_ms)) {
-              durations = rawAlign.char_durations_ms;
-            } else if (Array.isArray(rawAlign.character_end_times_seconds) && Array.isArray(rawAlign.character_start_times_seconds)) {
-              durations = rawAlign.character_end_times_seconds.map((endSec: number, idx: number) => {
-                const startSec = rawAlign.character_start_times_seconds[idx] ?? 0;
-                return Math.max(25, (endSec - startSec) * 1000);
-              });
-            }
-
-            if (startTimes.length === rawChars.length) {
-              alignment = {
-                chars: rawChars,
-                char_start_times_ms: startTimes,
-                char_durations_ms: durations.length === rawChars.length ? durations : rawChars.map(() => 50),
-                source: 'elevenlabs',
-              };
-            }
-          }
-        }
+        // 1. Normalize the alignment metadata (aliases, units, guards) — pure function, unit-tested.
+        let alignment: CharAlignment | null = normalizeAlignmentPayload(payload);
 
         // 1b. RESCALE to the audio axis (v1.1): the text span in the EL alignment chunk often does NOT equal
         // the audio length of the chunk (observed ratio 0.56-2.5x). Text slices are disjoint, so the
         // error accumulates → drift in long sentences. We scale character times so that the end of the
         // last character coincides with the end of the audio chunk (inner proportions preserved).
+        // The ratio BEFORE the rescale is the honest telemetry number: after it the ratio is ~1.0 by
+        // construction and can never flag anything (17-05 reads rawRatio from the AlignDiag log).
+        let rawRatio = -1;
         if (alignment && alignment.source === 'elevenlabs') {
           const audioDurMs = (pcmBytes.byteLength / 2 / sampleRate) * 1000;
-          alignment = rescaleAlignmentToAudio(alignment, audioDurMs);
+          rawRatio = alignmentSpanMs(alignment) / audioDurMs;
+          // Anchor on the audible speech (onset/offset) when it can be detected; leading and trailing
+          // silence are then not smeared into the words. Falls back to the whole chunk otherwise.
+          alignment = rescaleAlignmentToAudio(alignment, audioDurMs, detectSpeechBounds(pcmBytes, sampleRate));
         }
 
         // 2. FALLBACK: if the ElevenLabs server did not attach alignment metadata or it is empty,
@@ -136,7 +117,7 @@ export class ElevenAgentsSpeechBackend implements SpeechBackend {
           alignment = generateEnergyFallbackAlignment(pcmBytes, sampleRate);
         }
 
-        this.diagnoseSync(alignment, pcmBytes, epoch, scheduledStartTime);
+        this.diagnoseSync(alignment, pcmBytes, epoch, scheduledStartTime, rawRatio);
 
         this.onAudioChunk(pcmBytes.buffer as ArrayBuffer, alignment, epoch, scheduledStartTime, sampleRate);
       },
@@ -273,12 +254,15 @@ export class ElevenAgentsSpeechBackend implements SpeechBackend {
    * (after the rescale to the audio axis) to the audio chunk length, and the gaps between chunks.
    * After the rescale the ratio should be ~1.0; deviations signal pathologies (fallback, empty chunk,
    * network jitter), not intentional drift (that is removed by rescaleAlignmentToAudio).
+   * `rawRatio` is the same ratio measured BEFORE the rescale (the real drift signal, -1 when unknown);
+   * it is logged as `raw=` and flagged when it falls outside the rescale clamp range [0.5, 2.5].
    */
   private diagnoseSync(
     alignment: CharAlignment,
     pcmBytes: Uint8Array,
     epoch: number,
-    scheduledStartTime: number
+    scheduledStartTime: number,
+    rawRatio = -1
   ): void {
     if (this.diagEpoch !== epoch) {
       this.diagEpoch = epoch;
@@ -313,6 +297,7 @@ export class ElevenAgentsSpeechBackend implements SpeechBackend {
     else if (audioDurMs >= 150 && (ratio < 0.9 || ratio > 1.1))
       flags.push(`ratio=${ratio.toFixed(2)} outside [0.9,1.1]`);
     // A mid-utterance gap (30..1500 ms) = jitter worth noting; otherwise a normal pause between turns.
+    if (rawRatio > 0 && audioDurMs >= 150 && (rawRatio < 0.5 || rawRatio > 2.5)) flags.push(`raw=${rawRatio.toFixed(2)} beyond the rescale clamp`);
     if (gapMs > 30 && gapMs < 1500) flags.push(`GAP ${gapMs.toFixed(0)}ms`);
     if (samples === 0) flags.push('empty chunk');
 
@@ -334,7 +319,7 @@ export class ElevenAgentsSpeechBackend implements SpeechBackend {
       `[AlignDiag] e${epoch}#${index} audio=${audioDurMs.toFixed(0)}ms` +
       (isFallback
         ? ' align=fallback'
-        : ` alignEnd=${alignEndMs.toFixed(0)}ms ratio=${ratio.toFixed(2)} n=${n}`) +
+        : ` alignEnd=${alignEndMs.toFixed(0)}ms ratio=${ratio.toFixed(2)}${rawRatio > 0 ? ` raw=${rawRatio.toFixed(2)}` : ''} n=${n}`) +
       ` start=${scheduledStartTime.toFixed(3)}s` +
       (flags.length ? ` ⚠ ${flags.join(' | ')}` : ' ✓');
     if (flags.length) console.warn(log);
