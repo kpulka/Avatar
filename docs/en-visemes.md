@@ -160,7 +160,7 @@ Diphthongs (EY/AY/AW/OY/OW) in real speech are a **movement** (start→end). Our
 
 ### P / B / M (C-MBP) — "map, boy, pen"
 - **Description:** **lip closure** (bilabial). P/B = lips closed with slight pressure (P voiceless + aspiration, B voiced). M = lips closed, sound through the nose — **visually the same**: mouth closed in a natural line, teeth apart, no "sucking". This is the most important test of lip-sync readability.
-- **Parameters (base):** `mouthClose 1.0 · press .15` — *proposal for MetaPerson:* `mouthClose ~0.5-0.6` (higher pulls the lip onto the nose), `press .15`, do NOT add jawOpen.
+- **Parameters (base):** `mouthClose 1.0 · press .15` (historical). **In code since Phase 11.2 SHOW-06 (v1.3):** `jawOpen .02 · mouthClose .50 · mouthPress L/R .58 · mouthRollLower .25 · mouthRollUpper .15` — closure is *perceived* (press + roll), `mouthClose` stays low because a high value pulls the lip onto the nose. Effective values are table x profile scale: balanced (closeScale .60, capped at .85) gives close `.50 x .60 = .30`, press `.58 x .60 = .348`, jaw `.02`. Do NOT add jawOpen.
 - **Test:** *(check: full lip contact, the lower lip does NOT ride up under the nose)*
 
 ### F / V (C-FV) — "fine, van"
@@ -232,6 +232,8 @@ Diphthongs (EY/AY/AW/OY/OW) in real speech are a **movement** (start→end). Our
 
 ## 4. Summary parameter table (working sheet)
 
+> **Status (Phase 17):** columns **B** and **P** are historical working values. The source of truth is `PHONEME_POSES` in `src/lipsync/g2p/phoneme-visemes.ts` (v1.3), which is also what the Calibrator preview and the tests read. The MBP row below shows the v1.3 code values.
+
 Legend: **B** = current value (code v1); **P** = proposal to test; blank = not used (0).
 L/R entered once (symmetry). `jaw`=`jawOpen`, `close`=`mouthClose`, `press`=`mouthPress`, `puck`=`mouthPucker`,
 `fun`=`mouthFunnel`, `roll`=`mouthRollLower`, `shrug`=`mouthShrugLower`, `uUp`=`mouthUpperUp`,
@@ -254,7 +256,7 @@ L/R entered once (symmetry). `jaw`=`jawOpen`, `close`=`mouthClose`, `press`=`mou
 | ER | .30 | | | P .25 | .20 | | | | | | |
 | AY | .45 | | | | | | | | | .20 | |
 | OY | .40 | | | .40 | | | | | | P .15 | |
-| MBP | P .0 | B 1.0/P.55 | .15 | | | | | | | | |
+| MBP | .02 | .50 | .58 | | | .25 (+ rollUpper .15) | | | | | |
 | FV | .12 | | | | | .65 | .18 | .50 | | | |
 | THDH | .20 | | | | | | | | | | .30 |
 | TDN | .20 | | | | | | | | | | |
@@ -318,6 +320,8 @@ EY/AY/AW/OY/OW in reality **shift** the mouth. Holding a single pose = "a frozen
 3. compromise: middle + a slight tilt (smile for AY/OY, pucker for AW/OW).
 > Recommendation to start: **option 2 for AY and AW** (the most contrasting), the rest static. Add the decision after the test.
 
+**Status (Phase 17-02): option 2 is implemented for AY and AW.** The merge emits the diphthong's own pose over 60% of its time, then a glide end pose over the remaining 40% (AY -> IH, AW -> UH; `DIPHTHONG_END_POSES` in `phoneme-visemes.ts`, the second span carries `glideOf`). EY, OW and OY stay single static poses. Whether the glide is visible enough is judged in the live UAT (`17-UAT-PROTOCOL.md` section 3), so it is *tuned-by-harness*, not final. The remaining `5.1` twin pairs are checked by a computed proxy (`tests/lipsync-corpus.test.ts`): three near-twins stay pinned (ER/R, AY start vs EH, AH vs K/G) and every other pair of distinct poses is at least 0.15 apart (L1 over the pose vectors).
+
 ---
 
 ## 6. Control sentences for evaluation (minimal pairs)
@@ -345,3 +349,5 @@ EY/AY/AW/OY/OW in reality **shift** the mouth. Holding a single pose = "a frozen
 | 2026-09 | Document created; twin pairs identified: EY/AE/AY, IH/Y, ER/R, HH/NG, SH/CH, UH/UW; proposed distinctions in §5. |
 | 2026-09 | **v1.2 deployed** to `src/lipsync/g2p/phoneme-visemes.ts` as a 50/50 average (current ↔ §5 proposals). New values = averages: MBP close .78, front vowels spread apart (jaw+smile+`upperUp`), SH/SZ with teeth exposed, back rounded vowels separated (AO oval → UW beak), HH low amplitude .22, L without `tongueOut`. Column **B** in §4 is outdated as "code" — see the code/table above. |
 | 2026-09 | **v1.3** — more "power" (larger jaw/smile/rounding) + the "extra touch": open vowels got `lowerDown` (lower teeth), IY/EY stronger `upperUp`, UW/W got `shrugLower` (protrusion), SZ/SH strong teeth exposure, K/G/NG/T/D/N/L gentle teeth presence (so that "neutral" visemes are not empty). |
+| 2026-11 | **Phase 17-02:** poses extracted into one table (`PHONEME_POSES`) read by live speech, the Calibrator preview (`testPhoneme`) and the tests; word-window invariant with a 35 ms soft minimum; diphthong glide for AY and AW (section 5.5); closure criterion changed from "effective mouthClose >= 0.85" to *perceived closure* (close <= .35, press >= .3, jaw <= .05 under balanced). |
+| 2026-11 | **Phase 17-04:** Polish gets its own viseme classes (`PL_PHONEME_POSES`: velar fricative, soft sibilants, nasal vowels) next to this table; the English table is unchanged. |

@@ -15,6 +15,7 @@ import {
   SYNC_CLOCK_VERSION,
 } from '../../lipsync/calibration';
 import { VisemeOverrideMap } from '../../lipsync/viseme-overrides';
+import { DEFAULT_LIP_SYNC_ENGINE, LipSyncEngine, parseLipSyncEngine } from '../../lipsync/lipsync-engine';
 import { DEFAULT_AGENT_CONFIG } from '../../audio/agent-config';
 
 /** Default address of the local A2F wrapper (eventually cloud too, in Phase 10). */
@@ -27,7 +28,7 @@ const RESERVED_KEYS = new Set(['__proto__', 'constructor', 'prototype']);
 
 export type UiMode = 'user' | 'studio';
 export type ThemeMode = 'dark' | 'light';
-export type LipSyncEngine = 'phoneme' | 'char';
+export type { LipSyncEngine };
 
 export interface UserSettings {
   uiMode: UiMode;
@@ -76,7 +77,7 @@ export const DEFAULT_SETTINGS: SettingsStateV1 = {
   studio: {
     agentId: DEFAULT_AGENT_CONFIG.agentId,
     a2fUrl: DEFAULT_A2F_URL,
-    lipSyncEngine: 'phoneme',
+    lipSyncEngine: DEFAULT_LIP_SYNC_ENGINE,
     calibration: { ...DEFAULT_CALIBRATION_PROFILE },
     visemeOverrides: {},
     locks: {},
@@ -224,9 +225,9 @@ export function validateSettings(raw: unknown): { ok: true; value: SettingsState
   if (typeof studioRaw.a2fUrl === 'string' && isValidA2fUrl(studioRaw.a2fUrl)) {
     studio.a2fUrl = studioRaw.a2fUrl.trim();
   }
-  if (studioRaw.lipSyncEngine === 'phoneme' || studioRaw.lipSyncEngine === 'char') {
-    studio.lipSyncEngine = studioRaw.lipSyncEngine;
-  }
+  // Legacy 'phoneme' (pre 17-04) -> 'phoneme-en'; unknown values keep the default.
+  const engine = parseLipSyncEngine(studioRaw.lipSyncEngine);
+  if (engine !== undefined) studio.lipSyncEngine = engine;
   studio.calibration = sanitizeCalibration(studioRaw.calibration);
   studio.visemeOverrides = sanitizeVisemeOverrides(studioRaw.visemeOverrides);
   studio.locks = sanitizeLocks(studioRaw.locks);

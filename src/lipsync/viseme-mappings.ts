@@ -8,9 +8,19 @@ export interface MappedShapeResult {
 }
 
 /**
+ * Language context of the character path (17-04). Only the Polish flag exists today: in Polish "ch" is
+ * the velar fricative [x], not the English affricate. Shared frozen objects, so passing a context in the
+ * hot per-character loop allocates nothing.
+ */
+export interface CharContext {
+  readonly polish?: boolean;
+}
+export const POLISH_CHAR_CONTEXT: CharContext = Object.freeze({ polish: true });
+
+/**
  * Checks whether a pair of characters forms a digraph, using lookahead
  */
-function tryMapDigraph(c1: string, c2: string): Map<string, number> | null {
+function tryMapDigraph(c1: string, c2: string, context?: CharContext): Map<string, number> | null {
   const pair = (c1 + c2).toUpperCase();
 
   switch (pair) {
@@ -20,6 +30,14 @@ function tryMapDigraph(c1: string, c2: string): Map<string, number> | null {
         ['mouthFunnel', 0.5],
       ]);
     case 'CH':
+      if (context?.polish) {
+        // Polish "ch" = [x] (as in "chata"): open, no rounding -- the same shape as the phoneme path's PL_H.
+        return new Map([
+          ['jawOpen', 0.3],
+          ['mouthLowerDownLeft', 0.06],
+          ['mouthLowerDownRight', 0.06],
+        ]);
+      }
       return new Map([
         ['jawOpen', 0.25],
         ['mouthFunnel', 0.45],
@@ -279,13 +297,13 @@ function mapSingleChar(char: string, nextChar?: string): Map<string, number> {
 /**
  * Main function extracting a viseme from text, with lookahead for digraphs
  */
-export function mapCharToShapes(chars: string[], index: number): Map<string, number> {
+export function mapCharToShapes(chars: string[], index: number, context?: CharContext): Map<string, number> {
   const currentChar = chars[index] ?? '';
   const nextChar = chars[index + 1];
 
   // 1. Check digraphs (lookahead)
   if (nextChar) {
-    const digraphShapes = tryMapDigraph(currentChar, nextChar);
+    const digraphShapes = tryMapDigraph(currentChar, nextChar, context);
     if (digraphShapes) {
       return digraphShapes;
     }
@@ -319,6 +337,20 @@ export function charTokenFor(chars: string[], index: number): string | null {
   const upper = currentChar.toUpperCase();
   if (!/[A-ZĄĆĘŁŃÓŚŹŻ]/.test(upper)) return null; // space, punctuation, digits...
   return upper;
+}
+
+// Digraphs whose second letter is a vowel (PL softness markers: "si", "zi", "ni", "ci"). The vowel
+// is still spoken, so the character path must keep enqueueing it as its own viseme.
+const VOWEL_SECOND_DIGRAPHS = new Set(['SI', 'ZI', 'NI', 'CI']);
+
+/**
+ * How many alignment characters the character path consumes at `index`: 2 for a consonant
+ * digraph (th/sh/ch/ph/wh/qu/ng, sz/cz/rz/dz...), otherwise 1. The caller enqueues ONE viseme for
+ * the digraph and skips the second letter (otherwise "the" pulses TH, then a stray H, then E).
+ */
+export function charPathSpan(chars: string[], index: number): 1 | 2 {
+  const token = charTokenFor(chars, index);
+  return token !== null && token.length === 2 && !VOWEL_SECOND_DIGRAPHS.has(token) ? 2 : 1;
 }
 
 /**

@@ -11,7 +11,9 @@ import {
 } from '../types/avatar';
 import { AudioEngine } from '../audio/audio-engine';
 import { VisemeScheduler, isSpeechShape } from './viseme-scheduler';
-import { mapCharToShapes, charTokenFor } from './viseme-mappings';
+import { mapCharToShapes, charTokenFor, charPathSpan, CharContext, POLISH_CHAR_CONTEXT } from './viseme-mappings';
+import { LipSyncEngine, DEFAULT_LIP_SYNC_ENGINE } from './lipsync-engine';
+import { charsLookPolish } from './g2p/language';
 import { ensureG2pLoaded, isG2pReady, g2pAvailable } from './g2p/g2p-en';
 import { mergeCharAlignmentToPhonemes } from './g2p/phoneme-merge';
 import { mapPhonemeToShapes } from './g2p/phoneme-visemes';
@@ -116,10 +118,10 @@ export class FaceController {
   private readonly speechShapeList: string[];
 
   // Character-to-shape mapping function
-  private charMapper: (chars: string[], index: number) => Map<string, number> = mapCharToShapes;
+  private charMapper: (chars: string[], index: number, context?: CharContext) => Map<string, number> = mapCharToShapes;
 
-  // Lip-sync engine: 'phoneme' = G2P layer (EN), 'char' = legacy char table (PL/fallback)
-  private lipSyncEngine: 'phoneme' | 'char' = 'phoneme';
+  // Lip-sync engine: 'phoneme-en' / 'phoneme-pl' = G2P layer per language, 'char' = character table (fallback)
+  private lipSyncEngine: LipSyncEngine = DEFAULT_LIP_SYNC_ENGINE;
 
   // Per-VISEME blendshape pose overrides (Viseme Editor, localStorage) —
   // they take precedence over the default mapping tables.
@@ -366,12 +368,12 @@ export class FaceController {
     }
   }
 
-  public setCharMapper(mapper: (chars: string[], index: number) => Map<string, number>): void {
+  public setCharMapper(mapper: (chars: string[], index: number, context?: CharContext) => Map<string, number>): void {
     this.charMapper = mapper;
   }
 
-  /** Selects the lip-sync engine: 'phoneme' (G2P, EN) or 'char' (character table). */
-  public setLipSyncEngine(engine: 'phoneme' | 'char'): void {
+  /** Selects the lip-sync engine: 'phoneme-en' / 'phoneme-pl' (G2P per language) or 'char' (character table). */
+  public setLipSyncEngine(engine: LipSyncEngine): void {
     this.lipSyncEngine = engine;
     this.scheduler.clear();
   }
@@ -447,15 +449,16 @@ export class FaceController {
       return; // do NOT run the per-character loop for the fallback
     }
 
-    // EN phoneme layer (LIPS-05): character alignment -> ARPAbet phonemes (G2P) -> visemes.
-    // Silent letters produce no movement; word timings come from the ElevenLabs alignment.
+    // Phoneme layer (LIPS-05, 17-04): character alignment -> phonemes (EN: CMUdict G2P, PL: rules) -> visemes.
+    // Silent letters produce no movement; word timings come from the ElevenLabs alignment. The Polish engine
+    // needs no lexicon, so it does not wait for the English dictionary.
+    const polishEngine = this.lipSyncEngine === 'phoneme-pl';
     if (
-      this.lipSyncEngine === 'phoneme' &&
-      g2pAvailable() &&
-      isG2pReady() &&
+      (this.lipSyncEngine === 'phoneme-en' || polishEngine) &&
+      (polishEngine || (g2pAvailable() && isG2pReady())) &&
       (alignment.source === undefined || alignment.source === 'elevenlabs')
     ) {
-      const spans = mergeCharAlignmentToPhonemes(alignment);
+      const spans = mergeCharAlignmentToPhonemes(alignment, { defaultLanguage: polishEngine ? 'pl' : 'en' });
       if (spans.length > 0) {
         const profile = this.scheduler.getCalibrationProfile();
         const syncOffsetSec = profile.syncOffsetMs / 1000;
@@ -477,11 +480,19 @@ export class FaceController {
       // No spans (e.g. non-letter text only) -> fall through to the per-character loop
     }
 
+    // Character path language context (17-04): the Polish engine, or a chunk with Polish evidence,
+    // switches the "ch" digraph to the Polish velar fricative. One scan per chunk, no allocation.
+    const charContext = this.lipSyncEngine === 'phoneme-pl' || charsLookPolish(alignment.chars) ? POLISH_CHAR_CONTEXT : undefined;
+
     // Schedule visemes on the audio timeline
     for (let i = 0; i < alignment.chars.length; i++) {
       const char = alignment.chars[i];
       const startMs = alignment.char_start_times_ms[i] ?? 0;
-      const durationMs = alignment.char_durations_ms[i] ?? 50;
+      // A consonant digraph (th, sh, ch ...) is ONE viseme: it spans both letters and the second
+      // letter is skipped, so it never fires a phantom pulse of its own.
+      const span = charPathSpan(alignment.chars, i);
+      const durationMs =
+        (alignment.char_durations_ms[i] ?? 50) + (span === 2 ? (alignment.char_durations_ms[i + 1] ?? 0) : 0);
 
       // An override from the Viseme Editor (character path) takes precedence over the character table.
       let shapes: Map<string, number>;
@@ -490,7 +501,7 @@ export class FaceController {
       if (tokenOverride) {
         shapes = new Map(tokenOverride);
       } else {
-        shapes = this.charMapper(alignment.chars, i);
+        shapes = this.charMapper(alignment.chars, i, charContext);
       }
 
       const profile = this.scheduler.getCalibrationProfile();
@@ -503,6 +514,7 @@ export class FaceController {
         startTimeSec: chunkStartTimeSec + startMs / 1000 + syncOffsetSec,
         durationSec: Math.max(viseme.minDurationSec, durationMs / 1000),
       });
+      i += span - 1; // skip the second letter of a digraph
     }
   }
 
@@ -528,64 +540,13 @@ export class FaceController {
       return;
     }
 
-    const profile = this.scheduler.getCalibrationProfile();
-
-    switch (phonemeKey) {
-      case 'A':
-        this.setManualOverride('jawOpen', 0.55 * profile.jawScale);
-        this.setManualOverride('mouthLowerDownLeft', 0.15);
-        this.setManualOverride('mouthLowerDownRight', 0.15);
-        break;
-
-      case 'E':
-        this.setManualOverride('jawOpen', 0.16 * profile.jawScale);
-        this.setManualOverride('mouthSmileLeft', 0.35 * profile.smileScale);
-        this.setManualOverride('mouthSmileRight', 0.35 * profile.smileScale);
-        this.setManualOverride('mouthUpperUpLeft', 0.15);
-        this.setManualOverride('mouthUpperUpRight', 0.15);
-        this.setManualOverride('mouthLowerDownLeft', 0.15);
-        this.setManualOverride('mouthLowerDownRight', 0.15);
-        break;
-
-      case 'O':
-        this.setManualOverride('jawOpen', 0.28 * profile.jawScale);
-        this.setManualOverride('mouthFunnel', 0.45 * profile.funnelScale);
-        this.setManualOverride('mouthPucker', 0.40 * profile.puckerScale);
-        break;
-
-      case 'U':
-        this.setManualOverride('jawOpen', 0.16 * profile.jawScale);
-        this.setManualOverride('mouthPucker', 0.65 * profile.puckerScale);
-        this.setManualOverride('mouthFunnel', 0.20 * profile.funnelScale);
-        break;
-
-      case 'M':
-        // Lip closure (M / B / P): lips meet along their natural line, no chin pulled up under the nose
-        this.setManualOverride('mouthClose', profile.closeScale);
-        this.setManualOverride('jawOpen', 0.04);
-        this.setManualOverride('mouthPressLeft', 0.12);
-        this.setManualOverride('mouthPressRight', 0.12);
-        break;
-
-      case 'SZ':
-        // Hushing (SZ / CZ): lips pushed forward into a rounded tunnel, teeth close together and visible
-        this.setManualOverride('jawOpen', 0.12 * profile.jawScale);
-        this.setManualOverride('mouthFunnel', 0.65 * profile.funnelScale);
-        this.setManualOverride('mouthPucker', 0.25 * profile.puckerScale);
-        this.setManualOverride('mouthUpperUpLeft', 0.25 * profile.teethExposureScale);
-        this.setManualOverride('mouthUpperUpRight', 0.25 * profile.teethExposureScale);
-        this.setManualOverride('mouthLowerDownLeft', 0.22 * profile.teethExposureScale);
-        this.setManualOverride('mouthLowerDownRight', 0.22 * profile.teethExposureScale);
-        break;
-
-      case 'F':
-        // Labiodental (F / V): upper incisors rest on the rolled-in lower lip!
-        this.setManualOverride('jawOpen', 0.10 * profile.jawScale);
-        this.setManualOverride('mouthRollLower', 0.70 * profile.rollScale);
-        this.setManualOverride('mouthUpperUpLeft', 0.55 * profile.teethExposureScale);
-        this.setManualOverride('mouthUpperUpRight', 0.55 * profile.teethExposureScale);
-        this.setManualOverride('mouthShrugLower', 0.20);
-        break;
+    // The calibrator vocabulary (A/E/O/U/M/SZ/F) reads the SAME tables as live speech (single source
+    // of truth, 17-02): M and F come from the phoneme table, A/E/O/U/SZ from the character table.
+    // Table values are effective targets; the profile scale is applied exactly as the scheduler does it.
+    const shapes = defaultVisemeShapes(phonemeKey);
+    if (!shapes) return;
+    for (const [shape, value] of shapes.entries()) {
+      this.setManualOverride(shape, value * this.scheduler.scaleForShape(shape));
     }
   }
 

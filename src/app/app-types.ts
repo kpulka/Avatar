@@ -9,6 +9,7 @@ import type * as THREE from 'three';
 import { AnimationMode, CharAlignment, FaceDriver, FramesClip } from '../types/avatar';
 import { CalibrationPresetName, CalibrationProfile } from '../lipsync/calibration';
 import { VisemeOverrideMap } from '../lipsync/viseme-overrides';
+import type { LipSyncEngine } from '../lipsync/lipsync-engine';
 import type { AnimationSourceRegistry } from '../lipsync/animation-sources';
 
 export type VoiceState = 'listening' | 'speaking' | 'thinking' | 'idle';
@@ -123,7 +124,7 @@ export interface AnimationService {
   updateCalibrationSliders(): CalibrationProfile;
   saveCalibration(): void;
   resetCalibration(): CalibrationProfile;
-  setLipSyncEngine(engine: 'phoneme' | 'char'): void;
+  setLipSyncEngine(engine: LipSyncEngine): void;
   previewViseme(key: string | null): void;
   applyVisemeOverrides(record: VisemeOverrideMap): void;
   analyzeAndApplyEmotion(text: string): void;

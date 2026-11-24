@@ -1,5 +1,12 @@
 import { describe, it, expect } from 'vitest';
-import { mapPhonemeToShapes } from '../src/lipsync/g2p/phoneme-visemes';
+import { readFileSync } from 'node:fs';
+import {
+  mapPhonemeToShapes,
+  lipPoseToShapes,
+  PHONEME_POSES,
+  DIPHTHONG_END_POSES,
+} from '../src/lipsync/g2p/phoneme-visemes';
+import { ANIM_DEFAULTS } from '../src/lipsync/anim-config';
 import { VisemeScheduler } from '../src/lipsync/viseme-scheduler';
 import { CALIBRATION_PRESETS } from '../src/lipsync/calibration';
 
@@ -72,7 +79,7 @@ describe('mapPhonemeToShapes (ARPAbet → ARKit)', () => {
     expect(aa.has('mouthPucker')).toBe(false);
   });
 
-  it('klucze symetryczne aplikowane do Left i Right', () => {
+  it('symmetric keys are applied to both Left and Right', () => {
     const m = mapPhonemeToShapes('M')!;
     expect(m.get('mouthPressLeft')).toBe(0.58);
     expect(m.get('mouthPressRight')).toBe(0.58);
@@ -100,5 +107,92 @@ describe('mapPhonemeToShapes (ARPAbet → ARKit)', () => {
   it('unknown phoneme -> null', () => {
     expect(mapPhonemeToShapes('XYZ')).toBeNull();
     expect(mapPhonemeToShapes('')).toBeNull();
+    expect(mapPhonemeToShapes('constructor')).toBeNull(); // not an own key of the table
+  });
+});
+
+// ---------------------------------------------------------------------------------------------
+// Phase 17 (17-02): the table is the single source of truth
+// ---------------------------------------------------------------------------------------------
+
+const snapshot = JSON.parse(
+  readFileSync(new URL('./fixtures/phoneme-poses-snapshot.json', import.meta.url), 'utf8'),
+) as { poses: Record<string, Record<string, number>> };
+
+describe('PHONEME_POSES single source of truth (LIP-04)', () => {
+  it('has exactly the 39 ARPAbet keys of the committed snapshot', () => {
+    expect(Object.keys(PHONEME_POSES).sort()).toEqual(Object.keys(snapshot.poses).sort());
+    expect(Object.keys(snapshot.poses)).toHaveLength(39);
+  });
+
+  it('mapPhonemeToShapes output is unchanged for every key (regression snapshot)', () => {
+    for (const [phoneme, expected] of Object.entries(snapshot.poses)) {
+      const shapes = mapPhonemeToShapes(phoneme)!;
+      expect(Object.fromEntries([...shapes.entries()].sort(([a], [b]) => (a < b ? -1 : 1))), phoneme).toEqual(expected);
+    }
+  });
+
+  it('P, B and M share one bilabial pose', () => {
+    expect(PHONEME_POSES.P).toBe(PHONEME_POSES.M);
+    expect(PHONEME_POSES.B).toBe(PHONEME_POSES.M);
+  });
+
+  it('diphthong glide targets exist in the table (AY -> IH, AW -> UH)', () => {
+    expect(DIPHTHONG_END_POSES).toEqual({ AY: 'IH', AW: 'UH' });
+    for (const end of Object.values(DIPHTHONG_END_POSES)) expect(PHONEME_POSES[end]).toBeDefined();
+  });
+
+  it('every pose uses only shapes the speech subset can drive (jaw/mouth/tongue)', () => {
+    for (const [phoneme, pose] of Object.entries(PHONEME_POSES)) {
+      for (const shape of lipPoseToShapes(pose).keys()) {
+        expect(/^(jawOpen|mouth|tongueOut)/.test(shape), `${phoneme}: ${shape}`).toBe(true);
+      }
+    }
+  });
+});
+
+describe('perceived bilabial closure, computed from the table (LIP-04 / T-10)', () => {
+  const cap = ANIM_DEFAULTS.common.mouthCloseCap;
+
+  /** effective = table value x profile scale; close/press scale is min(closeScale, cap). */
+  function computedEffective(phoneme: string, closeScale: number) {
+    const pose = PHONEME_POSES[phoneme];
+    const closeFactor = Math.min(closeScale, cap);
+    return {
+      jaw: (pose.jaw ?? 0) * 1.0,
+      close: (pose.close ?? 0) * closeFactor,
+      press: (pose.press ?? 0) * closeFactor,
+    };
+  }
+
+  it('M/B/P under balanced: mouthClose <= 0.35, mouthPress >= 0.3, jawOpen <= 0.05', () => {
+    const closeScale = CALIBRATION_PRESETS.balanced.closeScale;
+    for (const p of ['M', 'B', 'P']) {
+      const e = computedEffective(p, closeScale);
+      expect(e.close, `${p} close`).toBeLessThanOrEqual(0.35);
+      expect(e.press, `${p} press`).toBeGreaterThanOrEqual(0.3);
+      expect(e.jaw, `${p} jaw`).toBeLessThanOrEqual(0.05);
+    }
+  });
+
+  it('the roll-in lips complete the closure (rollLower and rollUpper present and unscaled by closeScale)', () => {
+    const pose = PHONEME_POSES.M;
+    expect(pose.rollLower ?? 0).toBeGreaterThanOrEqual(0.2);
+    expect(pose.rollUpper ?? 0).toBeGreaterThanOrEqual(0.1);
+  });
+
+  it('the computation agrees with what the scheduler actually renders', () => {
+    for (const preset of ['subtle', 'balanced', 'expressive'] as const) {
+      const computed = computedEffective('M', CALIBRATION_PRESETS[preset].closeScale);
+      const rendered = effectivePose('M', preset);
+      expect(rendered.get('mouthClose')!).toBeCloseTo(computed.close, 2);
+      expect(rendered.get('mouthPressLeft')!).toBeCloseTo(computed.press, 2);
+    }
+  });
+
+  it('the cap limits the scale: a 1.2 slider never exceeds the 0.85 ceiling on mouthClose', () => {
+    const e = computedEffective('M', 1.2);
+    expect(e.close).toBeCloseTo(PHONEME_POSES.M.close! * cap, 6);
+    expect(e.close).toBeLessThanOrEqual(PHONEME_POSES.M.close! * cap + 1e-9);
   });
 });

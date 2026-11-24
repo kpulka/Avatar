@@ -28,14 +28,13 @@ export default defineConfig({
       output: {
         // Vendor chunking: three (~596 kB) separate from the app code (~154 kB), so that changes
         // in the code do not invalidate the cache of the 3D engine.
-        // NOTE: the largest chunk in the project is NOT three but the dictionary
-        // `cmu-pronouncing-dictionary` (~3.92 MB / 961 kB gzip) — deliberately loaded
-        // via a dynamic import in `src/lipsync/g2p/g2p-en.ts` (lazy, outside the first render).
+        // The EN G2P lexicon (`src/lipsync/g2p/dict-en-pruned.json`, pruned by `npm run build:dict`) is
+        // a separate lazy chunk loaded via a dynamic import in `g2p-en.ts` (outside the first render).
         manualChunks: (id: string) => (id.includes('node_modules/three') ? 'three' : undefined),
       },
     },
-    // The dictionary chunk (`cmu-pronouncing-dictionary`, ~3.92 MB) is deliberate and lazy —
-    // the 4000 kB limit silences the noise, while still catching real growth of the app code (~750 kB).
-    chunkSizeWarningLimit: 4000,
+    // three is the largest chunk (~596 kB); the 700 kB limit still flags real growth of the app code
+    // or an accidental return of the full CMU dictionary (it was 3.92 MB before Phase 17).
+    chunkSizeWarningLimit: 700,
   },
 });

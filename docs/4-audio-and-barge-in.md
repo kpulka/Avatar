@@ -173,6 +173,10 @@ hardStop() {
 }
 ```
 
+### What `agent_response_correction` does (and does not do)
+
+After an interruption ElevenLabs sends `agent_response_correction` with the text the agent actually got to say. On the client it travels as the `transcript:agent` event, so a correction updates the **captions** (and re-runs the emotion text analysis); it never touches audio or visemes. Those are already invalidated by the epoch bump at the interruption: chunks and visemes of the old epoch are ignored, so a late correction cannot resurrect or re-time anything.
+
 ### Transition rules (hardened in Phase 16)
 
 Every state × event cell has a defined, tested behavior (`tests/face-controller-transitions.test.ts`, `tests/race-condition-epoch.test.ts`, `tests/face-controller-clock.test.ts`). The rules that matter:

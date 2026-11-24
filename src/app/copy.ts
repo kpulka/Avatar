@@ -16,6 +16,7 @@ export const COPY: Readonly<Record<string, string>> = {
   'status.listening': 'Listening…',
   'status.speaking': 'Speaking…',
   'status.thinking': 'Thinking…',
+  'chip.simplifiedLipsync': 'Simplified lip-sync',
   'dock.start': 'Start conversation',
   'dock.end': 'End conversation',
   'dock.mute': 'Mute',
@@ -183,8 +184,11 @@ export const COPY: Readonly<Record<string, string>> = {
   'scenePreset.light': 'Light',
 
   // ---- Animation panel
-  'animation.engineLabel': 'EN phoneme engine (G2P)',
-  'animation.engineHint': 'ON = letters → phonemes (CMUdict); OFF = legacy char table',
+  'animation.engineLabel': 'Lip-sync engine:',
+  'animation.engineEn': 'EN phonemes (G2P, CMUdict)',
+  'animation.enginePl': 'PL phonemes (rule-based G2P)',
+  'animation.engineChar': 'Character table (fallback)',
+  'animation.engineHint': 'Pick the language of the voice. The character table works for every language but ignores silent letters and softness',
   'animation.sourceLabel': 'Animation source:',
   'animation.sourceViseme': 'LIVE visemes (default)',
   'animation.sourceFrames': 'A2F (frames)',

@@ -11,6 +11,7 @@ import {
 } from '../../../lipsync/calibration';
 import { AnimationMode } from '../../../types/avatar';
 import { t } from '../../../app/copy';
+import { LipSyncEngine, parseLipSyncEngine } from '../../../lipsync/lipsync-engine';
 
 interface SliderSpec {
   key: keyof CalibrationProfile;
@@ -55,16 +56,21 @@ export function createAnimationPanel(): PanelDefinition {
       const root = el('div', { className: 'panel panel-animation' });
 
       // 0. Lip-sync engine (A/B)
-      const engineToggle = el('input', { type: 'checkbox' }) as HTMLInputElement;
-      engineToggle.checked = store.getEffective<'phoneme' | 'char'>('lipSyncEngine') === 'phoneme';
-      engineToggle.addEventListener('change', () => {
-        services.animation.setLipSyncEngine(engineToggle.checked ? 'phoneme' : 'char');
+      const engineSelect = el('select', { className: 'engine-select', ariaLabel: t('animation.engineLabel') }) as HTMLSelectElement;
+      engineSelect.append(
+        el('option', { value: 'phoneme-en', text: t('animation.engineEn') }),
+        el('option', { value: 'phoneme-pl', text: t('animation.enginePl') }),
+        el('option', { value: 'char', text: t('animation.engineChar') })
+      );
+      engineSelect.value = store.getEffective<LipSyncEngine>('lipSyncEngine');
+      engineSelect.addEventListener('change', () => {
+        services.animation.setLipSyncEngine(parseLipSyncEngine(engineSelect.value) ?? 'phoneme-en');
       });
       root.append(
         el('div', { className: 'drawer-section' }, [
-          el('label', { className: 'engine-toggle' }, [
-            engineToggle,
+          el('label', { className: 'engine-toggle column' }, [
             el('span', { text: t('animation.engineLabel') }),
+            engineSelect,
           ]),
           el('p', { className: 'drawer-subtitle', text: t('animation.engineHint') }),
         ])
