@@ -137,7 +137,7 @@ describe('form label association', () => {
       // Controls live in the form; labels too (ids are stable, same document).
       document.body.append(form);
       assertLabelled(form);
-      expect(form.querySelectorAll('label[for]').length).toBe(4);
+      expect(form.querySelectorAll('label[for]').length).toBe(5);
     });
   });
 

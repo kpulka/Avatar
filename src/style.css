@@ -1211,6 +1211,12 @@ dialog.settings-dialog::backdrop {
   margin-bottom: var(--space-3);
 }
 
+.settings-studio-row {
+  margin-bottom: 0;
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--border-subtle);
+}
+
 .user-settings-form select {
   min-height: 36px;
   background: var(--surface-input);

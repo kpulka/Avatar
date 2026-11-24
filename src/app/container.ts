@@ -204,6 +204,7 @@ export function createApp(canvas: HTMLCanvasElement): AppHandle {
       list: () => scenePresetController.list().map((preset) => ({ id: preset.id, label: preset.label })),
       getCurrentId: () => scenePresetController.getCurrentId(),
     },
+    uiMode,
   };
 
   // Microphone device from the profile (F11) — applied at capture start and on change.
@@ -253,10 +254,19 @@ export function createApp(canvas: HTMLCanvasElement): AppHandle {
 
   const shell = createStudioShell({ registry, contextFactory, host: hostRoot });
 
-  // The studio opens automatically in studio mode (refreshed at start).
+  // The studio opens automatically in studio mode (refreshed at start) and follows later mode switches
+  // (Ctrl+Shift+D, Settings toggle). Subscribing here keeps ui-mode.ts untouched.
   if (uiMode.getMode() === 'studio') {
     shell.open();
   }
+  let shellMode = uiMode.getMode();
+  const unsubUiModeShell = store.subscribe(() => {
+    const next = uiMode.getMode();
+    if (next === shellMode) return;
+    shellMode = next;
+    if (next === 'studio') shell.open();
+    else shell.close();
+  });
 
   // ---- Global listeners (composition root only)
   const onPointerMove = (event: PointerEvent): void => {
@@ -361,6 +371,7 @@ export function createApp(canvas: HTMLCanvasElement): AppHandle {
       unsubAvatarProgress();
       unsubAvatarError();
       unsubUiModeShortcut();
+      unsubUiModeShell();
       unsubLegacyBridge();
       unsubSceneTheme();
       unsubSceneAttr();

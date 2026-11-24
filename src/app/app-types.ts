@@ -136,6 +136,13 @@ export interface SceneService {
   getAvatarInfo(): { name: string; shapesCount: number; speechMeshes: number } | null;
 }
 
+/** UI mode seam (15-06): the composition root passes its `UiModeController`; UI never imports `ui-mode.ts`. */
+export interface UiModeService {
+  getMode(): 'user' | 'studio';
+  set(mode: 'user' | 'studio'): void;
+  toggle(): void;
+}
+
 export interface AppServices {
   conversation: ConversationService;
   animation: AnimationService;
@@ -145,6 +152,7 @@ export interface AppServices {
   compare: CompareService;
   lastTurn: LastTurnService;
   scenePresets: ScenePresetService;
+  uiMode: UiModeService;
 }
 
 export type { FramesClip };

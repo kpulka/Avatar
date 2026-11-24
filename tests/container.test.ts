@@ -237,6 +237,23 @@ describe('createApp (container smoke, jsdom)', () => {
     }
   });
 
+  it('Ctrl+Shift+D przelacza tryb i otwiera/zamyka shell studia (15-06)', () => {
+    const app = createApp(setupDom());
+    const shellEl = document.querySelector('.studio-shell') as HTMLElement;
+    expect(shellEl.classList.contains('hidden')).toBe(true);
+    const press = (): void => {
+      window.dispatchEvent(new KeyboardEvent('keydown', { key: 'D', ctrlKey: true, shiftKey: true }));
+    };
+    press();
+    expect(document.body.getAttribute('data-mode')).toBe('studio');
+    expect(shellEl.classList.contains('hidden')).toBe(false);
+    expect(app.shell.isOpen()).toBe(true);
+    press();
+    expect(document.body.getAttribute('data-mode')).toBe('user');
+    expect(app.shell.isOpen()).toBe(false);
+    app.dispose();
+  });
+
   it('dispose() usuwa shell i nie rzuca', () => {
     const app = createApp(setupDom());
     app.start();

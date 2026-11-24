@@ -84,6 +84,16 @@ export function createUserSettings(): PanelDefinition {
       }
       applyLock(presetSelect, 'scenePreset');
 
+      // Studio mode switch (15-06): routed through AppServices.uiMode, lock-respecting.
+      const studioToggle = el('input', { id: uid('studio-mode'), type: 'checkbox' }) as HTMLInputElement;
+      studioToggle.checked = services.uiMode.getMode() === 'studio';
+      studioToggle.addEventListener('change', () => {
+        services.uiMode.set(studioToggle.checked ? 'studio' : 'user');
+        // The studio shell appears immediately: get the dialog out of the way.
+        if (studioToggle.checked) ui.modal.close();
+      });
+      applyLock(studioToggle, 'uiMode');
+
       function applyLock(control: HTMLInputElement | HTMLSelectElement, key: string): void {
         if (store.isLocked(key)) {
           control.disabled = true;
@@ -108,6 +118,13 @@ export function createUserSettings(): PanelDefinition {
           el('div', { className: 'form-group' }, [
             el('label', { text: t('settings.presetLabel'), attrs: { for: presetSelect.id } }),
             presetSelect,
+          ]),
+          el('div', { className: 'form-group settings-studio-row' }, [
+            el('label', { className: 'engine-toggle', attrs: { for: studioToggle.id } }, [
+              studioToggle,
+              el('span', { text: t('settings.studioMode') }),
+            ]),
+            el('p', { className: 'drawer-subtitle', text: t('settings.studioModeHint') }),
           ]),
         ]);
       }

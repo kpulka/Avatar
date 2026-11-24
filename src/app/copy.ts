@@ -51,6 +51,8 @@ export const COPY: Readonly<Record<string, string>> = {
   'settings.themeDark': 'Dark',
   'settings.themeLight': 'Light',
   'settings.presetLabel': 'Scene preset:',
+  'settings.studioMode': 'Studio mode',
+  'settings.studioModeHint': 'Shortcut: Ctrl+Shift+D',
   'settings.lockTooltip': 'Locked by studio ({key})',
   'presentation.show': 'Show controls',
   'presentation.showAria': 'Show interface',
