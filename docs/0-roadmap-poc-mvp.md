@@ -1,5 +1,7 @@
 # 0. Roadmap: PoC → MVP → Phase 2
 
+> **Status (checked 2026-11-24):** the PoC (ROADMAP phases 1–4) and the MVP (phases 5–6) are marked complete in `.planning/ROADMAP.md` (2026-09-01). Their acceptance runs are recorded in `.planning/phases/04-barge-in-i-szlif-poc/04-VERIFICATION.md` and `.planning/phases/06-produktyzacja-mvp/06-VERIFICATION.md`, both with `status: passed`. The checkboxes in the sections below are the original targets; they were not ticked in place. The current milestone is v1.1 (phases 12–18, plus the inserted 11.1 and 11.2; see ROADMAP). "Stage 2" below lists directions, not commitments.
+
 Guiding principle: **thin vertical slice** — each stage ends with a working, demonstrable product, not a collection of modules. Documents 1–6 are the technical reference; this file is the execution plan.
 
 ---

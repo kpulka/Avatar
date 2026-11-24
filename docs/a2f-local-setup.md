@@ -1,7 +1,7 @@
 # A2F local setup — local NVIDIA Audio2Face-3D PoC (Phase 9)
 
 > Instructions for setting up and verifying a local A2F (SDK MIT + HF weights) on an RTX 3090, Windows, without containers.
-> Updated: 2026-09-11. Server contract (the `/predict` wrapper) → `docs/7-audio2face-cloudrun.md` §5.
+> Updated: 2026-09-11 (status rows corrected 2026-11-24 from `.planning/STATE.md`). Server contract (the `/predict` wrapper) → `docs/7-audio2face-cloudrun.md` §5.
 
 ## 1. Environment status (2026-09-11)
 
@@ -9,7 +9,7 @@
 |---|---|---|
 | GPU + driver | NVIDIA, VRAM ≥ 4 GB | ✅ RTX 3090 24 GB, driver 595.79 |
 | CUDA Toolkit | ≥12.8, <13.0 (12.9 recommended) | ✅ **12.9.1** (`...\CUDA\v12.9`; `CUDA_PATH` user = v12.9; alongside 13.2) |
-| TensorRT | ≥10.13, <11.0 | ❌ **missing** — see §2.2 |
+| TensorRT | ≥10.13, <11.0 | ✅ **10.13.3.9** installed without an NVIDIA login (pip wheels, §4; the manual download in §2.2 was not needed). Recorded in `.planning/STATE.md` (2026-09-12). |
 | Python | 3.8–3.10.x | ✅ 3.10.20 (uv) + venv `a2f/.venv` |
 | Python dependencies | `deps/requirements.txt` | ✅ (torch 2.7.1+cu128, onnx, huggingface-hub) |
 | Build tools | CMake/Ninja | ✅ `fetch_deps.bat` → `_deps/build-deps` |
@@ -70,7 +70,8 @@ User environment: **VS 2026 (MSVC 195x)** — CUDA 12.9 does not support it (`cu
 4. **`trtexec` without NVIDIA's zip**: pip does not include the binary, so `a2f/tools/trtexec_shim.py` implements the subset of the CLI that is used, on top of the TRT Python API; `audio2x/trt.py` has a `TRTEXEC_SHIM` hook (env) → shim.
 5. **A2F models from HF without a token** (A2F models are not gated): v3.0, v2.3-Mark, v2.3.1-Claire, v2.3.1-James into `a2f/sdk/_data/audio2face-models/` (`hf download nvidia/Audio2Face-3D-*`). Only **A2E is gated** (token).
 
-### ⏳ Current blocker (2026-09-11): OOM while building the engines
+### ⏳ Last recorded blocker (2026-09-11): OOM while building the engines
+Still listed as open in `.planning/STATE.md` (entry of 2026-11-18): a retry needs the owner's consent because it is a heavy GPU/RAM job. The text below is the 2026-09-11 record.
 `gen_sample_data.py` → shim → TRT `buildSerializedNetwork` throws `OutOfMemory` (832 MB) on `virtualMemoryBuffer` — **not enough memory/commit in the system** (only about 4.4 GB of commit free and ~7.7 GB of RAM with several processes running), not a configuration error. Fix: close heavy applications / restart, then:
 
 ```powershell
