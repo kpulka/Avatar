@@ -90,3 +90,8 @@ Checker: haiku, read-only. Verdict: DRIFT (21 SEMANTIC). Supersedes earlier anch
 - 18-01: SECURITY.md exists & tracked → amend; src/config doesn't exist → scan src/audio/agent-config.ts, src/app/store/.
 - 18-02/03: README slot placeholders absent until 13-01 lands.
 - 18-06: scripts/ is untracked (owner's make-demo-clip.mjs) → "tracked files" checks fail until owner commits it.
+
+# Drift D1 — after merge 4fd5473 (13-01/02 README)
+Checker: orchestrator inline. Slots present: 13-03 hero (l.5), 18-05 demo (l.36), 18-03 CI badge (l.100), 18-02 license (l.101, 106).
+- SEMANTIC (owner decision): README 18-02 placeholder says "MIT", but ROADMAP Phase 18 / 18-02 say "All Rights Reserved (owner-confirmed)". 18-02 must follow the owner's confirmed choice, not the placeholder text. Blocked on owner.
+- README truthfully omits ARCHITECTURE.md, typecheck script, layering/lifecycle gates → 14-01 (typecheck), 14-02/03 (gates), 14-05 (ARCHITECTURE.md) should add a README line/link when they land (README is in Gate A root scope — English only).
