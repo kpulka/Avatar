@@ -62,7 +62,7 @@ Skipped per user; plans stop at checkpoint:human-* and are recorded as PARTIAL/B
 | L-2, L-3, L-4 (language scope, CSP note, .gitignore EN) | orchestrator | 5702590 |
 | UIX-02/04 static gates (44px targets, WCAG AA tokens, aria-live, modal focus) | sonnet | merged 8507d78 |
 | L-5 dispose paths (EmbedBridge, AudioEngine, vignette), @elevenlabs/client removed, npm audit 5 to 0, T-8 tests, M-3 engines | sonnet | merged 7f3cbd5 |
-| THIRD-PARTY-NOTICES regeneration | sonnet | pending |
+| THIRD-PARTY-NOTICES regeneration (235 lockfile entries, no copyleft) | sonnet | merged |
 
 Gate after both merges: `npm run verify` exit 0, 78 files / 855 tests.
 Drift: the UIX agent applied 44px (REQUIREMENTS UIX-02). `15-DRAFT-ui-spec.md` still says 36/40px, so the owner should amend the spec. Both executor worktrees were created from `master` and the agents rebased onto `implement/v1.1-refactor` themselves; future dispatch prompts must state the base branch.
