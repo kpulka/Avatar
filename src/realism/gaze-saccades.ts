@@ -1,5 +1,5 @@
 import type { EyeLookWeights } from '../types/avatar';
-import { ANIM_DEFAULTS } from '../lipsync/anim-config';
+import { ANIM_DEFAULTS } from './anim-config';
 
 const { gaze: gazeConfig } = ANIM_DEFAULTS;
 

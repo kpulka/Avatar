@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { FaceController } from '../src/lipsync/face-controller';
-import { ANIM_DEFAULTS } from '../src/lipsync/anim-config';
+import { ANIM_DEFAULTS } from '../src/realism/anim-config';
 
 import { FaceDriver, FramesClip } from '../src/types/avatar';
 import { AudioEngine } from '../src/audio/audio-engine';

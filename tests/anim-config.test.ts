@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
-import { ANIM_DEFAULTS, clamp01 } from '../src/lipsync/anim-config';
+import { ANIM_DEFAULTS, clamp01 } from '../src/realism/anim-config';
 
 function collectSources(dir: string, out: string[] = []): string[] {
   for (const entry of readdirSync(dir)) {
@@ -34,7 +34,7 @@ describe('ANIM_DEFAULTS', () => {
   });
 
   it('every key is referenced by at least one runtime source file (no dead config)', () => {
-    const files = collectSources('src').filter((f) => !f.replace(/\\/g, '/').endsWith('src/lipsync/anim-config.ts'));
+    const files = collectSources('src').filter((f) => !f.replace(/\\/g, '/').endsWith('src/realism/anim-config.ts'));
     const corpus = files.map((f) => readFileSync(f, 'utf-8')).join('\n');
     const unreferenced = leafKeys(ANIM_DEFAULTS).filter((key) => !new RegExp(`\\.${key}\\b`).test(corpus));
     expect(unreferenced).toEqual([]);

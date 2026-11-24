@@ -13,7 +13,7 @@ import { mergeCharAlignmentToPhonemes, PhonemeSpan } from '../src/lipsync/g2p/ph
 import { PHONEME_POSES, lipPoseToShapes } from '../src/lipsync/g2p/phoneme-visemes';
 import { charTokenFor, charPathSpan } from '../src/lipsync/viseme-mappings';
 import { CALIBRATION_PRESETS } from '../src/lipsync/calibration';
-import { ANIM_DEFAULTS } from '../src/lipsync/anim-config';
+import { ANIM_DEFAULTS } from '../src/realism/anim-config';
 import { CONTROL_SENTENCES, CONVERSATIONAL_PARAGRAPHS } from '../scripts/lipsync-corpus.mjs';
 import { defined } from './helpers/defined';
 

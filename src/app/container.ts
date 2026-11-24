@@ -14,7 +14,7 @@ import { ElevenAgentsSpeechBackend } from '../audio/speech-backend';
 import { resolveAgentId } from '../audio/agent-config';
 import { HeadMicroMovements } from '../realism/head-micro-movements';
 import { GazeSaccades } from '../realism/gaze-saccades';
-import { ANIM_DEFAULTS } from '../lipsync/anim-config';
+import { ANIM_DEFAULTS } from '../realism/anim-config';
 import { EmbedBridge } from '../prod/embed-bridge';
 import { TelemetryManager } from '../prod/telemetry';
 import { TypedEventBus } from './events';

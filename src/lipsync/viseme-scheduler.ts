@@ -1,5 +1,5 @@
 import { CalibrationProfile, DEFAULT_CALIBRATION_PROFILE } from './calibration';
-import { ANIM_DEFAULTS } from './anim-config';
+import { ANIM_DEFAULTS } from '../realism/anim-config';
 
 const { viseme: visemeConfig, common } = ANIM_DEFAULTS;
 

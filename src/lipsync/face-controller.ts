@@ -26,8 +26,8 @@ import { ProceduralBlink } from './procedural-blink';
 import { EmotionLayer, EmotionType } from '../realism/emotion-layer';
 import { CalibrationProfile } from './calibration';
 import { createAudibleClock } from '../audio/audible-clock';
-import { ANIM_DEFAULTS, clamp01 } from './anim-config';
-import { allocProbe } from './alloc-probe';
+import { ANIM_DEFAULTS, clamp01 } from '../realism/anim-config';
+import { allocProbe } from '../realism/alloc-probe';
 
 export type FaceState = 'IDLE' | 'SPEAKING' | 'RELAXING';
 

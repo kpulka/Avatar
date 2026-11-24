@@ -1,5 +1,5 @@
-import { ANIM_DEFAULTS } from '../lipsync/anim-config';
-import { allocProbe } from '../lipsync/alloc-probe';
+import { ANIM_DEFAULTS } from './anim-config';
+import { allocProbe } from './alloc-probe';
 
 const { emotion: emotionConfig } = ANIM_DEFAULTS;
 

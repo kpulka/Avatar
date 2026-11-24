@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { FaceController } from '../src/lipsync/face-controller';
-import { allocProbe } from '../src/lipsync/alloc-probe';
+import { allocProbe } from '../src/realism/alloc-probe';
 import { FaceDriver, FramesClip } from '../src/types/avatar';
 import { AudioEngine } from '../src/audio/audio-engine';
 import { defined } from './helpers/defined';

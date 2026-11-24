@@ -6,7 +6,7 @@ import {
   PHONEME_POSES,
   DIPHTHONG_END_POSES,
 } from '../src/lipsync/g2p/phoneme-visemes';
-import { ANIM_DEFAULTS } from '../src/lipsync/anim-config';
+import { ANIM_DEFAULTS } from '../src/realism/anim-config';
 import { VisemeScheduler } from '../src/lipsync/viseme-scheduler';
 import { CALIBRATION_PRESETS } from '../src/lipsync/calibration';
 import { defined } from './helpers/defined';

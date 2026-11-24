@@ -1,4 +1,4 @@
-import { ANIM_DEFAULTS } from './anim-config';
+import { ANIM_DEFAULTS } from '../realism/anim-config';
 
 const { blink: blinkConfig } = ANIM_DEFAULTS;
 

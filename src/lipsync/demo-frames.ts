@@ -13,7 +13,7 @@
  */
 
 import { FramesClip, PoseFrame } from '../types/avatar';
-import { clamp01 } from './anim-config';
+import { clamp01 } from '../realism/anim-config';
 
 const FPS = 60;
 
