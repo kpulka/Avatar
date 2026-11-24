@@ -9,11 +9,11 @@
 
 In the PoC/MVP we use the **character alignment** delivered by ElevenLabs (in Mode A: `audio_event.alignment`; in Mode B: `normalizedAlignment` — identical shape). Advantages: zero CPU overhead (no WASM/ML in the browser), and the markers arrive together with the audio.
 
-Since v1.1 (Phase 7), English has a **G2P phoneme layer** (see below): letters → ARPAbet phonemes (CMUdict lexicon) → visemes. The character→viseme table remains for Polish and as a fallback (G2P missing or not ready, or the A/B switch).
+Since v1.1 (Phase 7), English has a **G2P phoneme layer** (see below): letters → ARPAbet phonemes (a pruned ~10k-word CMUdict lexicon plus letter-to-sound rules) → visemes. Since Phase 17 Polish has its own **rule-based phoneme path** (no lexicon). The character→viseme table remains as the fallback for every language (G2P not ready, no phonemes produced, or the engine select set to "Character table").
 
 Limitations we must keep in mind:
 1. **The alignment applies to normalized text** — numbers/readings are expanded into words; we map only the characters from the alignment.
-2. **The alignment gives letters, not phonemes** — in EN we reconstruct phonemes with the G2P layer; in PL (phonetic spelling) the character table with heuristics is sufficient.
+2. **The alignment gives letters, not phonemes** — in EN we reconstruct phonemes with the G2P layer; in PL (nearly phonetic spelling) a deterministic rules engine handles digraphs, softness, devoicing and nasals; the character table remains the fallback.
 3. **Languages without a phonetic script** (other than EN, handled by G2P/CMUdict, and other than PL) → acoustic fallback, jaw-only (no alignment), or in Phase 2 Rhubarb/MFCC ([docs/6](6-opensource-analysis-and-future.md)).
 
 ---
@@ -26,36 +26,60 @@ English spelling is not phonetic: silent letters ("know", "though", "listen"), v
 
 ```
 audio_event.alignment (letters + times)          src/audio/speech-backend.ts
+   • normalizeAlignmentPayload()                 src/audio/alignment-normalize.ts (pure, tested)
+       aliases, ms/seconds units, length + finite guards, negative times clamped to 0
+   • rescaleAlignmentToAudio()                   src/audio/alignment-rescale.ts
+       first char -> speech onset, last char -> speech offset (70 ms RMS windows), factor clamped [0.5, 2.5]
         │  source: 'elevenlabs'
         ▼
 mergeCharAlignmentToPhonemes()                  src/lipsync/g2p/phoneme-merge.ts
-   • split into words by runs of letters
-   • each word → ARPAbet phonemes (G2P)
-   • word time distributed proportionally over the phonemes
-     (vowels/diphthongs 1.2, consonants 0.8) — silent letters give their time to their neighbors
-        ▼  PhonemeSpan[] { phoneme, startMs, durationMs }  (anchors from ElevenLabs!)
+   • split into words by runs of letters (EN letters, PL diacritics, ' and -)
+   • per-word language (language.ts): Polish diacritic / Polish-only digraph -> PL, else the engine default
+   • EN word -> ARPAbet via g2p-en.ts:   pruned lexicon (~10k words, lazy chunk) -> apostrophe/hyphen
+                                         ladder -> letter-to-sound rules
+     PL word -> viseme classes via g2p-pl.ts: ordered rules, no lexicon
+   • word time distributed over the phonemes (vowels/diphthongs 1.2, consonants 0.8);
+     35 ms SOFT minimum, renormalized inside the word window (hard floor 17.5 ms)
+   • AY and AW emit two spans (own pose 60%, then the glide end pose IH / UH 40%)
+        ▼  PhonemeSpan[] { phoneme, startMs, durationMs, glideOf? }  (anchors from ElevenLabs!)
 mapPhonemeToShapes()                            src/lipsync/g2p/phoneme-visemes.ts
-   • ARPAbet → ARKit visemes (13 groups, full table in the module)
+   • PHONEME_POSES (ARPAbet) + PL_PHONEME_POSES (PL_* classes) -> ARKit visemes
         ▼
 VisemeScheduler.enqueue()  (no API change)
 ```
+
+The spans of a word always sum to the word's time window and never cross its end (tested for every sentence of the golden-span corpus, `tests/lipsync-corpus.test.ts`).
 
 ### Components
 
 | Module | Role |
 | :--- | :--- |
-| `g2p-en.ts` | `ensureG2pLoaded()` (lazy dynamic import of `cmu-pronouncing-dictionary`, ~135k words, separate Vite chunk ~1 MB gz), `wordToPhonemesSync()` (lexicon + rule-based letter-to-sound for OOV words; strips stress digits 0/1/2) |
-| `phoneme-merge.ts` | `mergeCharAlignmentToPhonemes(alignment)` — 1:1 word timing from the alignment; the result is phoneme spans |
-| `phoneme-visemes.ts` | `mapPhonemeToShapes(phoneme)` — ARPAbet → ARKit combos (Left/Right symmetric) |
+| `g2p-en.ts` | `ensureG2pLoaded()` (lazy dynamic import of the committed, build-time-pruned `dict-en-pruned.json`: 10,000 words, ~259 kB / ~65 kB gz as a separate Vite chunk; the full 135k-word dictionary stays a devDependency, `npm run build:dict` regenerates the artifact idempotently), `wordToPhonemesSync()` (lexicon, then letter-to-sound rules for OOV words incl. silent letters and -tion/-sion; stress digits are stripped) |
+| `g2p-pl.ts` | `g2pPl(word)` — Polish rules: digraphs, softness-i, nasals, final devoicing; no lexicon |
+| `language.ts` | per-word language dispatch (`detectWordLanguage`) and the chunk-level `charsLookPolish` used by the character path |
+| `phoneme-merge.ts` | `mergeCharAlignmentToPhonemes(alignment, { defaultLanguage })` — word timing from the alignment, window-invariant duration split, diphthong glide spans |
+| `phoneme-visemes.ts` | `PHONEME_POSES` / `PL_PHONEME_POSES` (single source of truth for every consumer, incl. the Calibrator preview) and `mapPhonemeToShapes(phoneme)` — pose → ARKit combos (Left/Right symmetric) |
+| `alignment-normalize.ts` | `normalizeAlignmentPayload(payload)` — the pure input normalizer (see the pipeline) |
 
 > 📄 **Work on per-phoneme mouth poses:** `docs/en-visemes.md` — working document (description of articulation → ARKit parameters, analysis of "twin" visemes and the nuances that tell them apart).
 
 ### Operating rules
 
-1. G2P is loaded lazily (`FaceController` preloads it in the constructor). Until `isG2pReady() === true` (the first ~1–2 s) the character path runs — the avatar always speaks.
+1. G2P is loaded lazily (`FaceController` preloads it in the constructor). Until `isG2pReady() === true` (the first moments; the pruned lexicon parses in ~15 ms) the character path runs for the EN engine — the avatar always speaks. The Polish engine needs no lexicon and starts at once.
 2. No lexicon entry → rule-based letter-to-sound fallback (never an empty list for a word that has letters).
 3. `source === 'energy-fallback'` (no alignment from the server) takes priority — then only the jaw ∝ RMS energy (see below) is driven, without text conversion.
-4. The HUD switch "EN phoneme engine (G2P)" (A/B, `localStorage.avatar_lipsync_engine`) forces the phoneme path or the character path in real time.
+4. The Studio Animation panel select "Lip-sync engine" chooses `phoneme-en`, `phoneme-pl` or `char` in real time (persisted in the settings blob; the legacy value `phoneme` migrates to `phoneme-en`). Words with Polish evidence are routed to the Polish rules by either phoneme engine.
+
+### PL phoneme layer (Phase 17)
+
+Polish orthography is nearly phonemic, so `g2p-pl.ts` is a left-to-right, longest-match-first rules engine that emits **viseme classes** (not IPA): shared ARPAbet keys where the mouth shape coincides (AA, EH, IY, AO, UW, IH, SH, ZH, CH, JH, W, Y, ...) and `PL_*` keys for the rest (`PL_H` the velar fricative of "ch"/"h", `PL_SI/ZI/CI/DZI` the soft sibilants, `PL_NI`, `PL_TS`, `PL_DZ`, `PL_AN/PL_EN` the nasal vowels).
+
+* digraphs sz/cz/rz/ch/dz and the two-letter dz-acute / dz-dot; "ch" is **[x]**, not the English "church" pose;
+* **softness-i**: ci/ni/si/zi/dzi followed by a vowel collapse into ONE soft consonant ("ziarno" = PL_ZI AA R N AO); before a consonant or at the end of the word the i stays a vowel ("zima" = Z IY M AA, no false softening);
+* the acute letters are always soft, z-dot is ZH, l-stroke is W, o-acute is UW, a nasal e at the very end of a word is a plain e;
+* **final devoicing** on the last token (b->p, d->t, g->k, w->f, z->s and the soft/dotted variants), e.g. "chleb" ends in P.
+
+Control words are unit-tested without a model (`tests/g2p-pl.test.ts`). Mixed-language turns are handled per word only; automatic turn-level language detection is out of scope.
 
 ## ✏️ Viseme Editor (v1.1) — manual per-phoneme posing
 
@@ -71,7 +95,7 @@ application: `FaceController.visemeOverrides` (`resolveVisemeShapes` / `setVisem
 `previewViseme`); UI: `Hud.initVisemeEditor`.
 
 ### Acoustic fallback, jaw-only (no alignment)
-When `audio_event` does not carry `alignment`, `src/audio/energy-fallback.ts` generates substitute markers from the RMS energy of the signal (70 ms windows, `source: 'energy-fallback'`). `FaceController` then queues **only `jawOpen`** ∝ energy (no false vowels — before v1.1 the fallback inserted A/O/E/I and caused a rhythmic flapping of the mouth). Telemetry and the HUD badge (`ALIGN: EL ✓` / `ALIGN: FALLBACK ⚠`) show which source actually drives the mouth.
+When `audio_event` does not carry `alignment`, `src/audio/energy-fallback.ts` generates substitute markers from the RMS energy of the signal (70 ms windows, `source: 'energy-fallback'`). `FaceController` then queues **only `jawOpen`** ∝ energy (no false vowels — before v1.1 the fallback inserted A/O/E/I and caused a rhythmic flapping of the mouth). Telemetry and the Studio badge (`ALIGN: EL ✓` / `ALIGN: FALLBACK ⚠`) show which source actually drives the mouth; in user mode a subtle chip "Simplified lip-sync" appears next to the status pill while the fallback is active and clears after two consecutive chunks with real alignment. The window count is rounded (a tail of at least half a window becomes a slice), silence yields no viseme, and an invalid sample rate is rejected loudly.
 
 ---
 
@@ -100,7 +124,7 @@ When `audio_event` does not carry `alignment`, `src/audio/energy-fallback.ts` ge
 | `O`, `o-acute` | `jawOpen`, `mouthPucker`, `mouthFunnel` | `0.40`, `0.60`, `0.40` | rounded |
 | `U` | `jawOpen`, `mouthPucker`, `mouthFunnel` | `0.25`, `0.75`, `0.50` | strong pucker |
 | `W` (consonant) | `mouthPucker` | `0.40` | quick glide — coarticulation with the following vowel |
-| `M`, `B`, `P` | `mouthClose`, `mouthPress*` | `1.00`, `0.30` | **full closure** — the most important lip-sync test |
+| `M`, `B`, `P` | `mouthClose`, `mouthPress*` | `1.00`, `0.15` | **closure** on the character path (the phoneme path uses the perceived-closure pose, see section 4) — the most important lip-sync test |
 | `F`, `V` | `jawOpen`, `mouthRollLower` | `0.15`, `0.55` | lower lip under the upper teeth |
 | `L` | `jawOpen` (+`tongueOut`) | `0.30`, `0.30` | tongue up; without `tongueOut` in the model — opening only |
 | `T`, `D`, `N` | `jawOpen` | `0.20` | teeth / close to the palate |
@@ -161,14 +185,15 @@ Every speech key tends toward 0 in every window without an active contribution. 
 * no "frozen" pose,
 * an interruption = natural relaxation (supported by `FaceController` from [docs/4](4-audio-and-barge-in.md)).
 
-### 4. Scale semantics (v1.1 — ONE multiplication)
+### 4. Scale semantics and effective-value layering (v1.1, corrected in Phase 17)
 
-The values in the mapping tables (character→viseme and phoneme→viseme) are **EFFECTIVE values** — the scheduler multiplies them **exactly once**, by the scale from the calibration profile:
+The values in the mapping tables (character→viseme and phoneme→viseme) are **table values** — the scheduler multiplies them **exactly once**, by the scale from the calibration profile:
 
 ```ts
+effective = tableValue × scaleForShape(shape)
 contribution = maxVal × scaleForShape(shape) × easingWeight
-scaleForShape(shape):           // default 1.0 (balanced preset)
-  mouthClose / mouthPress*  → closeScale
+scaleForShape(shape):           // per profile; closeScale 0.50 / 0.60 / 0.70 in subtle / balanced / expressive
+  mouthClose / mouthPress*  → min(closeScale, common.mouthCloseCap = 0.85)   // the cap limits the SCALE
   jawOpen                    → jawScale
   mouthPucker                → puckerScale
   mouthFunnel                → funnelScale
@@ -178,7 +203,9 @@ scaleForShape(shape):           // default 1.0 (balanced preset)
   (tongueOut and the rest)   → 1.0
 ```
 
-Presets are **tasteful** multipliers around 1.0 (subtle 0.85 / balanced 1.00 / expressive 1.15), not dampers — this way M/B/P reaches a real closure (~1.0), and 'A' jawOpen reaches ~0.55 instead of the squashed ~0.30 (the cause of the visual "flatness" before v1.1).
+Presets are **tasteful** multipliers around 1.0 for jaw, pucker, funnel, roll, teeth and smile (subtle 0.85 / balanced 1.00 / expressive 1.15), so 'A' jawOpen reaches ~0.55 instead of the squashed ~0.30 (the cause of the visual "flatness" before v1.1). `closeScale` is deliberately lower (0.50 / 0.60 / 0.70) because a high `mouthClose` pulls the lower lip onto the nose on MetaPerson.
+
+**Worked example — bilabial closure under "balanced" (closeScale 0.60):** the closure is *perceived* closure, not `mouthClose` alone. The M/B/P pose is `jawOpen 0.02`, `mouthClose 0.50`, `mouthPress 0.58`, `mouthRollLower 0.25`, `mouthRollUpper 0.15`; the effective values are `mouthClose 0.50 × 0.60 = 0.30`, `mouthPress L/R 0.58 × 0.60 = 0.348`, `jawOpen 0.02`. The automated criterion is `mouthClose ≤ 0.35 ∧ mouthPress ≥ 0.3 ∧ jawOpen ≤ 0.05` (`tests/phoneme-visemes.test.ts`, `tests/lipsync-corpus.test.ts`); the old "effective mouthClose ≥ 0.85" goal was dropped because it is exactly what lifts the lip onto the nose. A `closeScale` above 0.85 is clamped to 0.85 (the cap applies to the scale).
 
 **The closure-priority rule** still applies (bilabial jaw gate, Phase 11.2 SHOW-06): when `mouthClose` **or** `mouthPress` exceeds `viseme.closeJawThreshold` (0.15), `jawOpen` is suppressed: `closure = min(1, max(mouthClose/closeScale, mouthPress/pressRef))`, `jaw × max(0, 1 − closure × closeJawFactor)` with `closeJawFactor` 0.95 and `pressRef` 0.35 (the effective press of a full M/B/P). Press is part of the gate because a bilabial's `mouthClose` alone can be low on MetaPerson — this protects against the MetaPerson artifact where the "lower lip rides up under the nose". The effective `mouthClose` never exceeds `common.mouthCloseCap` (0.85) — one constant shared by the viseme and the frames track (the frames track clamps its absolute `mouthClose` to it). The old cap `min(closeScale, 0.28 + 0.5×jaw)`, which prevented full closure, was removed.
 
@@ -248,7 +275,7 @@ render(dt) {
 Properties of this loop:
 * **Single owner** of `morphTargetInfluences` — `FaceController` (see the architecture in [docs/4](4-audio-and-barge-in.md)).
 * `lambdaForShape` controls the "size" of the mouth per muscle group (table above): too small = clipped speech, too large = a chewing machine.
-* **Forced closure**: for `M/B/P` aim at `mouthClose: 1.0` with priority — if the additive sum exceeds it, `mouthClose` takes precedence over `jawOpen` (closure is visually dominant).
+* **Forced closure**: for `M/B/P` the closure (press + roll, and `mouthClose` capped at 0.85 of scale) takes precedence over `jawOpen` through the closure-priority rule above — closure is visually dominant.
 * Implementation in code: `src/lipsync/viseme-scheduler.ts` — `scaleForShape()`, `lambdaForShape()`, `update()`; all constants in `src/lipsync/anim-config.ts`. The per-frame hot path allocates nothing (scratch maps, in-place queue compaction — verified in `tests/hot-path-allocations.test.ts`).
 
 
