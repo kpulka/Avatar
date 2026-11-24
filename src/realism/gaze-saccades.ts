@@ -29,6 +29,18 @@ export class GazeSaccades {
   private currentX = 0;
   private currentY = 0;
 
+  // Reused result object (BORROWED by callers until the next compute()) — no per-frame allocation.
+  private readonly weights: EyeGazeWeights = {
+    eyeLookInLeft: 0,
+    eyeLookOutLeft: 0,
+    eyeLookUpLeft: 0,
+    eyeLookDownLeft: 0,
+    eyeLookInRight: 0,
+    eyeLookOutRight: 0,
+    eyeLookUpRight: 0,
+    eyeLookDownRight: 0,
+  };
+
   // Saccade state
   private nextSaccadeTimeSec = 1.0;
   private saccadeOffsetX = 0;
@@ -54,7 +66,8 @@ export class GazeSaccades {
   }
 
   /**
-   * Main gaze computation step
+   * Main gaze computation step.
+   * BORROWED result: the same object is mutated and returned every call — copy it to keep it.
    */
   public compute(currentTimeSec: number, dt: number): EyeGazeWeights {
     // 1. Check and update micro-saccades
@@ -72,19 +85,19 @@ export class GazeSaccades {
     const lookX = Math.max(-1, Math.min(1, this.currentX));
     const lookY = Math.max(-1, Math.min(1, this.currentY));
 
-    return {
-      // Left eye (seen from the front: cursor to the right -> left eye outwards / towards the ear)
-      eyeLookInLeft: lookX < 0 ? -lookX : 0,
-      eyeLookOutLeft: lookX > 0 ? lookX : 0,
-      eyeLookUpLeft: lookY > 0 ? lookY : 0,
-      eyeLookDownLeft: lookY < 0 ? -lookY : 0,
+    const w = this.weights;
+    // Left eye (seen from the front: cursor to the right -> left eye outwards / towards the ear)
+    w.eyeLookInLeft = lookX < 0 ? -lookX : 0;
+    w.eyeLookOutLeft = lookX > 0 ? lookX : 0;
+    w.eyeLookUpLeft = lookY > 0 ? lookY : 0;
+    w.eyeLookDownLeft = lookY < 0 ? -lookY : 0;
 
-      // Right eye (cursor to the right -> right eye inwards / towards the nose)
-      eyeLookInRight: lookX > 0 ? lookX : 0,
-      eyeLookOutRight: lookX < 0 ? -lookX : 0,
-      eyeLookUpRight: lookY > 0 ? lookY : 0,
-      eyeLookDownRight: lookY < 0 ? -lookY : 0,
-    };
+    // Right eye (cursor to the right -> right eye inwards / towards the nose)
+    w.eyeLookInRight = lookX > 0 ? lookX : 0;
+    w.eyeLookOutRight = lookX < 0 ? -lookX : 0;
+    w.eyeLookUpRight = lookY > 0 ? lookY : 0;
+    w.eyeLookDownRight = lookY < 0 ? -lookY : 0;
+    return w;
   }
 
   public getLookAngles(): { lookX: number; lookY: number } {

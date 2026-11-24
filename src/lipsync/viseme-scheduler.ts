@@ -48,6 +48,10 @@ export class VisemeScheduler {
   // Smoothed weights of the current frame (shape -> weight)
   private readonly currentWeights: Map<string, number> = new Map();
 
+  // Per-frame scratch structures, reused (cleared, never reallocated) so update() allocates nothing.
+  private readonly scratchTargets: Map<string, number> = new Map();
+  private readonly scratchUpdated: Map<string, number> = new Map();
+
   constructor(options: SchedulerOptions = {}) {
     if (options.calibrationProfile) {
       this.profile = { ...this.profile, ...options.calibrationProfile };
@@ -73,12 +77,14 @@ export class VisemeScheduler {
   }
 
   public clear(): void {
-    this.queue = [];
+    this.queue.length = 0;
   }
 
   /**
    * Main coarticulation step, invoked every frame (dt in seconds)
    * Returns the map of updated weights for all speech keys.
+   * BORROWED: the returned Map is a reused scratch instance — valid until the next update() call;
+   * copy it if you need to keep it.
    */
   public update(
     nowSec: number,
@@ -86,13 +92,19 @@ export class VisemeScheduler {
     activeEpoch: number,
     speechShapes: string[]
   ): Map<string, number> {
-    const targets = new Map<string, number>();
+    const targets = this.scratchTargets;
+    targets.clear();
 
-    // 1. Drop expired queue items
-    this.queue = this.queue.filter((item) => {
-      if (item.epoch !== activeEpoch) return false;
-      return nowSec <= item.startTimeSec + item.durationSec + this.blendOutSec;
-    });
+    // 1. Drop expired queue items — in-place compaction (write index), no filter() copy.
+    const queue = this.queue;
+    let write = 0;
+    for (let read = 0; read < queue.length; read++) {
+      const item = queue[read];
+      if (item.epoch !== activeEpoch) continue;
+      if (nowSec > item.startTimeSec + item.durationSec + this.blendOutSec) continue;
+      queue[write++] = item;
+    }
+    queue.length = write;
 
     let activeMouthClose = 0;
     let activePress = 0;
@@ -135,7 +147,8 @@ export class VisemeScheduler {
 
     // 4. FPS-independent smoothing (exponential damping): alpha = 1 - exp(-lambda * dt)
     // Lambda is PER MUSCLE GROUP (closures fast, smile slow), base = coarticulationSpeed.
-    const updated = new Map<string, number>();
+    const updated = this.scratchUpdated;
+    updated.clear();
 
     for (const shape of speechShapes) {
       if (shape.startsWith('eyeBlink')) continue;
@@ -222,6 +235,6 @@ export class VisemeScheduler {
 
   public resetAll(): void {
     this.currentWeights.clear();
-    this.queue = [];
+    this.queue.length = 0;
   }
 }

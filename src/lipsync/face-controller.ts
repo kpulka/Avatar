@@ -23,6 +23,7 @@ import { EmotionLayer, EmotionType } from '../realism/emotion-layer';
 import { CalibrationProfile } from './calibration';
 import { createAudibleClock } from '../audio/audible-clock';
 import { ANIM_DEFAULTS, clamp01 } from './anim-config';
+import { allocProbe } from './alloc-probe';
 
 export type FaceState = 'IDLE' | 'SPEAKING' | 'RELAXING';
 
@@ -46,6 +47,8 @@ const guardClose = (close: number, jaw: number): number => Math.min(close, jaw +
 /** Meta of the active clip in frames mode (08-CONTEXT v2). */
 interface FrameMeta {
   shapes: readonly string[];
+  /** Same shapes as a Set — O(1) ownership lookups per frame (built once per clip). */
+  shapeSet: ReadonlySet<string>;
   carriesEyes: boolean;
 }
 
@@ -54,6 +57,8 @@ export interface FaceControllerOptions {
   audibleClock?: () => number;
   /** Wall clock in milliseconds for RELAXING / turn boundaries; defaults to performance.now. */
   nowMs?: () => number;
+  /** Test/debug only: enables the allocation probe (see alloc-probe.ts). */
+  debugAllocations?: boolean;
 }
 
 /**
@@ -121,6 +126,10 @@ export class FaceController {
     // Mouth timing follows the time actually HEARD (output latency compensated), not the render position.
     this.audibleClock = options.audibleClock ?? createAudibleClock(engine.ctx);
     this.nowMs = options.nowMs ?? (() => performance.now());
+    if (options.debugAllocations) {
+      allocProbe.enabled = true;
+      allocProbe.reset();
+    }
     this.scheduler = new VisemeScheduler();
     this.speechShapeList = driver.listAvailableShapes().filter(isSpeechShape);
     this.blinker = new ProceduralBlink();
@@ -227,8 +236,10 @@ export class FaceController {
 
     this.frameBaseSec = baseSec;
     this.frameBuffer = [...clip.frames].sort((a, b) => a.timeSec - b.timeSec);
+    const ownedShapes = clip.shapes ?? [];
     this.framesMeta = {
-      shapes: clip.shapes ?? [],
+      shapes: ownedShapes,
+      shapeSet: new Set(ownedShapes),
       carriesEyes: clip.carriesEyes === true,
     };
     console.log(
@@ -537,20 +548,12 @@ export class FaceController {
    * owned by the clip (e.g. brows) receive the base emotion, at emotion.mixFactorSpeaking —
    * the same policy as the viseme track.
    */
-  private updateFrames(nowSec: number, emotionWeights: Map<string, number>): void {
+  private updateFrames(nowSec: number, emotionWeights: ReadonlyMap<string, number>): void {
     const meta = this.framesMeta;
     const base = this.frameBaseSec;
 
-    const endTurn = () => {
-      if (!this.engine.hasPendingAudio()) {
-        if (this.commitPendingMode()) return;
-        this.state = 'RELAXING';
-        this.relaxStartedAt = this.nowMs();
-      }
-    };
-
     if (!meta || this.frameBuffer.length === 0) {
-      endTurn();
+      this.endTurnIfDrained();
       return;
     }
 
@@ -574,8 +577,12 @@ export class FaceController {
     }
 
     // Drop consumed frames (older than the current one), keep the current one for the next tick.
-    if (idx > 0) this.frameBuffer = buf.slice(idx);
-    const frame = this.frameBuffer[0];
+    // In place (copyWithin + length): no slice() copy per consumed frame.
+    if (idx > 0) {
+      buf.copyWithin(0, idx);
+      buf.length -= idx;
+    }
+    const frame = buf[0];
 
     // Apply the shapes owned by the clip (owned = absolute, zero is meaningful).
     for (const shape of meta.shapes) {
@@ -590,14 +597,22 @@ export class FaceController {
     // Emotions outside the clip: same mix as the viseme track (one policy for both).
     for (const [shape, emWeight] of emotionWeights.entries()) {
       if (shape.startsWith('eyeBlink')) continue;
-      if (meta.shapes.indexOf(shape) !== -1) continue; // absolute shape — no blending
+      if (meta.shapeSet.has(shape)) continue; // absolute shape — no blending
       const w = clamp01(emWeight * emotion.mixFactorSpeaking);
       this.currentWeights.set(shape, w);
       this.driver.applyWeight(shape, w);
     }
 
     // End of turn: audio has finished -> frames consumed -> RELAXING from the last pose.
-    endTurn();
+    this.endTurnIfDrained();
+  }
+
+  /** Frames track end-of-turn: once the audio has drained, commit a pending mode or relax. */
+  private endTurnIfDrained(): void {
+    if (this.engine.hasPendingAudio()) return;
+    if (this.commitPendingMode()) return;
+    this.state = 'RELAXING';
+    this.relaxStartedAt = this.nowMs();
   }
 
   /**
@@ -707,6 +722,9 @@ export class FaceController {
           const emTarget = emotionWeights.get(shape) ?? 0;
           // Smooth return from the speech pose towards the base emotion
           const next = emTarget + (current - emTarget) * relaxFactor;
+
+          // Zero-to-zero: nothing visible to write (saves driver writes x sub-meshes per frame).
+          if (current < common.snapEpsilon && Math.abs(current - next) < common.snapEpsilon) continue;
 
           this.currentWeights.set(shape, next);
           this.driver.applyWeight(shape, next);

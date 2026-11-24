@@ -24,6 +24,9 @@ export class ProceduralBlink {
   private readonly openDurationSec: number;
   private readonly totalBlinkDurationSec: number;
 
+  // Reused result (BORROWED until the next update(); single consumer: FaceController.render).
+  private readonly result: BlinkWeights = { left: 0, right: 0 };
+
   private nextBlinkTimeSec = 0;
   private isBlinking = false;
   private blinkStartTimeSec = 0;
@@ -48,7 +51,8 @@ export class ProceduralBlink {
   }
 
   /**
-   * Returns the blink weights [0.0, 1.0] for the current point in time
+   * Returns the blink weights [0.0, 1.0] for the current point in time.
+   * BORROWED: the returned object is reused on the next call — read it immediately.
    */
   public update(currentTimeSec: number): BlinkWeights {
     if (!this.isBlinking) {
@@ -56,7 +60,7 @@ export class ProceduralBlink {
         this.isBlinking = true;
         this.blinkStartTimeSec = currentTimeSec;
       } else {
-        return { left: 0, right: 0 };
+        return this.setResult(0, 0);
       }
     }
 
@@ -71,7 +75,7 @@ export class ProceduralBlink {
       } else {
         this.scheduleNextBlink(currentTimeSec);
       }
-      return { left: 0, right: 0 };
+      return this.setResult(0, 0);
     }
 
     // Compute the blink weight
@@ -89,10 +93,13 @@ export class ProceduralBlink {
     const clamped = Math.max(0, Math.min(1, weight));
 
     // Subtle eyelid asymmetry for extra realism
-    return {
-      left: clamped,
-      right: Math.max(0, Math.min(1, clamped * blinkConfig.rightScale)),
-    };
+    return this.setResult(clamped, Math.max(0, Math.min(1, clamped * blinkConfig.rightScale)));
+  }
+
+  private setResult(left: number, right: number): BlinkWeights {
+    this.result.left = left;
+    this.result.right = right;
+    return this.result;
   }
 
   public forceBlink(currentTimeSec: number): void {
