@@ -1,0 +1,258 @@
+{
+  "note": "Expected mapPhonemeToShapes() output for all 39 ARPAbet keys, captured BEFORE the 17-02 table extraction (v1.3 values + SHOW-06 bilabials). A change here is a deliberate table edit.",
+  "poses": {
+    "AA": {
+      "jawOpen": 0.6,
+      "mouthLowerDownLeft": 0.15,
+      "mouthLowerDownRight": 0.15,
+      "mouthSmileLeft": 0.1,
+      "mouthSmileRight": 0.1
+    },
+    "AE": {
+      "jawOpen": 0.52,
+      "mouthLowerDownLeft": 0.12,
+      "mouthLowerDownRight": 0.12,
+      "mouthSmileLeft": 0.18,
+      "mouthSmileRight": 0.18
+    },
+    "AH": {
+      "jawOpen": 0.44,
+      "mouthLowerDownLeft": 0.08,
+      "mouthLowerDownRight": 0.08
+    },
+    "AO": {
+      "jawOpen": 0.4,
+      "mouthFunnel": 0.3,
+      "mouthLowerDownLeft": 0.08,
+      "mouthLowerDownRight": 0.08,
+      "mouthPucker": 0.5
+    },
+    "AW": {
+      "jawOpen": 0.46,
+      "mouthLowerDownLeft": 0.12,
+      "mouthLowerDownRight": 0.12,
+      "mouthPucker": 0.52
+    },
+    "AY": {
+      "jawOpen": 0.46,
+      "mouthLowerDownLeft": 0.08,
+      "mouthLowerDownRight": 0.08,
+      "mouthSmileLeft": 0.26,
+      "mouthSmileRight": 0.26
+    },
+    "B": {
+      "jawOpen": 0.02,
+      "mouthClose": 0.5,
+      "mouthPressLeft": 0.58,
+      "mouthPressRight": 0.58,
+      "mouthRollLower": 0.25,
+      "mouthRollUpper": 0.15
+    },
+    "CH": {
+      "jawOpen": 0.3,
+      "mouthFunnel": 0.45,
+      "mouthLowerDownLeft": 0.1,
+      "mouthLowerDownRight": 0.1,
+      "mouthPucker": 0.1
+    },
+    "D": {
+      "jawOpen": 0.2,
+      "mouthLowerDownLeft": 0.06,
+      "mouthLowerDownRight": 0.06,
+      "mouthUpperUpLeft": 0.06,
+      "mouthUpperUpRight": 0.06
+    },
+    "DH": {
+      "jawOpen": 0.22,
+      "tongueOut": 0.38
+    },
+    "EH": {
+      "jawOpen": 0.42,
+      "mouthLowerDownLeft": 0.08,
+      "mouthLowerDownRight": 0.08,
+      "mouthSmileLeft": 0.24,
+      "mouthSmileRight": 0.24
+    },
+    "ER": {
+      "jawOpen": 0.32,
+      "mouthFunnel": 0.22,
+      "mouthPucker": 0.16
+    },
+    "EY": {
+      "jawOpen": 0.34,
+      "mouthSmileLeft": 0.34,
+      "mouthSmileRight": 0.34,
+      "mouthUpperUpLeft": 0.14,
+      "mouthUpperUpRight": 0.14
+    },
+    "F": {
+      "jawOpen": 0.12,
+      "mouthLowerDownLeft": 0.05,
+      "mouthLowerDownRight": 0.05,
+      "mouthRollLower": 0.7,
+      "mouthShrugLower": 0.2,
+      "mouthUpperUpLeft": 0.55,
+      "mouthUpperUpRight": 0.55
+    },
+    "G": {
+      "jawOpen": 0.4,
+      "mouthLowerDownLeft": 0.12,
+      "mouthLowerDownRight": 0.12
+    },
+    "HH": {
+      "jawOpen": 0.22
+    },
+    "IH": {
+      "jawOpen": 0.26,
+      "mouthSmileLeft": 0.16,
+      "mouthSmileRight": 0.16
+    },
+    "IY": {
+      "jawOpen": 0.25,
+      "mouthSmileLeft": 0.38,
+      "mouthSmileRight": 0.38,
+      "mouthUpperUpLeft": 0.12,
+      "mouthUpperUpRight": 0.12
+    },
+    "JH": {
+      "jawOpen": 0.3,
+      "mouthFunnel": 0.45,
+      "mouthLowerDownLeft": 0.1,
+      "mouthLowerDownRight": 0.1,
+      "mouthPucker": 0.1
+    },
+    "K": {
+      "jawOpen": 0.4,
+      "mouthLowerDownLeft": 0.12,
+      "mouthLowerDownRight": 0.12
+    },
+    "L": {
+      "jawOpen": 0.32,
+      "mouthLowerDownLeft": 0.08,
+      "mouthLowerDownRight": 0.08,
+      "tongueOut": 0.12
+    },
+    "M": {
+      "jawOpen": 0.02,
+      "mouthClose": 0.5,
+      "mouthPressLeft": 0.58,
+      "mouthPressRight": 0.58,
+      "mouthRollLower": 0.25,
+      "mouthRollUpper": 0.15
+    },
+    "N": {
+      "jawOpen": 0.2,
+      "mouthLowerDownLeft": 0.06,
+      "mouthLowerDownRight": 0.06,
+      "mouthUpperUpLeft": 0.06,
+      "mouthUpperUpRight": 0.06
+    },
+    "NG": {
+      "jawOpen": 0.3,
+      "mouthLowerDownLeft": 0.06,
+      "mouthLowerDownRight": 0.06
+    },
+    "OW": {
+      "jawOpen": 0.34,
+      "mouthFunnel": 0.5,
+      "mouthPucker": 0.6
+    },
+    "OY": {
+      "jawOpen": 0.42,
+      "mouthPucker": 0.45,
+      "mouthSmileLeft": 0.1,
+      "mouthSmileRight": 0.1
+    },
+    "P": {
+      "jawOpen": 0.02,
+      "mouthClose": 0.5,
+      "mouthPressLeft": 0.58,
+      "mouthPressRight": 0.58,
+      "mouthRollLower": 0.25,
+      "mouthRollUpper": 0.15
+    },
+    "R": {
+      "jawOpen": 0.32,
+      "mouthFunnel": 0.22,
+      "mouthPucker": 0.14
+    },
+    "S": {
+      "jawOpen": 0.16,
+      "mouthLowerDownLeft": 0.16,
+      "mouthLowerDownRight": 0.16,
+      "mouthSmileLeft": 0.2,
+      "mouthSmileRight": 0.2,
+      "mouthUpperUpLeft": 0.16,
+      "mouthUpperUpRight": 0.16
+    },
+    "SH": {
+      "jawOpen": 0.22,
+      "mouthFunnel": 0.55,
+      "mouthLowerDownLeft": 0.14,
+      "mouthLowerDownRight": 0.14,
+      "mouthPucker": 0.16,
+      "mouthUpperUpLeft": 0.14,
+      "mouthUpperUpRight": 0.14
+    },
+    "T": {
+      "jawOpen": 0.2,
+      "mouthLowerDownLeft": 0.06,
+      "mouthLowerDownRight": 0.06,
+      "mouthUpperUpLeft": 0.06,
+      "mouthUpperUpRight": 0.06
+    },
+    "TH": {
+      "jawOpen": 0.22,
+      "tongueOut": 0.38
+    },
+    "UH": {
+      "jawOpen": 0.24,
+      "mouthFunnel": 0.22,
+      "mouthPucker": 0.5
+    },
+    "UW": {
+      "jawOpen": 0.2,
+      "mouthFunnel": 0.45,
+      "mouthPucker": 0.7,
+      "mouthShrugLower": 0.08
+    },
+    "V": {
+      "jawOpen": 0.12,
+      "mouthLowerDownLeft": 0.05,
+      "mouthLowerDownRight": 0.05,
+      "mouthRollLower": 0.7,
+      "mouthShrugLower": 0.2,
+      "mouthUpperUpLeft": 0.55,
+      "mouthUpperUpRight": 0.55
+    },
+    "W": {
+      "jawOpen": 0.16,
+      "mouthFunnel": 0.18,
+      "mouthPucker": 0.6,
+      "mouthShrugLower": 0.08
+    },
+    "Y": {
+      "jawOpen": 0.26,
+      "mouthSmileLeft": 0.28,
+      "mouthSmileRight": 0.28
+    },
+    "Z": {
+      "jawOpen": 0.16,
+      "mouthLowerDownLeft": 0.16,
+      "mouthLowerDownRight": 0.16,
+      "mouthSmileLeft": 0.2,
+      "mouthSmileRight": 0.2,
+      "mouthUpperUpLeft": 0.16,
+      "mouthUpperUpRight": 0.16
+    },
+    "ZH": {
+      "jawOpen": 0.22,
+      "mouthFunnel": 0.55,
+      "mouthLowerDownLeft": 0.14,
+      "mouthLowerDownRight": 0.14,
+      "mouthPucker": 0.16,
+      "mouthUpperUpLeft": 0.14,
+      "mouthUpperUpRight": 0.14
+    }
+  }
+}
