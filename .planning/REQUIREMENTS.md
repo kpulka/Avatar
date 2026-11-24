@@ -62,8 +62,8 @@ Diagnoza (2026-09-02): mowa EN wizualnie płaska — trzy nałożone przyczyny: 
 
 Decyzja kierunkowa (2026-09, potwierdzona po review-unifikacji 2026-09-02): zachowujemy LIVE wizemy jako domyślny, real-time tor; dodajemy **neuronowy tor A2F-3D** (SDK MIT, offline/batch dla tur EN) pod wspólnym interfejsem animacji i wspólnym barge-in (epoka). Smoothing/koartykulacja per-źródło; wspólne: state machine, epoka, safety rigu. Emocje: A2E prowadzi mimikę w turach A2F; EmotionLayer pozostaje bazą IDLE i toru wizemowego. Lokalnie na RTX 3090 → dopiero potem Cloud Run **tylko w modelu scale-to-zero** (płacimy wyłącznie za przetworzenie). Szczegóły: `docs/7-audio2face-cloudrun.md`, `.planning/phases/08-*/08-CONTEXT.md`.
 
-- [ ] **UNA-01**: FaceController ma dwa tryby animacji (`viseme` / `frames` — wartości bezwzględne z ramek) przełączalne w runtime (per-tura z odroczeniem na granicę); wspólna epoka barge-in i jedyny właściciel morphów w obu; wspólne safety rigu (clamp, cap mouthClose) (docs/4, docs/7)
-- [ ] **A2F-01**: Parser/normalizer wyjścia A2F (JSON ramek, ARKit PascalCase 52 shape'y → camelCase przez dekapitalizer parsera) → `FramesClip` (ramki relatywne, meta shapes/carriesEyes/carriesEmotion); nieznane shape'y pomijane + zliczane (docs/7 §5)
+- [x] **UNA-01**: FaceController ma dwa tryby animacji (`viseme` / `frames` — wartości bezwzględne z ramek) przełączalne w runtime (per-tura z odroczeniem na granicę); wspólna epoka barge-in i jedyny właściciel morphów w obu; wspólne safety rigu (clamp, cap mouthClose) (docs/4, docs/7)
+- [x] **A2F-01**: Parser/normalizer wyjścia A2F (JSON ramek, ARKit PascalCase 52 shape'y → camelCase przez dekapitalizer parsera) → `FramesClip` (ramki relatywne, meta shapes/carriesEyes/carriesEmotion); nieznane shape'y pomijane + zliczane (docs/7 §5)
 - [ ] **A2F-02**: Lokalny Audio2Face-3D SDK (MIT; wagi HF NVIDIA Open Model License) na RTX 3090 + solver blendshape na rigu ARKit-52 z naszego `avatar.glb` + REST wrapper `/predict` (wav → JSON ramek, gzip, bez capu) — docs/a2f-local-setup.md
 - [ ] **A2F-03**: E2E offline w aplikacji: audio + ramki zsynchronizowane (playback gapless trybem `frames`), przełącznik A/B `LIVE / A2F` w HUD z degradacją bez dziury (EN-only dla A2F)
 - [ ] **A2F-04**: Porównanie jakości na zdaniach kontrolnych EN (docs/en-visemes §6) + barge-in w trybie A2F (stop <50 ms, neutral <300 ms) + rozstrzygnięcie v3.0/v2.3; go/no-go do chmury (09-VERIFICATION.md)
@@ -73,11 +73,11 @@ Decyzja kierunkowa (2026-09, potwierdzona po review-unifikacji 2026-09-02): zach
 
 Decyzje (2026-09-10): dwie warstwy — `user` (ładna scena + rozmowa + porównywarka algorytmów) i `studio` (schowane narzędzia tweakera, dostęp `?studio=1`/skrót); porównywarka działa na ostatniej turze (to samo audio+alignment; A2F z tym samym PCM); pełny, etapowany refaktor modułowy; realizacja równolegle z Fazą 9 po UAT 08-04. Szczegóły: `.planning/phases/11-*/11-CONTEXT.md`.
 
-- [ ] **UI-01**: Dwie warstwy UI: `user` (dock rozmowy, captions, status, segment algorytmu) i `studio` (Animacja, Wizemy, Inspektor, A2F, Sesja, Scena) — dostęp `?studio=1` / skrót / persisted; funkcje deklarują warstwę przez `panel-registry` (`visibleIn`), przeniesienie funkcji między personami = zmiana jednego pola
-- [ ] **UI-02**: Porównywarka algorytmów: segment `LIVE | A2F` + „Porównaj" odtwarzające tę samą wypowiedź w obu torach (to samo audio+alignment; A2F zasilony tym samym PCM), chipsy A/B, opcjonalny tryb blind („który lepszy?"); przełączenie mid-turn bez cięcia twarzy (deferToTurnEnd)
-- [ ] **UI-03**: Scene presets: min. 3 presety tła/oświetlenia/kadru (studio-dark / studio-soft / cinema + sync z motywem jasnym), przełączalne w runtime i wybieralne przez usera; domyślny preset trzyma 60 FPS @ 1080p
-- [ ] **UI-04**: Modularny frontend: `SettingsStore` (jeden schemat + precedencja defaults → profil tweakera → user), kontrolery w `src/features/`, panele zamiast god-object `hud.ts`, `main.ts` ≤ ~100 linii (composition root `app/container.ts`), markup paneli w modułach
-- [ ] **UI-05**: Profil tweakera: export/import JSON, blokady ustawień dla usera (niewidoczne/disabled), zero martwych ustawień (`micSensitivity` podpięte albo usunięte)
+- [x] **UI-01**: Dwie warstwy UI: `user` (dock rozmowy, captions, status, segment algorytmu) i `studio` (Animacja, Wizemy, Inspektor, A2F, Sesja, Scena) — dostęp `?studio=1` / skrót / persisted; funkcje deklarują warstwę przez `panel-registry` (`visibleIn`), przeniesienie funkcji między personami = zmiana jednego pola
+- [x] **UI-02**: Porównywarka algorytmów: segment `LIVE | A2F` + „Porównaj" odtwarzające tę samą wypowiedź w obu torach (to samo audio+alignment; A2F zasilony tym samym PCM), chipsy A/B, opcjonalny tryb blind („który lepszy?"); przełączenie mid-turn bez cięcia twarzy (deferToTurnEnd)
+- [x] **UI-03**: Scene presets: min. 3 presety tła/oświetlenia/kadru (studio-dark / studio-soft / cinema + sync z motywem jasnym), przełączalne w runtime i wybieralne przez usera; domyślny preset trzyma 60 FPS @ 1080p
+- [x] **UI-04**: Modularny frontend: `SettingsStore` (jeden schemat + precedencja defaults → profil tweakera → user), kontrolery w `src/features/`, panele zamiast god-object `hud.ts`, `main.ts` ≤ ~100 linii (composition root `app/container.ts`), markup paneli w modułach
+- [x] **UI-05**: Profil tweakera: export/import JSON, blokady ustawień dla usera (niewidoczne/disabled), zero martwych ustawień (`micSensitivity` podpięte albo usunięte)
 
 ## v1.1 Requirements — Hardening & Showcase (Fazy 11.1–11.2, INSERTED 2026-11-19)
 
@@ -228,17 +228,17 @@ Milestone v1.1 (2026-11): publiczne repo jako produkt rekruterski — język ang
 | LIPS-05 | Phase 7 | Complete (code+testy; UAT wizualny w 07-04) |
 | LIPS-06 | Phase 7 | Complete (code+testy; UAT wizualny w 07-04) |
 | LIPS-07 | Phase 7 | Complete (code+testy; UAT wizualny w 07-04) |
-| UNA-01 | Phase 8 | Not Started |
-| A2F-01 | Phase 8 | Not Started |
+| UNA-01 | Phase 8 | Complete (code + tests, 08-01; manual UAT 08-04 pending) |
+| A2F-01 | Phase 8 | Complete (code + tests, 08-02; per-frame emotions dropped in 16-02, owner sign-off pending) |
 | A2F-02 | Phase 9 | Not Started |
 | A2F-03 | Phase 9 | Not Started |
 | A2F-04 | Phase 9 | Not Started |
 | A2F-05 | Phase 10 | Not Started (po go/no-go z Fazy 9) |
-| UI-01 | Phase 11 | Not Started |
-| UI-02 | Phase 11 | Not Started |
-| UI-03 | Phase 11 | Not Started |
-| UI-04 | Phase 11 | Not Started |
-| UI-05 | Phase 11 | Not Started |
+| UI-01 | Phase 11 | Complete (code + tests, 11-VERIFICATION; manual UAT pending) |
+| UI-02 | Phase 11 | Complete (code + tests, 11-VERIFICATION; manual UAT pending) |
+| UI-03 | Phase 11 | Complete (code + tests, 11-VERIFICATION; manual UAT pending) |
+| UI-04 | Phase 11 | Complete (code + tests, 11-VERIFICATION; manual UAT pending) |
+| UI-05 | Phase 11 | Complete (code + tests, 11-VERIFICATION; manual UAT pending) |
 | HARD-01..07 | Phase 11.1 | Verified by automated tests and drift reviews; manual UAT pending |
 | SHOW-01..10 | Phase 11.2 | Partial: 02, 03-09 complete (code; visual UAT deferred); 01, 10 pending (11.2-03, 11.2-09 blocked) |
 | I18N-01..08 | Phase 12 | 01-03,06-08 Complete; 04-05 automated-complete, manual UI/console UAT pending |

@@ -8,7 +8,7 @@ status: in_progress
 stopped_at: "Implement run 20261122-071333 closed. Owner-blocked: 11.2-03, 11.2-09, 13-03, 18-05, 18-06. Partial: 13-04, 17-05, 18-03, 18-07."
 last_updated: "2026-11-24"
 last_activity: "2026-11-24"
-last_activity_desc: "Implement run 20261122-071333: waves A-F executed; gate 75 files / 706 tests, npm run verify green. Owner-blocked plans recorded."
+last_activity_desc: "Implement run 20261122-071333: waves A-F executed; gate 78 files / 855 tests (after audit remediation 2026-11-24; CI green on PR #1), npm run verify green. Owner-blocked plans recorded."
 progress:
   total_phases: 20
   completed_phases: 10
@@ -29,7 +29,7 @@ See: .planning/PROJECT.md (updated 2026-09-01)
 
 Phase: v1.1 Portfolio Polish — implement run closed (11.2 7/9, 12, 14-17 executed, 13 and 18 partial).
 Plan: 11.2-03 and 11.2-09 blocked on owner; 13-03 blocked; 18-05 and 18-06 blocked; 13-04, 17-05, 18-03, 18-07 partial.
-Status: implement run done. Automated gates green (npm run verify: typecheck 0, 75 files / 706 tests, build, lint, format). v1.0: F11/F8 manual UAT pending, F9 blocked on OOM, F10 subject to go/no-go.
+Status: implement run done. Automated gates green (npm run verify: typecheck 0, 78 files / 855 tests (after audit remediation 2026-11-24; CI green on PR #1), build, lint, format). v1.0: F11/F8 manual UAT pending, F9 blocked on OOM, F10 subject to go/no-go.
 Last activity: 2026-11-24 — implement run 20261122-071333 results recorded in ROADMAP and REQUIREMENTS.
 
 Progress: 84/108 plan SUMMARY files without PARTIAL status (4 partial excluded; 5 owner-blocked plans have no SUMMARY). Completed phases: 1-6, 11.1, 12, 14, 15.
