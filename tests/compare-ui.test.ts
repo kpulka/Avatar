@@ -21,12 +21,14 @@ function mount(options: Parameters<typeof createUiFixture>[0] = {}): UiFixture {
   return fixture;
 }
 
-const q = <T extends HTMLElement>(fixture: UiFixture, selector: string): T =>
-  fixture.host.querySelector(selector) as T;
+const q = <T extends HTMLElement>(fixture: UiFixture, selector: string): T => fixture.host.querySelector(selector) as T;
 
 describe('compare UI (15-05)', () => {
   beforeEach(() => {
-    vi.stubGlobal('fetch', vi.fn(async () => ({})));
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => ({}))
+    );
   });
 
   it('compare is disabled with the empty-state copy when there is no turn to compare', () => {
@@ -37,7 +39,7 @@ describe('compare UI (15-05)', () => {
 
   it('clicking Compare runs the service with the blind flag', () => {
     const fixture = mount();
-    (q<HTMLInputElement>(fixture, 'input[type="checkbox"]')).checked = true;
+    q<HTMLInputElement>(fixture, 'input[type="checkbox"]').checked = true;
     q<HTMLButtonElement>(fixture, '.user-algo .btn-small').click();
     expect(fixture.spies.compareRun).toHaveBeenCalledWith({ blind: true });
   });
@@ -105,9 +107,12 @@ describe('compare UI (15-05)', () => {
   });
 
   it('A2F segment option is disabled with a reason tooltip when the service is unreachable, but stays usable otherwise', async () => {
-    vi.stubGlobal('fetch', vi.fn(async () => {
-      throw new TypeError('network');
-    }));
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => {
+        throw new TypeError('network');
+      })
+    );
     const down = mount();
     await vi.waitFor(() => {
       const a2f = [...down.host.querySelectorAll<HTMLButtonElement>('.segment-btn')].find((b) => b.textContent === 'A2F')!;
@@ -117,7 +122,10 @@ describe('compare UI (15-05)', () => {
     const live = [...down.host.querySelectorAll<HTMLButtonElement>('.segment-btn')].find((b) => b.textContent === 'LIVE')!;
     expect(live.disabled).toBe(false);
 
-    vi.stubGlobal('fetch', vi.fn(async () => ({})));
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => ({}))
+    );
     const up = mount();
     await new Promise((resolve) => setTimeout(resolve, 0));
     const a2fUp = [...up.host.querySelectorAll<HTMLButtonElement>('.segment-btn')].find((b) => b.textContent === 'A2F')!;

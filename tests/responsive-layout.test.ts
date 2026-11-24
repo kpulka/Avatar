@@ -64,16 +64,14 @@ describe('responsive layout (15-07, static CSS)', () => {
       .map((rule) => defined(rule.split('{')[0]).trim().replace(/\s+/g, ' '))
       // reduced-motion block is a deliberate global override
       .filter((selector) => !/prefers-reduced-motion/.test(selector));
-    const allowed = [
-      'body[data-mode="user"] .studio-shell',
-      '.hidden',
-      'body.presentation-mode .btn-exit-presentation',
-    ];
+    const allowed = ['body[data-mode="user"] .studio-shell', '.hidden', 'body.presentation-mode .btn-exit-presentation'];
     const unexpected = offenders.filter(
       (selector) =>
         !allowed.includes(selector) &&
         !selector.includes('presentation-mode') &&
-        !/\.(vignette-overlay|user-dock|user-algo|user-status|side-drawer|studio-tab|segment-btn|toast|loader-overlay|btn-call|dock-btn|dock-icon-btn|pulse-dot|spinner|transcript-line)/.test(selector)
+        !/\.(vignette-overlay|user-dock|user-algo|user-status|side-drawer|studio-tab|segment-btn|toast|loader-overlay|btn-call|dock-btn|dock-icon-btn|pulse-dot|spinner|transcript-line)/.test(
+          selector
+        )
     );
     expect(unexpected).toEqual([]);
   });
@@ -110,9 +108,7 @@ describe('final sweep gates (UIX-11)', () => {
   });
 
   it('no getElementById in the user layer', () => {
-    const offenders = listTs(join(ROOT, 'src', 'ui', 'user')).filter((file) =>
-      readFileSync(file, 'utf8').includes('getElementById')
-    );
+    const offenders = listTs(join(ROOT, 'src', 'ui', 'user')).filter((file) => readFileSync(file, 'utf8').includes('getElementById'));
     expect(offenders).toEqual([]);
   });
 });

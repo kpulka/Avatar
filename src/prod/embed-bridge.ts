@@ -34,8 +34,7 @@ export class EmbedBridge {
 
     const params = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
     const devMode = options.devMode ?? import.meta.env.DEV;
-    this.allowAnyOrigin = devMode &&
-      (params?.get('allow_any_origin') === '1' || params?.get('allow_any_origin') === 'true');
+    this.allowAnyOrigin = devMode && (params?.get('allow_any_origin') === '1' || params?.get('allow_any_origin') === 'true');
     this.sameOrigin = typeof window !== 'undefined' ? window.location.origin : '';
 
     this.allowedOrigins = new Set(

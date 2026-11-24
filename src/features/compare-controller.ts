@@ -18,14 +18,7 @@ import { TypedEventBus, Unsub } from '../app/events';
 import { AppEvents, CompareResultEvent } from '../app/app-types';
 import { t } from '../app/copy';
 
-export type CompareState =
-  | 'idle'
-  | 'ready'
-  | 'predicting'
-  | 'playing-a'
-  | 'playing-b'
-  | 'done'
-  | 'error';
+export type CompareState = 'idle' | 'ready' | 'predicting' | 'playing-a' | 'playing-b' | 'done' | 'error';
 
 export interface CompareControllerDeps {
   buffer: LastTurnBuffer;

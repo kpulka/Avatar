@@ -17,11 +17,7 @@ import { charsLookPolish } from './g2p/language';
 import { ensureG2pLoaded, isG2pReady, g2pAvailable } from './g2p/g2p-en';
 import { mergeCharAlignmentToPhonemes } from './g2p/phoneme-merge';
 import { mapPhonemeToShapes } from './g2p/phoneme-visemes';
-import {
-  loadVisemeOverrides,
-  defaultVisemeShapes,
-  VisemeOverrideMap,
-} from './viseme-overrides';
+import { loadVisemeOverrides, defaultVisemeShapes, VisemeOverrideMap } from './viseme-overrides';
 import { ProceduralBlink } from './procedural-blink';
 import { EmotionLayer, EmotionType } from '../realism/emotion-layer';
 import { CalibrationProfile } from './calibration';
@@ -169,9 +165,7 @@ export class FaceController {
     // EN phoneme layer (docs/3 v1.1): lazy, dynamic load of the CMUdict lexicon.
     // For the first ~1-2 s of a session FaceController runs on the char path; once loaded
     // it switches to phonemes on its own (isG2pReady).
-    ensureG2pLoaded().catch((err) =>
-      console.warn('[FaceController] G2P unavailable — staying on the char path:', err)
-    );
+    ensureG2pLoaded().catch((err) => console.warn('[FaceController] G2P unavailable — staying on the char path:', err));
 
     // Viseme overrides from the Editor (if saved in localStorage)
     this.applyVisemeOverridesRecord(loadVisemeOverrides());
@@ -423,7 +417,6 @@ export class FaceController {
       return;
     }
 
-
     if (this.state === 'RELAXING' || this.state === 'IDLE') {
       this.state = 'SPEAKING';
       this.clearManualOverrideMap();
@@ -494,8 +487,7 @@ export class FaceController {
       // A consonant digraph (th, sh, ch ...) is ONE viseme: it spans both letters and the second
       // letter is skipped, so it never fires a phantom pulse of its own.
       const span = charPathSpan(alignment.chars, i);
-      const durationMs =
-        (alignment.char_durations_ms[i] ?? 50) + (span === 2 ? (alignment.char_durations_ms[i + 1] ?? 0) : 0);
+      const durationMs = (alignment.char_durations_ms[i] ?? 50) + (span === 2 ? (alignment.char_durations_ms[i + 1] ?? 0) : 0);
 
       // An override from the Viseme Editor (character path) takes precedence over the character table.
       let shapes: Map<string, number>;
@@ -597,7 +589,8 @@ export class FaceController {
     let idx = -1;
     while (lo <= hi) {
       const mid = (lo + hi) >> 1;
-      if (base + (buf[mid]?.timeSec ?? Infinity) <= nowSec) { // mid in [lo, hi] within buf
+      if (base + (buf[mid]?.timeSec ?? Infinity) <= nowSec) {
+        // mid in [lo, hi] within buf
         idx = mid;
         lo = mid + 1;
       } else {

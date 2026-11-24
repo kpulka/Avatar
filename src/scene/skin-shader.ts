@@ -17,10 +17,7 @@ const _targetPos = new Vector3();
 export function updateSkinLightUniforms(key: DirectionalLight, camera: Camera): void {
   key.getWorldPosition(_lightPos);
   key.target.getWorldPosition(_targetPos);
-  skinLightUniforms.uKeyLightDirView.value
-    .subVectors(_lightPos, _targetPos)
-    .normalize()
-    .transformDirection(camera.matrixWorldInverse);
+  skinLightUniforms.uKeyLightDirView.value.subVectors(_lightPos, _targetPos).normalize().transformDirection(camera.matrixWorldInverse);
   skinLightUniforms.uKeyLightColor.value.copy(key.color).multiplyScalar(key.intensity);
 }
 
@@ -38,10 +35,7 @@ export interface SkinShaderOptions {
 /**
  * Injects advanced subsurface scattering (Wrap Diffuse SSS) into MeshPhysicalMaterial (docs/5 Stage 2)
  */
-export function injectSkinSSS(
-  material: MeshPhysicalMaterial,
-  options: SkinShaderOptions = {}
-): MeshPhysicalMaterial {
+export function injectSkinSSS(material: MeshPhysicalMaterial, options: SkinShaderOptions = {}): MeshPhysicalMaterial {
   const wrap = options.wrapAmount ?? 0.4;
   const sssColor = options.subsurfaceColor ?? new Color(0.85, 0.32, 0.22); // biological haemoglobin tint
   const sssIntensity = options.subsurfaceIntensity ?? 0.35;

@@ -7,13 +7,7 @@
  * `src/` and use forward slashes. No vitest, no fs, no TypeScript compiler API here: it must load
  * in a plain Node context (ESLint flat config).
  */
-import {
-  DIR_LAYER,
-  EXCEPTIONS,
-  LAYER_MAY_IMPORT,
-  MODULE_RULES,
-  type Layer,
-} from './layering-rules';
+import { DIR_LAYER, EXCEPTIONS, LAYER_MAY_IMPORT, MODULE_RULES, type Layer } from './layering-rules';
 
 export interface Edge {
   from: string;

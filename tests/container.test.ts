@@ -78,10 +78,10 @@ vi.mock('../src/avatar/meta-person-loader', async () => {
       load = vi.fn(async () => {
         if ((globalThis as { __failAvatarLoad?: boolean }).__failAvatarLoad) throw new Error('avatar.glb missing');
         return {
-        root: new THREE.Group(),
-        faceDriver: { listAvailableShapes: () => [] },
-        speechMeshes: [],
-        morphTargetDictionary: {},
+          root: new THREE.Group(),
+          faceDriver: { listAvailableShapes: () => [] },
+          speechMeshes: [],
+          morphTargetDictionary: {},
         };
       });
       dispose = vi.fn();
@@ -165,7 +165,12 @@ vi.mock('../src/prod/telemetry', () => ({
     getAlignmentStats = vi.fn(() => ({ elevenlabs: 0, fallback: 0 }));
   },
 }));
-vi.mock('../src/realism/head-micro-movements', () => ({ HeadMicroMovements: class { reset = vi.fn(); update = vi.fn(); } }));
+vi.mock('../src/realism/head-micro-movements', () => ({
+  HeadMicroMovements: class {
+    reset = vi.fn();
+    update = vi.fn();
+  },
+}));
 vi.mock('../src/realism/gaze-saccades', () => ({
   GazeSaccades: class {
     setPointer = vi.fn();
@@ -184,7 +189,10 @@ function setupDom(): HTMLCanvasElement {
 
 describe('createApp (container smoke, jsdom)', () => {
   beforeEach(() => {
-    vi.stubGlobal('requestAnimationFrame', vi.fn(() => 1));
+    vi.stubGlobal(
+      'requestAnimationFrame',
+      vi.fn(() => 1)
+    );
     vi.stubGlobal('cancelAnimationFrame', vi.fn());
     vi.stubGlobal('localStorage', createMemoryStorage());
     created.buses.length = 0;

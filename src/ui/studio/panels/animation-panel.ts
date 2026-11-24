@@ -4,11 +4,7 @@
  */
 import { PanelContext, PanelDefinition, PanelHandle } from '../panel-registry';
 import { el, uid } from '../../shared/dom';
-import {
-  CALIBRATION_PRESETS,
-  CalibrationPresetName,
-  CalibrationProfile,
-} from '../../../lipsync/calibration';
+import { CALIBRATION_PRESETS, CalibrationPresetName, CalibrationProfile } from '../../../lipsync/calibration';
 import { AnimationMode } from '../../../types/avatar';
 import { t } from '../../../app/copy';
 import { LipSyncEngine, parseLipSyncEngine } from '../../../lipsync/lipsync-engine';
@@ -25,13 +21,48 @@ interface SliderSpec {
 const SLIDERS: SliderSpec[] = [
   { key: 'jawScale', label: t('animation.slider.jawScale'), min: 0.5, max: 1.3, step: 0.05, format: (v) => `${Math.round(v * 100)}%` },
   { key: 'closeScale', label: t('animation.slider.closeScale'), min: 0.3, max: 1.2, step: 0.05, format: (v) => `${Math.round(v * 100)}%` },
-  { key: 'puckerScale', label: t('animation.slider.puckerScale'), min: 0.4, max: 1.3, step: 0.05, format: (v) => `${Math.round(v * 100)}%` },
-  { key: 'funnelScale', label: t('animation.slider.funnelScale'), min: 0.4, max: 1.3, step: 0.05, format: (v) => `${Math.round(v * 100)}%` },
+  {
+    key: 'puckerScale',
+    label: t('animation.slider.puckerScale'),
+    min: 0.4,
+    max: 1.3,
+    step: 0.05,
+    format: (v) => `${Math.round(v * 100)}%`,
+  },
+  {
+    key: 'funnelScale',
+    label: t('animation.slider.funnelScale'),
+    min: 0.4,
+    max: 1.3,
+    step: 0.05,
+    format: (v) => `${Math.round(v * 100)}%`,
+  },
   { key: 'rollScale', label: t('animation.slider.rollScale'), min: 0.4, max: 1.3, step: 0.05, format: (v) => `${Math.round(v * 100)}%` },
-  { key: 'teethExposureScale', label: t('animation.slider.teethExposureScale'), min: 0.4, max: 1.3, step: 0.05, format: (v) => `${Math.round(v * 100)}%` },
+  {
+    key: 'teethExposureScale',
+    label: t('animation.slider.teethExposureScale'),
+    min: 0.4,
+    max: 1.3,
+    step: 0.05,
+    format: (v) => `${Math.round(v * 100)}%`,
+  },
   { key: 'smileScale', label: t('animation.slider.smileScale'), min: 0.4, max: 1.3, step: 0.05, format: (v) => `${Math.round(v * 100)}%` },
-  { key: 'coarticulationSpeed', label: t('animation.slider.coarticulationSpeed'), min: 8, max: 35, step: 1, format: (v) => `${Math.round(v)}` },
-  { key: 'syncOffsetMs', label: t('animation.slider.syncOffsetMs'), min: -150, max: 400, step: 5, format: (v) => `${v > 0 ? '+' : ''}${Math.round(v)} ms` },
+  {
+    key: 'coarticulationSpeed',
+    label: t('animation.slider.coarticulationSpeed'),
+    min: 8,
+    max: 35,
+    step: 1,
+    format: (v) => `${Math.round(v)}`,
+  },
+  {
+    key: 'syncOffsetMs',
+    label: t('animation.slider.syncOffsetMs'),
+    min: -150,
+    max: 400,
+    step: 5,
+    format: (v) => `${v > 0 ? '+' : ''}${Math.round(v)} ms`,
+  },
 ];
 
 const PHONEMES: Array<{ key: 'A' | 'E' | 'O' | 'U' | 'M' | 'SZ' | 'F' | 'neutral'; label: string }> = [
@@ -68,10 +99,7 @@ export function createAnimationPanel(): PanelDefinition {
       });
       root.append(
         el('div', { className: 'drawer-section' }, [
-          el('label', { className: 'engine-toggle column' }, [
-            el('span', { text: t('animation.engineLabel') }),
-            engineSelect,
-          ]),
+          el('label', { className: 'engine-toggle column' }, [el('span', { text: t('animation.engineLabel') }), engineSelect]),
           el('p', { className: 'drawer-subtitle', text: t('animation.engineHint') }),
         ])
       );
@@ -88,10 +116,7 @@ export function createAnimationPanel(): PanelDefinition {
       });
       root.append(
         el('div', { className: 'drawer-section' }, [
-          el('label', { className: 'engine-toggle column' }, [
-            el('span', { text: t('animation.sourceLabel') }),
-            sourceSelect,
-          ]),
+          el('label', { className: 'engine-toggle column' }, [el('span', { text: t('animation.sourceLabel') }), sourceSelect]),
           el('p', { className: 'drawer-subtitle', text: t('animation.sourceHint') }),
         ])
       );

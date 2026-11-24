@@ -1,11 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import {
-  resampleFloat32,
-  float32ToInt16,
-  int16ToBase64,
-  base64ToPcmBytes,
-  pcmBytesToFloat32,
-} from '../src/audio/pcm-resampler';
+import { resampleFloat32, float32ToInt16, int16ToBase64, base64ToPcmBytes, pcmBytesToFloat32 } from '../src/audio/pcm-resampler';
 
 describe('PCM Resampler and Format Utilities', () => {
   it('resamples 48000 Hz input to 16000 Hz output with exact 3:1 length ratio', () => {

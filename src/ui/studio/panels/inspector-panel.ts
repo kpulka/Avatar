@@ -99,9 +99,23 @@ const CATEGORIES: Category[] = [
 ];
 
 const MIRROR_BASES = [
-  'eyeBlink', 'eyeSquint', 'eyeWide', 'eyeLookUp', 'eyeLookDown', 'eyeLookIn', 'eyeLookOut',
-  'browDown', 'browOuterUp', 'cheekSquint', 'noseSneer',
-  'mouthSmile', 'mouthPress', 'mouthUpperUp', 'mouthLowerDown', 'mouthDimple', 'mouthFrown',
+  'eyeBlink',
+  'eyeSquint',
+  'eyeWide',
+  'eyeLookUp',
+  'eyeLookDown',
+  'eyeLookIn',
+  'eyeLookOut',
+  'browDown',
+  'browOuterUp',
+  'cheekSquint',
+  'noseSneer',
+  'mouthSmile',
+  'mouthPress',
+  'mouthUpperUp',
+  'mouthLowerDown',
+  'mouthDimple',
+  'mouthFrown',
   'mouthStretch',
 ];
 

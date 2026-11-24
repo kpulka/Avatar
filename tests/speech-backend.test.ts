@@ -1,29 +1,52 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-// eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion -- test double / mock typing: the value comes from an untyped mock or JSON fixture
-const captured = vi.hoisted(() => ({ callbacks: {} as Record<string, (...args: unknown[]) => void>, connect: vi.fn(), micStart: vi.fn(), micStop: vi.fn() }));
+const captured = vi.hoisted(() => ({
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion -- the assertion types the callback registry that the mock fills in later; without it callbacks is {}
+  callbacks: {} as Record<string, (...args: unknown[]) => void>,
+  connect: vi.fn(),
+  micStart: vi.fn(),
+  micStop: vi.fn(),
+}));
 vi.mock('../src/audio/raw-wss-client', () => ({
   RawWssClient: class {
-    connect = captured.connect; disconnect = vi.fn(); sendUserAudio = vi.fn();
-    setCallbacks = vi.fn((callbacks: typeof captured.callbacks) => { captured.callbacks = callbacks; });
+    connect = captured.connect;
+    disconnect = vi.fn();
+    sendUserAudio = vi.fn();
+    setCallbacks = vi.fn((callbacks: typeof captured.callbacks) => {
+      captured.callbacks = callbacks;
+    });
   },
 }));
 vi.mock('../src/audio/mic-capture', () => ({
-  MicCapture: class { start = captured.micStart; stop = captured.micStop; setDeviceId = vi.fn(); },
+  MicCapture: class {
+    start = captured.micStart;
+    stop = captured.micStop;
+    setDeviceId = vi.fn();
+  },
 }));
 
 import { ElevenAgentsSpeechBackend } from '../src/audio/speech-backend';
 import { defined } from './helpers/defined';
 
 function makeBackend() {
-  const engine = { ctx: {}, unlock: vi.fn(), getEpoch: vi.fn(() => 0), playChunk: vi.fn(() => 1.25),
-    hasPendingAudio: vi.fn(() => false), getTailTime: vi.fn(() => 0), hardStop: vi.fn() };
+  const engine = {
+    ctx: {},
+    unlock: vi.fn(),
+    getEpoch: vi.fn(() => 0),
+    playChunk: vi.fn(() => 1.25),
+    hasPendingAudio: vi.fn(() => false),
+    getTailTime: vi.fn(() => 0),
+    hardStop: vi.fn(),
+  };
   const backend = new ElevenAgentsSpeechBackend(engine as never, () => 'agent_test');
   backend.onAudioChunk = vi.fn();
   return { backend, engine };
 }
 
-afterEach(() => { vi.useRealTimers(); vi.restoreAllMocks(); });
+afterEach(() => {
+  vi.useRealTimers();
+  vi.restoreAllMocks();
+});
 
 describe('ElevenAgentsSpeechBackend sample rates', () => {
   it('demo speech reports its real 44100 Hz sample rate', () => {
@@ -40,9 +63,14 @@ describe('ElevenAgentsSpeechBackend sample rates', () => {
   it('live chunks report the negotiated agent rate', () => {
     const { backend, engine } = makeBackend();
     defined(captured.callbacks.onMetadata)({ outputFormat: 'pcm_24000' });
-    defined(captured.callbacks.onAudioChunk)({ audio_base_64: btoa('\0'.repeat(960)), alignment: {
-      chars: ['a'], char_start_times_ms: [0], char_durations_ms: [20],
-    } });
+    defined(captured.callbacks.onAudioChunk)({
+      audio_base_64: btoa('\0'.repeat(960)),
+      alignment: {
+        chars: ['a'],
+        char_start_times_ms: [0],
+        char_durations_ms: [20],
+      },
+    });
     expect(backend.onAudioChunk).toHaveBeenCalledWith(expect.anything(), expect.anything(), 0, 1.25, 24000);
     expect(engine.playChunk).toHaveBeenCalledWith(expect.anything(), 24000, 0);
   });
@@ -54,10 +82,17 @@ describe('ElevenAgentsSpeechBackend sample rates', () => {
     const int16 = new Int16Array(16000);
     for (let i = 4800; i < 16000; i++) int16[i] = 8000;
     let binary = '';
-    new Uint8Array(int16.buffer).forEach((b) => { binary += String.fromCharCode(b); });
-    defined(captured.callbacks.onAudioChunk)({ audio_base_64: btoa(binary), alignment: {
-      chars: ['h', 'e', 'l', 'l', 'o'], char_start_times_ms: [0, 100, 200, 300, 400], char_durations_ms: [100, 100, 100, 100, 100],
-    } });
+    new Uint8Array(int16.buffer).forEach((b) => {
+      binary += String.fromCharCode(b);
+    });
+    defined(captured.callbacks.onAudioChunk)({
+      audio_base_64: btoa(binary),
+      alignment: {
+        chars: ['h', 'e', 'l', 'l', 'o'],
+        char_start_times_ms: [0, 100, 200, 300, 400],
+        char_durations_ms: [100, 100, 100, 100, 100],
+      },
+    });
     const alignment = vi.mocked(backend.onAudioChunk).mock.calls.at(-1)![1];
     expect(alignment.source).toBe('elevenlabs');
     expect(alignment.char_start_times_ms[0]).toBeGreaterThanOrEqual(280);
@@ -68,9 +103,14 @@ describe('ElevenAgentsSpeechBackend sample rates', () => {
   it('malformed alignment falls back to the energy alignment', () => {
     const { backend } = makeBackend();
     defined(captured.callbacks.onMetadata)({ outputFormat: 'pcm_16000' });
-    defined(captured.callbacks.onAudioChunk)({ audio_base_64: btoa('\0'.repeat(3200)), alignment: {
-      chars: ['a', 'b'], char_start_times_ms: [0], char_durations_ms: [20],
-    } });
+    defined(captured.callbacks.onAudioChunk)({
+      audio_base_64: btoa('\0'.repeat(3200)),
+      alignment: {
+        chars: ['a', 'b'],
+        char_start_times_ms: [0],
+        char_durations_ms: [20],
+      },
+    });
     expect(vi.mocked(backend.onAudioChunk).mock.calls.at(-1)![1].source).toBe('energy-fallback');
   });
 
@@ -97,7 +137,6 @@ describe('ElevenAgentsSpeechBackend sample rates', () => {
   });
 });
 
-
 describe('microphone access', () => {
   it('fails before opening a socket when access is denied', async () => {
     captured.connect.mockClear();
@@ -111,13 +150,17 @@ describe('microphone access', () => {
   });
 });
 
-
 describe('concurrent startup', () => {
   it('coalesces starts and cancels a pending microphone start on stop', async () => {
     captured.connect.mockClear();
     captured.micStop.mockClear();
     let resolveMic!: () => void;
-    captured.micStart.mockImplementationOnce(() => new Promise<void>((resolve) => { resolveMic = resolve; }));
+    captured.micStart.mockImplementationOnce(
+      () =>
+        new Promise<void>((resolve) => {
+          resolveMic = resolve;
+        })
+    );
     const { backend } = makeBackend();
     const first = backend.start();
     const second = backend.start();

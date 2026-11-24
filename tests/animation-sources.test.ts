@@ -117,11 +117,7 @@ describe('FaceController track sources (16-06: third source without editing inte
     controller.onInterruption();
     expect(controller.getAnimationMode()).toBe('viseme');
     controller.setLipSyncEngine('char');
-    controller.feedTrack(
-      'viseme',
-      { alignment: { chars: ['a'], char_start_times_ms: [0], char_durations_ms: [100] }, startTimeSec: 0 },
-      0
-    );
+    controller.feedTrack('viseme', { alignment: { chars: ['a'], char_start_times_ms: [0], char_durations_ms: [100] }, startTimeSec: 0 }, 0);
     expect(controller.getVisemeQueueLength()).toBe(1);
   });
 

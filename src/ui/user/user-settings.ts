@@ -16,12 +16,16 @@ export function createUserSettings(): PanelDefinition {
     mount(ctx: PanelContext): PanelHandle {
       const { store, services, container, ui } = ctx;
 
-      const gear = el('button', {
-        className: 'dock-icon-btn user-settings-btn',
-        type: 'button',
-        ariaLabel: t('settings.title'),
-        title: t('settings.title'),
-      }, [icon('settings', 20)]);
+      const gear = el(
+        'button',
+        {
+          className: 'dock-icon-btn user-settings-btn',
+          type: 'button',
+          ariaLabel: t('settings.title'),
+          title: t('settings.title'),
+        },
+        [icon('settings', 20)]
+      );
       container.append(gear);
 
       const volumeValue = el('span', { text: `${Math.round(store.getEffective<number>('volume') * 100)}%` });
@@ -107,10 +111,7 @@ export function createUserSettings(): PanelDefinition {
             el('label', { attrs: { for: volumeSlider.id } }, [el('span', { text: t('settings.volumeLabel') }), volumeValue]),
             volumeSlider,
           ]),
-          el('div', { className: 'form-group' }, [
-            el('label', { text: t('settings.micLabel'), attrs: { for: micSelect.id } }),
-            micSelect,
-          ]),
+          el('div', { className: 'form-group' }, [el('label', { text: t('settings.micLabel'), attrs: { for: micSelect.id } }), micSelect]),
           el('div', { className: 'form-group' }, [
             el('label', { text: t('settings.themeLabel'), attrs: { for: themeSelect.id } }),
             themeSelect,

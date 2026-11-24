@@ -3,12 +3,7 @@
  * User-mode degradation chip (17-06, LIP-06): the pure state machine and its status-pill wiring.
  */
 import { describe, expect, it } from 'vitest';
-import {
-  INITIAL_DEGRADATION,
-  RECOVERY_CHUNKS,
-  nextDegradationState,
-  DegradationState,
-} from '../src/ui/user/lipsync-degradation';
+import { INITIAL_DEGRADATION, RECOVERY_CHUNKS, nextDegradationState, DegradationState } from '../src/ui/user/lipsync-degradation';
 import { createStatusPill } from '../src/ui/user/status-pill';
 import { createUiFixture } from './helpers/ui-fixtures';
 import { t } from '../src/app/copy';

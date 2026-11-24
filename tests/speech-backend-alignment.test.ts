@@ -108,7 +108,7 @@ describe('normalizeAlignmentPayload (T-1 matrix)', () => {
   describe('degenerate input degrades to null (fallback), never throws', () => {
     it('start times with a different length than the characters -> null', () => {
       expect(
-        normalizeAlignmentPayload({ alignment: { chars: CHARS, char_start_times_ms: [0, 60], char_durations_ms: DURS_MS } }),
+        normalizeAlignmentPayload({ alignment: { chars: CHARS, char_start_times_ms: [0, 60], char_durations_ms: DURS_MS } })
       ).toBeNull();
     });
 
@@ -132,12 +132,12 @@ describe('normalizeAlignmentPayload (T-1 matrix)', () => {
       expect(
         normalizeAlignmentPayload({
           alignment: { chars: ['a', 'b'], char_start_times_ms: [0, Number.NaN], char_durations_ms: [10, 10] },
-        }),
+        })
       ).toBeNull();
       expect(
         normalizeAlignmentPayload({
           alignment: { chars: ['a', 'b'], char_start_times_ms: [0, Infinity], char_durations_ms: [10, 10] },
-        }),
+        })
       ).toBeNull();
     });
 
@@ -145,7 +145,7 @@ describe('normalizeAlignmentPayload (T-1 matrix)', () => {
       expect(
         normalizeAlignmentPayload({
           alignment: { chars: ['a', 'b'], char_start_times_ms: [0, 10], char_durations_ms: [10, Number.NaN] },
-        }),
+        })
       ).toBeNull();
     });
   });

@@ -1,10 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import {
-  normalizeShapeName,
-  validateRequiredShapes,
-  assertRequiredShapes,
-  REQUIRED_SHAPES,
-} from '../src/avatar/shape-normalizer';
+import { normalizeShapeName, validateRequiredShapes, assertRequiredShapes, REQUIRED_SHAPES } from '../src/avatar/shape-normalizer';
 
 describe('ShapeNormalizer', () => {
   it('normalizes known aliases to camelCase ARKit', () => {
@@ -31,8 +26,6 @@ describe('ShapeNormalizer', () => {
     expect(result.missing).toContain('mouthPucker');
     expect(result.missing).toContain('mouthSmileLeft');
 
-    expect(() => assertRequiredShapes(incompleteSet)).toThrowError(
-      /Model is missing blendshapes:.*mouthClose/
-    );
+    expect(() => assertRequiredShapes(incompleteSet)).toThrowError(/Model is missing blendshapes:.*mouthClose/);
   });
 });

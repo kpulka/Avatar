@@ -48,7 +48,7 @@ export function createModal(container: HTMLElement): ModalHandle {
 
   if (!native) {
     dialog.addEventListener('keydown', (event) => {
-      const key = (event).key;
+      const key = event.key;
       if (key === 'Escape') {
         event.preventDefault();
         close();
@@ -60,10 +60,10 @@ export function createModal(container: HTMLElement): ModalHandle {
       const last = focusables[focusables.length - 1];
       if (!first || !last) return; // no focusable elements
       const active = document.activeElement;
-      if ((event).shiftKey && active === first) {
+      if (event.shiftKey && active === first) {
         event.preventDefault();
         last.focus();
-      } else if (!(event).shiftKey && active === last) {
+      } else if (!event.shiftKey && active === last) {
         event.preventDefault();
         first.focus();
       }
@@ -82,10 +82,7 @@ export function createModal(container: HTMLElement): ModalHandle {
       });
       closeButton.addEventListener('click', close);
       dialog.setAttribute('aria-labelledby', titleId);
-      content.replaceChildren(
-        el('div', { className: 'dialog-header' }, [el('h3', { id: titleId, text: title }), closeButton]),
-        contentEl
-      );
+      content.replaceChildren(el('div', { className: 'dialog-header' }, [el('h3', { id: titleId, text: title }), closeButton]), contentEl);
       if (native) {
         dialogEl.showModal();
       } else {

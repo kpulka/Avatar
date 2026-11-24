@@ -26,9 +26,10 @@ interface CorpusCase {
   expect: { phonemeSequence?: string[]; charTokens?: string[] };
 }
 
-const corpus = JSON.parse(
-  readFileSync(new URL('./fixtures/lipsync-corpus.json', import.meta.url), 'utf8'),
-) as { tolerances: { spanSumToleranceMs: number; minSpanMs: number; maxWordOverflowMs: number }; cases: CorpusCase[] };
+const corpus = JSON.parse(readFileSync(new URL('./fixtures/lipsync-corpus.json', import.meta.url), 'utf8')) as {
+  tolerances: { spanSumToleranceMs: number; minSpanMs: number; maxWordOverflowMs: number };
+  cases: CorpusCase[];
+};
 const { spanSumToleranceMs, minSpanMs, maxWordOverflowMs } = corpus.tolerances;
 
 function alignmentFor(c: CorpusCase) {
@@ -59,13 +60,19 @@ describe('lipsync corpus fixture', () => {
   it('has at least 15 cases and covers every control sentence verbatim', () => {
     expect(corpus.cases.length).toBeGreaterThanOrEqual(15);
     for (const sentence of CONTROL_SENTENCES) {
-      expect(corpus.cases.some((c) => c.text === sentence), sentence).toBe(true);
+      expect(
+        corpus.cases.some((c) => c.text === sentence),
+        sentence
+      ).toBe(true);
     }
   });
 
   it('conversational cases are verbatim excerpts of the shared corpus (single source of truth)', () => {
     for (const c of corpus.cases.filter((x) => x.group === 'conversational')) {
-      expect(CONVERSATIONAL_PARAGRAPHS.some((p: string) => p.includes(c.text)), c.id).toBe(true);
+      expect(
+        CONVERSATIONAL_PARAGRAPHS.some((p: string) => p.includes(c.text)),
+        c.id
+      ).toBe(true);
     }
   });
 
@@ -86,7 +93,10 @@ describe('golden spans: phoneme path', () => {
   for (const c of phonemeCases) {
     describe(c.id, () => {
       it('phoneme sequence equals the pinned sequence (exact)', () => {
-        const sequence = spansByCase.get(c.id)!.filter((s) => !s.glideOf).map((s) => s.phoneme);
+        const sequence = spansByCase
+          .get(c.id)!
+          .filter((s) => !s.glideOf)
+          .map((s) => s.phoneme);
         expect(sequence).toEqual(c.expect.phonemeSequence);
       });
 
@@ -201,7 +211,12 @@ describe('viseme distinctness proxy (min pairwise L1 distance between pose vecto
   const label = (g: string[]) => [...g].sort().join('/');
 
   it('the set of identical-pose groups is frozen', () => {
-    expect(groups.filter((g) => g.length > 1).map(label).sort()).toEqual(EXPECTED_IDENTICAL_GROUPS);
+    expect(
+      groups
+        .filter((g) => g.length > 1)
+        .map(label)
+        .sort()
+    ).toEqual(EXPECTED_IDENTICAL_GROUPS);
   });
 
   it(`distinct poses stay >= ${THRESHOLD} apart, except the pinned near-twins`, () => {

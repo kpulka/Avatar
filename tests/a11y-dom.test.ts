@@ -122,9 +122,7 @@ describe('form label association', () => {
     expect(controls.length).toBeGreaterThan(0);
     for (const control of controls) {
       const labelled =
-        control.getAttribute('aria-label') ||
-        (control.id && root.querySelector(`label[for="${control.id}"]`)) ||
-        control.closest('label');
+        control.getAttribute('aria-label') || (control.id && root.querySelector(`label[for="${control.id}"]`)) || control.closest('label');
       expect(labelled, `${control.tagName}#${control.id} has no label`).toBeTruthy();
     }
   }
@@ -133,13 +131,15 @@ describe('form label association', () => {
     const fixture = createUiFixture();
     createUserSettings().mount(fixture.ctx);
     (fixture.host.querySelector('.user-settings-btn') as HTMLButtonElement).click();
-    return vi.waitFor(() => expect(fixture.modalCalls).toHaveLength(1)).then(() => {
-      const form = defined(fixture.modalCalls[0]).content;
-      // Controls live in the form; labels too (ids are stable, same document).
-      document.body.append(form);
-      assertLabelled(form);
-      expect(form.querySelectorAll('label[for]').length).toBe(5);
-    });
+    return vi
+      .waitFor(() => expect(fixture.modalCalls).toHaveLength(1))
+      .then(() => {
+        const form = defined(fixture.modalCalls[0]).content;
+        // Controls live in the form; labels too (ids are stable, same document).
+        document.body.append(form);
+        assertLabelled(form);
+        expect(form.querySelectorAll('label[for]').length).toBe(5);
+      });
   });
 
   it('a2f URL input has a visible label; session agent and volume are labelled; animation sliders too', () => {

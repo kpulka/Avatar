@@ -151,7 +151,7 @@ export const COPY: Readonly<Record<string, string>> = {
   'session.ttfbValue': '{ms} ms',
   'session.ttfbIdle': '-- ms',
   'session.alignIdle': 'ALIGN: —',
-  'session.alignEl':'ALIGN: EL ✓ ({count})',
+  'session.alignEl': 'ALIGN: EL ✓ ({count})',
   'session.alignFallback': 'ALIGN: FALLBACK ⚠ ({el}/{fb})',
   'session.locksTitle': 'Settings locks (for the user):',
   'session.lockLabel': '{key} (locked for user)',
@@ -188,7 +188,8 @@ export const COPY: Readonly<Record<string, string>> = {
   'animation.engineEn': 'EN phonemes (G2P, CMUdict)',
   'animation.enginePl': 'PL phonemes (rule-based G2P)',
   'animation.engineChar': 'Character table (fallback)',
-  'animation.engineHint': 'Pick the language of the voice. The character table works for every language but ignores silent letters and softness',
+  'animation.engineHint':
+    'Pick the language of the voice. The character table works for every language but ignores silent letters and softness',
   'animation.sourceLabel': 'Animation source:',
   'animation.sourceViseme': 'LIVE visemes (default)',
   'animation.sourceFrames': 'A2F (frames)',

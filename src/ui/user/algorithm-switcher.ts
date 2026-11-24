@@ -54,9 +54,7 @@ export function createAlgorithmSwitcher(): PanelDefinition {
       refreshSegment();
 
       // --- A2F availability (S13): advisory probe, never blocks a compare attempt
-      const a2fButtons = [...segmentButtons.entries()].filter(
-        ([id]) => services.animationSources.get(id)?.short === t('algo.nameA2f')
-      );
+      const a2fButtons = [...segmentButtons.entries()].filter(([id]) => services.animationSources.get(id)?.short === t('algo.nameA2f'));
       const probeA2fAlive = async (): Promise<boolean> => {
         if (typeof fetch !== 'function') return true;
         const base = String(store.getEffective<string>('a2fUrl') ?? '').replace(/\/$/, '');
@@ -102,7 +100,11 @@ export function createAlgorithmSwitcher(): PanelDefinition {
         .list()
         .slice(0, 2)
         .map((_, index) => el('span', { className: 'compare-chip', text: chipSlot(index) }));
-      const tracks = el('div', { className: 'compare-tracks hidden', attrs: { role: 'group', 'aria-label': t('compare.trackAria') } }, chips);
+      const tracks = el(
+        'div',
+        { className: 'compare-tracks hidden', attrs: { role: 'group', 'aria-label': t('compare.trackAria') } },
+        chips
+      );
       const cancelButton = el('button', {
         className: 'btn btn-small btn-secondary compare-cancel hidden',
         type: 'button',
@@ -166,7 +168,7 @@ export function createAlgorithmSwitcher(): PanelDefinition {
 
       const refreshCompare = (): void => {
         const can = services.compare.canCompare();
-        (compareButton).disabled = !can;
+        compareButton.disabled = !can;
         if (!can && services.compare.getState() === 'idle') {
           statusLine.textContent = t('algo.empty');
         }

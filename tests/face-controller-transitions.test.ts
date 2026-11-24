@@ -105,7 +105,10 @@ describe('FaceController transition matrix (16-CONTEXT §2)', () => {
     expect(controller.getVisemeQueueLength()).toBe(0);
 
     controller.render(0.016);
-    const jawWrites = driver.writes.slice(mark).filter(([s]) => s === 'jawOpen').map(([, w]) => w);
+    const jawWrites = driver.writes
+      .slice(mark)
+      .filter(([s]) => s === 'jawOpen')
+      .map(([, w]) => w);
     expect(jawWrites.length).toBeGreaterThan(0);
     expect(jawWrites.every((w) => w > 0.05)).toBe(true);
   });
@@ -140,7 +143,10 @@ describe('FaceController transition matrix (16-CONTEXT §2)', () => {
     expect(controller.getState()).toBe('SPEAKING');
     for (let i = 0; i < 5; i++) controller.render(0.016);
 
-    const jawWrites = driver.writes.slice(mark).filter(([s]) => s === 'jawOpen').map(([, w]) => w);
+    const jawWrites = driver.writes
+      .slice(mark)
+      .filter(([s]) => s === 'jawOpen')
+      .map(([, w]) => w);
     expect(jawWrites.length).toBeGreaterThan(0);
     expect(jawWrites.some((w) => w === 0)).toBe(false);
   });
@@ -193,7 +199,10 @@ describe('FaceController transition matrix (16-CONTEXT §2)', () => {
     expect(controller.getAnimationMode()).toBe('viseme');
 
     controller.render(0.016);
-    const jawWrites = driver.writes.slice(mark).filter(([s]) => s === 'jawOpen').map(([, w]) => w);
+    const jawWrites = driver.writes
+      .slice(mark)
+      .filter(([s]) => s === 'jawOpen')
+      .map(([, w]) => w);
     expect(jawWrites.length).toBeGreaterThan(0);
     expect(jawWrites.every((w) => w > 0.05)).toBe(true);
   });
@@ -210,7 +219,10 @@ describe('FaceController transition matrix (16-CONTEXT §2)', () => {
     controller.onAudioChunk(CHUNK, 0, engine.epoch);
     for (let i = 0; i < 3; i++) controller.render(0.016);
 
-    const jawWrites = driver.writes.slice(mark).filter(([s]) => s === 'jawOpen').map(([, w]) => w);
+    const jawWrites = driver.writes
+      .slice(mark)
+      .filter(([s]) => s === 'jawOpen')
+      .map(([, w]) => w);
     expect(jawWrites.length).toBeGreaterThan(0);
     expect(jawWrites.some((w) => w === 0)).toBe(false);
     expect(controller.getState()).toBe('SPEAKING');

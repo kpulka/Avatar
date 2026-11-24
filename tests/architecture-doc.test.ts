@@ -33,7 +33,12 @@ function tableRows(block: string): string[][] {
     .split(/\r?\n/)
     .filter((line) => line.startsWith('|') && !/^\|[-| ]+\|$/.test(line))
     .slice(1) // header row
-    .map((line) => line.split('|').slice(1, -1).map((cell) => cell.trim()));
+    .map((line) =>
+      line
+        .split('|')
+        .slice(1, -1)
+        .map((cell) => cell.trim())
+    );
 }
 
 const backticked = (cell: string): string[] => [...cell.matchAll(/`([^`]+)`/g)].map((m) => defined(m[1]));
@@ -81,7 +86,14 @@ describe('ARCHITECTURE.md is in sync with the code (14-05)', () => {
     const filesCalling = (verb: 'emit' | 'on', event: string): string[] =>
       files.filter((f) => new RegExp(`\\.${verb}\\(\\s*'${event}'`).test(defined(text.get(f)))).sort();
     const cited = (cell: string): string[] =>
-      [...new Set(backticked(cell).map((token) => token.replace(/:.*$/, '')).filter((n) => n.endsWith('.ts')).map(resolveSrc))].sort();
+      [
+        ...new Set(
+          backticked(cell)
+            .map((token) => token.replace(/:.*$/, ''))
+            .filter((n) => n.endsWith('.ts'))
+            .map(resolveSrc)
+        ),
+      ].sort();
 
     for (const cells of rows) {
       const event = defined(backticked(defined(cells[0]))[0]);
@@ -95,7 +107,8 @@ describe('ARCHITECTURE.md is in sync with the code (14-05)', () => {
   });
 
   it('every cited file exists and every cited line is within the file', () => {
-    const citation = /`((?:src|tests|docs|public|a2f)\/[\w./-]+\.[a-z0-9]+|vite\.config\.ts|tsconfig[\w.]*\.json|package\.json)(?::(\d+)(?:-:?(\d+))?)?`/g;
+    const citation =
+      /`((?:src|tests|docs|public|a2f)\/[\w./-]+\.[a-z0-9]+|vite\.config\.ts|tsconfig[\w.]*\.json|package\.json)(?::(\d+)(?:-:?(\d+))?)?`/g;
     const problems: string[] = [];
     let count = 0;
     for (const match of DOC.matchAll(citation)) {

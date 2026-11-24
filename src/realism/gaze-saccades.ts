@@ -146,8 +146,7 @@ export class GazeSaccades {
         this.isSaccading = true;
         this.saccadeStartTimeSec = currentTimeSec;
         this.saccadeDurationSec =
-          gazeConfig.saccadeDurationMinSec +
-          Math.random() * (gazeConfig.saccadeDurationMaxSec - gazeConfig.saccadeDurationMinSec);
+          gazeConfig.saccadeDurationMinSec + Math.random() * (gazeConfig.saccadeDurationMaxSec - gazeConfig.saccadeDurationMinSec);
 
         // Random micro-jump of the eye < 5 degrees
         const angle = Math.random() * Math.PI * 2;

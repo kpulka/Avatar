@@ -7,12 +7,7 @@ export class AppCamera {
 
   constructor(domElement: HTMLElement) {
     // 35° FOV matches a portrait lens (~85mm) — prevents distortion of the nose/face
-    this.instance = new THREE.PerspectiveCamera(
-      35,
-      window.innerWidth / window.innerHeight,
-      0.1,
-      100
-    );
+    this.instance = new THREE.PerspectiveCamera(35, window.innerWidth / window.innerHeight, 0.1, 100);
 
     // Bust/head framing (camera at the avatar's eye level)
     this.instance.position.set(0, 1.5, 1.3);

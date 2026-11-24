@@ -8,14 +8,8 @@
  * - `avatar_settings_mic_sensitivity` is ignored (dead field, UI-05),
  * - legacy keys are NOT removed (write-through mirror until 11-04).
  */
-import {
-  SettingsStateV1,
-  StorageLike,
-  validateSettings,
-} from './settings-schema';
-import {
-  DEFAULT_CALIBRATION_PROFILE,
-} from '../../lipsync/calibration';
+import { SettingsStateV1, StorageLike, validateSettings } from './settings-schema';
+import { DEFAULT_CALIBRATION_PROFILE } from '../../lipsync/calibration';
 import { DEFAULT_LIP_SYNC_ENGINE, parseLipSyncEngine } from '../../lipsync/lipsync-engine';
 
 export const BLOB_KEY = 'avatar_settings_v1';
@@ -31,7 +25,6 @@ export const LEGACY_KEYS = {
   volume: 'avatar_settings_volume',
   a2fUrl: 'avatar_a2f_url',
 } as const;
-
 
 function readRaw(storage: StorageLike, key: string): string | null {
   try {

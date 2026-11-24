@@ -38,6 +38,14 @@ jobs:
       - name: Typecheck
         run: npm run typecheck
 
+      # ESLint (typescript-eslint type-checked + the import-layer rule from tests/layering-rules.ts), zero warnings.
+      - name: Lint
+        run: npm run lint
+
+      # Prettier check over src, tests and the two TypeScript config files.
+      - name: Format check
+        run: npm run format:check
+
       # Vitest suite, including the fs-based gates (English-only language gate, import layering).
       - name: Test
         run: npm test

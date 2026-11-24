@@ -105,8 +105,30 @@ describe('g2pPl rules', () => {
   });
 
   it('every emitted token has a pose (shared table or PL table) over a broad word list', () => {
-    const words = ['szczypczyzna', 'dzi\u0119kuj\u0119', 'chata', 'ziarno', 'zima', 'trzeba', 'chleb', 'k\u0105t', 'w\u0119\u017Ce', '\u015Bwiat',
-      '\u017Ad\u017Ab\u0142o', '\u017C\u00F3\u0142\u0107', 'd\u017Cem', 'ci\u0119\u017Cko', 'przepraszam', 'dzie\u0144', 'dzisiaj', 'cze\u015B\u0107', 'ha\u0142as', 'xylofon', 'quiz', 'vat'];
+    const words = [
+      'szczypczyzna',
+      'dzi\u0119kuj\u0119',
+      'chata',
+      'ziarno',
+      'zima',
+      'trzeba',
+      'chleb',
+      'k\u0105t',
+      'w\u0119\u017Ce',
+      '\u015Bwiat',
+      '\u017Ad\u017Ab\u0142o',
+      '\u017C\u00F3\u0142\u0107',
+      'd\u017Cem',
+      'ci\u0119\u017Cko',
+      'przepraszam',
+      'dzie\u0144',
+      'dzisiaj',
+      'cze\u015B\u0107',
+      'ha\u0142as',
+      'xylofon',
+      'quiz',
+      'vat',
+    ];
     const unknown = new Set<string>();
     for (const word of words) {
       for (const token of g2pPl(word)) {

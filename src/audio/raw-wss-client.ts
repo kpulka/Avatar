@@ -1,10 +1,4 @@
-import {
-  ServerToClientMsg,
-  AudioEventPayload,
-  PongClientMsg,
-  ClientInitMsg,
-  UserAudioChunkMsg,
-} from '../types/audio';
+import { ServerToClientMsg, AudioEventPayload, PongClientMsg, ClientInitMsg, UserAudioChunkMsg } from '../types/audio';
 import { DEFAULT_AGENT_CONFIG } from './agent-config';
 
 const MAX_RECONNECT_ATTEMPTS = 5;
@@ -51,9 +45,7 @@ export class RawWssClient {
     this.intentionalClose = false;
     this.clearReconnectTimer();
 
-    const targetUrl = this.signedUrl
-      ? this.signedUrl
-      : `${DEFAULT_AGENT_CONFIG.wssBaseUrl}?agent_id=${encodeURIComponent(this.agentId)}`;
+    const targetUrl = this.signedUrl ? this.signedUrl : `${DEFAULT_AGENT_CONFIG.wssBaseUrl}?agent_id=${encodeURIComponent(this.agentId)}`;
 
     this.setState(this.reconnectAttempts > 0 ? 'reconnecting' : 'connecting');
 
@@ -91,16 +83,18 @@ export class RawWssClient {
 
     socket.onerror = (e) => {
       if (this.ws !== socket) return;
-      this.lastSocketError = typeof ErrorEvent !== 'undefined' && e instanceof ErrorEvent && e.message
-        ? e.message.slice(0, 200)
-        : 'WebSocket connection error';
+      this.lastSocketError =
+        typeof ErrorEvent !== 'undefined' && e instanceof ErrorEvent && e.message ? e.message.slice(0, 200) : 'WebSocket connection error';
       console.warn('[RawWssClient] WebSocket error event:', e);
     };
 
     socket.onclose = (event: CloseEvent) => {
       if (this.ws !== socket) return;
       this.ws = null;
-      if (this.intentionalClose) { this.setState('disconnected'); return; }
+      if (this.intentionalClose) {
+        this.setState('disconnected');
+        return;
+      }
       const fatal = event.code === 1008 || (event.code >= 4000 && event.code < 5000);
       if (fatal) {
         const context = this.lastSocketError ? ` ${this.lastSocketError}.` : '';
@@ -221,7 +215,11 @@ export class RawWssClient {
   private scheduleReconnect(): void {
     if (this.reconnectAttempts >= MAX_RECONNECT_ATTEMPTS) {
       const context = this.lastSocketError ? ` (${this.lastSocketError})` : '';
-      this.fail(new Error(`Could not reach the voice agent after ${MAX_RECONNECT_ATTEMPTS} attempts${context}. Check your connection and try again.`));
+      this.fail(
+        new Error(
+          `Could not reach the voice agent after ${MAX_RECONNECT_ATTEMPTS} attempts${context}. Check your connection and try again.`
+        )
+      );
       return;
     }
     this.setState('reconnecting');

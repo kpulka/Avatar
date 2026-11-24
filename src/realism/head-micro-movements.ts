@@ -51,21 +51,11 @@ export class HeadMicroMovements {
     breathNorm: number;
   } {
     // 1. Very slow, natural harmonic head noise (no rhythmic pulsing)
-    const yaw =
-      (0.6 * Math.sin(time * 0.43) +
-        0.3 * Math.sin(time * 0.89) +
-        0.1 * Math.cos(time * 1.31)) *
-      this.maxYaw;
+    const yaw = (0.6 * Math.sin(time * 0.43) + 0.3 * Math.sin(time * 0.89) + 0.1 * Math.cos(time * 1.31)) * this.maxYaw;
 
-    const pitch =
-      (0.6 * Math.cos(time * 0.37) +
-        0.4 * Math.sin(time * 0.79)) *
-      this.maxPitch;
+    const pitch = (0.6 * Math.cos(time * 0.37) + 0.4 * Math.sin(time * 0.79)) * this.maxPitch;
 
-    const roll =
-      (0.7 * Math.sin(time * 0.31) +
-        0.3 * Math.cos(time * 0.67)) *
-      this.maxRoll;
+    const roll = (0.7 * Math.sin(time * 0.31) + 0.3 * Math.cos(time * 0.67)) * this.maxRoll;
 
     // 2. Chest breathing cycle (asymmetric inhale/exhale)
     const breathPhase = time * this.breathingFreq * Math.PI * 2;

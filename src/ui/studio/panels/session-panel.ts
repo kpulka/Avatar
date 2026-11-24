@@ -85,12 +85,7 @@ export function createSessionPanel(): PanelDefinition {
         const checkbox = el('input', { type: 'checkbox' });
         checkbox.checked = store.isLocked(key);
         checkbox.addEventListener('change', () => store.setLock(key, checkbox.checked));
-        locksSection.append(
-          el('label', { className: 'engine-toggle' }, [
-            checkbox,
-            el('span', { text: t('session.lockLabel', { key }) }),
-          ])
-        );
+        locksSection.append(el('label', { className: 'engine-toggle' }, [checkbox, el('span', { text: t('session.lockLabel', { key }) })]));
       }
 
       // --- Profile: export/import

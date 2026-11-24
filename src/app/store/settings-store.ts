@@ -8,14 +8,7 @@
  *
  * `setUser` on a locked key is a no-op (UI-05).
  */
-import {
-  DEFAULT_SETTINGS,
-  SettingsStateV1,
-  StorageLike,
-  UserSettings,
-  StudioSettings,
-  validateSettings,
-} from './settings-schema';
+import { DEFAULT_SETTINGS, SettingsStateV1, StorageLike, UserSettings, StudioSettings, validateSettings } from './settings-schema';
 import { BLOB_KEY, migrateLegacy } from './migrate';
 import { Unsub } from '../events';
 
@@ -31,14 +24,7 @@ const USER_KEYS: ReadonlyArray<keyof UserSettings> = [
   'micDeviceId',
 ];
 
-const STUDIO_KEYS: ReadonlyArray<keyof StudioSettings> = [
-  'agentId',
-  'a2fUrl',
-  'lipSyncEngine',
-  'calibration',
-  'visemeOverrides',
-  'locks',
-];
+const STUDIO_KEYS: ReadonlyArray<keyof StudioSettings> = ['agentId', 'a2fUrl', 'lipSyncEngine', 'calibration', 'visemeOverrides', 'locks'];
 
 function cloneState(state: SettingsStateV1): SettingsStateV1 {
   return JSON.parse(JSON.stringify(state)) as SettingsStateV1;
@@ -87,17 +73,14 @@ export class SettingsStore {
     const isUserKey = USER_KEYS.includes(path as keyof UserSettings);
     const userValue = (this.state.user as unknown as Record<string, unknown>)[path];
     const studioValue = (this.state.studio as unknown as Record<string, unknown>)[path];
-    const defaults = (DEFAULT_SETTINGS.user as unknown as Record<string, unknown>)[path]
-      ?? (DEFAULT_SETTINGS.studio as unknown as Record<string, unknown>)[path];
+    const defaults =
+      (DEFAULT_SETTINGS.user as unknown as Record<string, unknown>)[path] ??
+      (DEFAULT_SETTINGS.studio as unknown as Record<string, unknown>)[path];
     // A lock freezes the CURRENT value of the key (CONTEXT:53,57): the tweaker takes away from the user
     // the right to change it, but does not overwrite the value with its own. User and studio keys are
     // disjoint, so the source of the frozen value is the right profile —
     // the earlier `studioValue ?? defaults` for a user key dropped it back to the default.
-    const value = locked
-      ? isUserKey
-        ? userValue ?? defaults
-        : studioValue ?? defaults
-      : userValue ?? studioValue ?? defaults;
+    const value = locked ? (isUserKey ? (userValue ?? defaults) : (studioValue ?? defaults)) : (userValue ?? studioValue ?? defaults);
     // Defensive copy of object values (review A1 / P2): `calibration` and `visemeOverrides`
     // must not leak as live references into the store internals — an outside mutation bypasses validation.
     if (value !== null && typeof value === 'object') {

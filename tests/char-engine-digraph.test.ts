@@ -30,7 +30,7 @@ function charTurn(text: string): { queued: number } {
       char_durations_ms: chars.map(() => 60),
     },
     0,
-    0,
+    0
   );
   return { queued: controller.getVisemeQueueLength() };
 }

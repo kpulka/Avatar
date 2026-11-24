@@ -6,18 +6,58 @@ import { ArKitBlendshapeDriver } from './face-driver';
  * All 52 Apple ARKit blendshapes
  */
 const ARKIT_52_SHAPES = [
-  'eyeBlinkLeft', 'eyeLookDownLeft', 'eyeLookInLeft', 'eyeLookOutLeft', 'eyeLookUpLeft', 'eyeSquintLeft', 'eyeWideLeft',
-  'eyeBlinkRight', 'eyeLookDownRight', 'eyeLookInRight', 'eyeLookOutRight', 'eyeLookUpRight', 'eyeSquintRight', 'eyeWideRight',
-  'jawForward', 'jawLeft', 'jawRight', 'jawOpen',
-  'mouthClose', 'mouthFunnel', 'mouthPucker', 'mouthLeft', 'mouthRight',
-  'mouthSmileLeft', 'mouthSmileRight', 'mouthFrownLeft', 'mouthFrownRight',
-  'mouthDimpleLeft', 'mouthDimpleRight', 'mouthStretchLeft', 'mouthStretchRight',
-  'mouthRollLower', 'mouthRollUpper', 'mouthShrugLower', 'mouthShrugUpper',
-  'mouthPressLeft', 'mouthPressRight', 'mouthLowerDownLeft', 'mouthLowerDownRight',
-  'mouthUpperUpLeft', 'mouthUpperUpRight',
-  'browDownLeft', 'browDownRight', 'browInnerUp', 'browOuterUpLeft', 'browOuterUpRight',
-  'cheekPuff', 'cheekSquintLeft', 'cheekSquintRight',
-  'noseSneerLeft', 'noseSneerRight', 'tongueOut'
+  'eyeBlinkLeft',
+  'eyeLookDownLeft',
+  'eyeLookInLeft',
+  'eyeLookOutLeft',
+  'eyeLookUpLeft',
+  'eyeSquintLeft',
+  'eyeWideLeft',
+  'eyeBlinkRight',
+  'eyeLookDownRight',
+  'eyeLookInRight',
+  'eyeLookOutRight',
+  'eyeLookUpRight',
+  'eyeSquintRight',
+  'eyeWideRight',
+  'jawForward',
+  'jawLeft',
+  'jawRight',
+  'jawOpen',
+  'mouthClose',
+  'mouthFunnel',
+  'mouthPucker',
+  'mouthLeft',
+  'mouthRight',
+  'mouthSmileLeft',
+  'mouthSmileRight',
+  'mouthFrownLeft',
+  'mouthFrownRight',
+  'mouthDimpleLeft',
+  'mouthDimpleRight',
+  'mouthStretchLeft',
+  'mouthStretchRight',
+  'mouthRollLower',
+  'mouthRollUpper',
+  'mouthShrugLower',
+  'mouthShrugUpper',
+  'mouthPressLeft',
+  'mouthPressRight',
+  'mouthLowerDownLeft',
+  'mouthLowerDownRight',
+  'mouthUpperUpLeft',
+  'mouthUpperUpRight',
+  'browDownLeft',
+  'browDownRight',
+  'browInnerUp',
+  'browOuterUpLeft',
+  'browOuterUpRight',
+  'cheekPuff',
+  'cheekSquintLeft',
+  'cheekSquintRight',
+  'noseSneerLeft',
+  'noseSneerRight',
+  'tongueOut',
 ];
 
 /**
@@ -137,7 +177,7 @@ export function createTestAvatar(): LoadedAvatar {
         }
       } else if (shapeName === 'mouthClose') {
         if (isMouthArea) {
-          dy = (y < -0.1 ? 0.03 : -0.03);
+          dy = y < -0.1 ? 0.03 : -0.03;
           dz = 0.01;
         }
       } else if (shapeName === 'mouthFunnel') {
@@ -266,7 +306,7 @@ export function createTestAvatar(): LoadedAvatar {
   const neckGeo = new THREE.CylinderGeometry(0.09, 0.11, 0.22, 32);
   const neckMesh = new THREE.Mesh(neckGeo, skinMaterial);
   neckMesh.name = 'Avatar_Neck';
-  neckMesh.position.set(0, -0.20, -0.01);
+  neckMesh.position.set(0, -0.2, -0.01);
   neckMesh.receiveShadow = true;
   root.add(neckMesh);
 

@@ -66,7 +66,7 @@ const FUNCTIONAL_ALLOWLIST: readonly AllowEntry[] = [
   {
     file: 'src/lipsync/viseme-mappings.ts',
     pattern: /^\s*case '[A-Z\u0104\u0106\u0118\u0141\u0143\u00D3\u015A\u0179\u017B]+':/,
-    why: '1.2 class 1: PL phoneme case labels (case \'DZ-with-diacritic\':)',
+    why: "1.2 class 1: PL phoneme case labels (case 'DZ-with-diacritic':)",
   },
   {
     file: 'src/lipsync/viseme-mappings.ts',
@@ -80,7 +80,8 @@ const FUNCTIONAL_ALLOWLIST: readonly AllowEntry[] = [
   },
   {
     file: 'src/lipsync/viseme-overrides.ts',
-    pattern: /^\s*\{ key: '[A-Z\u0104\u0106\u0118\u0141\u0143\u00D3\u015A\u0179\u017B]+', label: '[^'\u0105\u0107\u0119\u0142\u0144\u00F3\u015B\u017A\u017C]*'/,
+    pattern:
+      /^\s*\{ key: '[A-Z\u0104\u0106\u0118\u0141\u0143\u00D3\u015A\u0179\u017B]+', label: '[^'\u0105\u0107\u0119\u0142\u0144\u00F3\u015B\u017A\u017C]*'/,
     why: '1.2 class 1 (added in 12-06): viseme-editor rows keyed by PL letters; English label, uppercase PL letters only',
   },
   {
@@ -205,14 +206,9 @@ function gateBFiles(): string[] {
   const planningRoot = readdirSync(join(ROOT, '.planning'))
     .filter((name) => name.endsWith('.md'))
     .map((name) => `.planning/${name}`);
-  return [
-    ...listFiles('docs', ['.md']),
-    'README.md',
-    'ARCHITECTURE.md',
-    'TODO_humanInTheLoop.md',
-    'a2f/README.md',
-    ...planningRoot,
-  ].filter((f) => existsSync(join(ROOT, f)));
+  return [...listFiles('docs', ['.md']), 'README.md', 'ARCHITECTURE.md', 'TODO_humanInTheLoop.md', 'a2f/README.md', ...planningRoot].filter(
+    (f) => existsSync(join(ROOT, f))
+  );
 }
 
 const MD_LINK_RE = /\[[^\]]*\]\(([^)\s]+)(?:\s+"[^"]*")?\)/g;
@@ -262,7 +258,9 @@ describe('language gate - mechanics (always on)', () => {
     const stale = FUNCTIONAL_ALLOWLIST.filter((entry) => {
       const abs = join(ROOT, entry.file);
       if (!existsSync(abs)) return true;
-      return !readFileSync(abs, 'utf8').split(/\r?\n/).some((line) => entry.pattern.test(line));
+      return !readFileSync(abs, 'utf8')
+        .split(/\r?\n/)
+        .some((line) => entry.pattern.test(line));
     }).map((entry) => `${entry.file} :: ${entry.pattern.source}`);
     expect(stale).toEqual([]);
   });
@@ -297,7 +295,7 @@ describe.each(GATE_A_SCOPES.filter((scope) => scope.enforced).map((scope) => [sc
     it('contains no Polish diacritics outside the functional allowlist', () => {
       expect(diacriticViolations(scope.files())).toEqual([]);
     });
-  },
+  }
 );
 
 describe('Gate B - relative .md link integrity', () => {

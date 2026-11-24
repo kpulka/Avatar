@@ -50,9 +50,7 @@ export const DIR_LAYER: Readonly<Record<string, Layer>> = {
  * `importableBy` further restricts who may import a module (by layer); absent = anyone the
  * layer table allows.
  */
-export const MODULE_RULES: Readonly<
-  Record<string, { layer: Layer; importableBy?: readonly Layer[] }>
-> = {
+export const MODULE_RULES: Readonly<Record<string, { layer: Layer; importableBy?: readonly Layer[] }>> = {
   'main.ts': { layer: 'entry' },
   // contracts: importable by features and ui (and the root)
   'app/app-types.ts': { layer: 'app-contracts' },
@@ -84,10 +82,7 @@ export const LAYER_MAY_IMPORT: Readonly<Record<Layer, readonly Layer[]>> = {
   // ui -> scene is one edge (scene-panel -> scene/skin-shader: the SSS toggle reaches that
   // module's state directly, not through AppServices).
   ui: ['types', 'scene', 'lipsync', 'app-contracts'],
-  'app-root': [
-    'types', 'core', 'scene', 'prod', 'realism', 'avatar', 'audio', 'lipsync',
-    'app-contracts', 'features', 'ui',
-  ],
+  'app-root': ['types', 'core', 'scene', 'prod', 'realism', 'avatar', 'audio', 'lipsync', 'app-contracts', 'features', 'ui'],
   entry: ['app-root', 'ui'],
 };
 
@@ -109,13 +104,19 @@ export const EXCEPTIONS: readonly { from: string; to: string; reason: string }[]
 
 /** Directories whose modules must not touch DOM / storage globals at module top level (ARCH-06). */
 export const SIDE_EFFECT_FREE_DIRS: readonly string[] = [
-  'types', 'core', 'scene', 'prod', 'realism', 'avatar', 'audio', 'lipsync', 'features',
+  'types',
+  'core',
+  'scene',
+  'prod',
+  'realism',
+  'avatar',
+  'audio',
+  'lipsync',
+  'features',
 ];
 
 /** Globals that are forbidden at module top level in SIDE_EFFECT_FREE_DIRS. */
-export const SIDE_EFFECT_GLOBALS: readonly string[] = [
-  'document', 'window', 'localStorage', 'sessionStorage', 'navigator', 'location',
-];
+export const SIDE_EFFECT_GLOBALS: readonly string[] = ['document', 'window', 'localStorage', 'sessionStorage', 'navigator', 'location'];
 
 /** Top-level uses that were reviewed and are intentional: 'path:global' -> reason. Empty = none needed. */
 export const SIDE_EFFECT_EXEMPTIONS: Readonly<Record<string, string>> = {};

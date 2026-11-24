@@ -45,7 +45,7 @@ export type CalibrationPresetName = 'subtle' | 'balanced' | 'expressive';
 export const CALIBRATION_PRESETS: Record<CalibrationPresetName, CalibrationProfile> = {
   subtle: {
     jawScale: 0.85,
-    closeScale: 0.50, // MetaPerson: a high mouthClose pulls the lower lip onto the nose — keep it low
+    closeScale: 0.5, // MetaPerson: a high mouthClose pulls the lower lip onto the nose — keep it low
     puckerScale: 0.85,
     funnelScale: 0.85,
     rollScale: 0.85,
@@ -57,13 +57,13 @@ export const CALIBRATION_PRESETS: Record<CalibrationPresetName, CalibrationProfi
     clockVersion: SYNC_CLOCK_VERSION,
   },
   balanced: {
-    jawScale: 1.00,
-    closeScale: 0.60, // safe M/B/P closure — no "lip on the nose" deformation
-    puckerScale: 1.00,
-    funnelScale: 1.00,
-    rollScale: 1.00,
-    teethExposureScale: 1.00,
-    smileScale: 1.00,
+    jawScale: 1.0,
+    closeScale: 0.6, // safe M/B/P closure — no "lip on the nose" deformation
+    puckerScale: 1.0,
+    funnelScale: 1.0,
+    rollScale: 1.0,
+    teethExposureScale: 1.0,
+    smileScale: 1.0,
     coarticulationSpeed: 30,
     // Residual A/V offset after audible-clock compensation (Phase 11.2 D-6); was a stand-in for output latency.
     syncOffsetMs: 30,
@@ -71,7 +71,7 @@ export const CALIBRATION_PRESETS: Record<CalibrationPresetName, CalibrationProfi
   },
   expressive: {
     jawScale: 1.15,
-    closeScale: 0.70,
+    closeScale: 0.7,
     puckerScale: 1.15,
     funnelScale: 1.15,
     rollScale: 1.15,

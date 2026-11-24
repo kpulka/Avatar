@@ -15,16 +15,7 @@ class MockFaceDriver implements FaceDriver {
     this.appliedWeights[shape] = weight;
   }
   public listAvailableShapes(): string[] {
-    return [
-      'jawOpen',
-      'mouthClose',
-      'mouthFunnel',
-      'mouthPucker',
-      'mouthSmileLeft',
-      'mouthSmileRight',
-      'eyeBlinkLeft',
-      'eyeBlinkRight',
-    ];
+    return ['jawOpen', 'mouthClose', 'mouthFunnel', 'mouthPucker', 'mouthSmileLeft', 'mouthSmileRight', 'eyeBlinkLeft', 'eyeBlinkRight'];
   }
   public getSpeechMeshes(): never[] {
     return [];
@@ -143,9 +134,7 @@ describe('FaceController tryb frames (kontrakt v2)', () => {
   });
 
   it('clamps mouthClose to 0.85 (MetaPerson safety)', () => {
-    const clip = clipOf([
-      { timeSec: 0.0, weights: { mouthClose: 1.0, jawOpen: 0.05 } },
-    ]);
+    const clip = clipOf([{ timeSec: 0.0, weights: { mouthClose: 1.0, jawOpen: 0.05 } }]);
     engine.ctx.currentTime = 0.0;
     engine.hasPending = true;
     controller.feedFrames(clip, 0.0, 0);

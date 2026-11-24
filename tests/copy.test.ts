@@ -29,12 +29,16 @@ afterEach(() => {
 
 describe('copy registry (English UI strings)', () => {
   it('every slot has a non-empty value', () => {
-    const empty = Object.entries(COPY).filter(([, value]) => value.trim() === '').map(([slot]) => slot);
+    const empty = Object.entries(COPY)
+      .filter(([, value]) => value.trim() === '')
+      .map(([slot]) => slot);
     expect(empty).toEqual([]);
   });
 
   it('no slot value contains Polish diacritics (Polish test phrase is data, not copy)', () => {
-    const offenders = Object.entries(COPY).filter(([, value]) => PL_DIACRITICS.test(value)).map(([slot]) => slot);
+    const offenders = Object.entries(COPY)
+      .filter(([, value]) => PL_DIACRITICS.test(value))
+      .map(([slot]) => slot);
     expect(offenders).toEqual([]);
   });
 
@@ -57,9 +61,7 @@ describe('copy registry (English UI strings)', () => {
   it('interpolates {param} markers and leaves unknown markers intact', () => {
     expect(t('algo.resultPredictMs', { ms: 1234 })).toBe('predict 1234 ms');
     expect(t('session.alignFallback', { el: 3, fb: 2 })).toBe('ALIGN: FALLBACK ⚠ (3/2)');
-    expect(t('scene.modelInfo', { name: 'avatar', shapes: 51, meshes: 4 })).toBe(
-      'Model: avatar · shapes: 51 · speech meshes: 4'
-    );
+    expect(t('scene.modelInfo', { name: 'avatar', shapes: 51, meshes: 4 })).toBe('Model: avatar · shapes: 51 · speech meshes: 4');
     expect(t('settings.lockTooltip')).toBe('Locked by studio ({key})');
   });
 
@@ -69,7 +71,7 @@ describe('copy registry (English UI strings)', () => {
     expect(warn).toHaveBeenCalledTimes(1);
   });
 
-  it('every slot referenced as t(\'...\') literal in src/ resolves (no dangling slot ids)', () => {
+  it("every slot referenced as t('...') literal in src/ resolves (no dangling slot ids)", () => {
     const missing: string[] = [];
     const re = /\bt\('([A-Za-z0-9_.-]+)'/g;
     for (const file of listTs('src')) {
@@ -85,14 +87,16 @@ describe('copy registry (English UI strings)', () => {
     const files = [...listTs('src/ui'), ...listTs('src/features'), join(ROOT, 'index.html')];
     const offenders: string[] = [];
     for (const file of files) {
-      readFileSync(file, 'utf8').split(/\r?\n/).forEach((line, idx) => {
-        if (!PL_DIACRITICS.test(line)) return;
-        if (/^\s*(\/\/|\*|\/\*)/.test(line)) return; // comment lines: covered by 12-06 / Gate A
-        if (/\bconsole\.(log|warn|error)\b/.test(line)) return; // developer strings: covered by 12-06
-        if (file.endsWith('animation-controller.ts') && /Dzie\u0144 dobry!/.test(line)) return; // functional data (PL calibration phrase)
-        if (file.endsWith('viseme-overrides.ts')) return;
-        offenders.push(`${file.slice(ROOT.length)}:${idx + 1}`);
-      });
+      readFileSync(file, 'utf8')
+        .split(/\r?\n/)
+        .forEach((line, idx) => {
+          if (!PL_DIACRITICS.test(line)) return;
+          if (/^\s*(\/\/|\*|\/\*)/.test(line)) return; // comment lines: covered by 12-06 / Gate A
+          if (/\bconsole\.(log|warn|error)\b/.test(line)) return; // developer strings: covered by 12-06
+          if (file.endsWith('animation-controller.ts') && /Dzie\u0144 dobry!/.test(line)) return; // functional data (PL calibration phrase)
+          if (file.endsWith('viseme-overrides.ts')) return;
+          offenders.push(`${file.slice(ROOT.length)}:${idx + 1}`);
+        });
     }
     expect(offenders).toEqual([]);
   });
@@ -107,38 +111,154 @@ describe('copy registry (English UI strings)', () => {
  * The gate is "every Phase 15 slot exists", not "COPY has exactly N keys".
  */
 const PHASE15_SLOTS = [
-  'brand.title', 'status.idle', 'status.listening', 'status.speaking', 'status.thinking',
-  'dock.start', 'dock.end', 'dock.mute', 'dock.unmute', 'dock.muteAria', 'dock.unmuteAria',
-  'dock.interrupt', 'dock.interruptAria', 'captions.you', 'captions.agent', 'captions.empty',
-  'algo.segmentAria', 'algo.compare', 'algo.blind', 'algo.empty', 'algo.predicting', 'algo.playingA',
-  'algo.playingB', 'algo.resultOrder', 'algo.orderLiveFirst', 'algo.orderA2fFirst', 'algo.result',
-  'algo.resultPredictMs', 'algo.resultFrames', 'algo.partialWarning', 'algo.cancelled',
-  'settings.title', 'settings.volumeLabel', 'settings.micLabel', 'settings.defaultDevice',
-  'settings.themeLabel', 'settings.themeDark', 'settings.themeLight', 'settings.presetLabel',
-  'settings.lockTooltip', 'presentation.show', 'presentation.showAria', 'loader.default', 'loader.model',
-  'toast.conversationEnded', 'toast.conversationStarting', 'toast.connectionError', 'toast.micMuted',
-  'toast.micUnmuted', 'toast.bargeIn', 'toast.agentChanged', 'poc.start', 'poc.interrupt1',
-  'poc.interrupt2', 'poc.done', 'poc.transcriptUser', 'compare.failedToast', 'compare.a2fDownToast',
-  'studio.title', 'studio.subtitle', 'studio.tabsAria', 'studio.closeAria', 'studio.leftOpenAria',
-  'studio.leftCloseAria', 'panel.errorTitle', 'panel.retry', 'session.agentTitle', 'session.agentPlaceholder',
-  'session.agentSave', 'session.agentEmptyError', 'session.audioTitle', 'session.telemetryTitle',
-  'session.alignEl', 'session.alignFallback', 'session.locksTitle', 'session.lockLabel',
-  'session.profileTitle', 'session.exportProfile', 'session.importProfile', 'session.exported',
-  'session.imported', 'session.importRejected', 'session.exportFailed', 'session.importFailed',
-  'session.stress', 'scene.modelTitle', 'scene.modelNone', 'scene.modelInfo', 'scene.loadDemo',
-  'scene.generatingDemo', 'scene.demoError', 'scene.chooseGlb', 'scene.loadingFile', 'scene.fileError',
-  'scene.presetsTitle', 'scene.presetsHint', 'scene.sssLabel', 'animation.engineLabel', 'animation.engineHint',
-  'animation.sourceLabel', 'animation.sourceViseme', 'animation.sourceFrames', 'animation.sourceHint',
-  'animation.presetsTitle', 'animation.phonemesTitle', 'animation.phrasePl', 'animation.phraseEn',
-  'animation.demoA2f', 'animation.geometryTitle', 'animation.dynamicsTitle', 'animation.save', 'animation.reset',
-  'animation.savedToast', 'animation.resetToast', 'a2f.urlTitle', 'a2f.urlPlaceholder', 'a2f.save',
-  'a2f.urlInvalid', 'a2f.urlSaved', 'a2f.checkStatus', 'a2f.statusIdle', 'a2f.statusChecking',
-  'a2f.statusOk', 'a2f.statusDown', 'a2f.demoTitle', 'a2f.demo', 'a2f.stats', 'visemes.groupEn',
-  'visemes.groupChar', 'visemes.searchPlaceholder', 'visemes.pickViseme', 'visemes.stateDefault',
-  'visemes.stateOverride', 'visemes.noMatches', 'visemes.resetKey', 'visemes.resetAll', 'visemes.hint',
-  'inspector.searchPlaceholder', 'inspector.resetAll', 'inspector.mirror', 'inspector.mirrorHint',
-  'scenePreset.studio-dark', 'scenePreset.studio-soft', 'scenePreset.cinema', 'scenePreset.light',
-  'webgl.title', 'webgl.body', 'webgl.subtext',
+  'brand.title',
+  'status.idle',
+  'status.listening',
+  'status.speaking',
+  'status.thinking',
+  'dock.start',
+  'dock.end',
+  'dock.mute',
+  'dock.unmute',
+  'dock.muteAria',
+  'dock.unmuteAria',
+  'dock.interrupt',
+  'dock.interruptAria',
+  'captions.you',
+  'captions.agent',
+  'captions.empty',
+  'algo.segmentAria',
+  'algo.compare',
+  'algo.blind',
+  'algo.empty',
+  'algo.predicting',
+  'algo.playingA',
+  'algo.playingB',
+  'algo.resultOrder',
+  'algo.orderLiveFirst',
+  'algo.orderA2fFirst',
+  'algo.result',
+  'algo.resultPredictMs',
+  'algo.resultFrames',
+  'algo.partialWarning',
+  'algo.cancelled',
+  'settings.title',
+  'settings.volumeLabel',
+  'settings.micLabel',
+  'settings.defaultDevice',
+  'settings.themeLabel',
+  'settings.themeDark',
+  'settings.themeLight',
+  'settings.presetLabel',
+  'settings.lockTooltip',
+  'presentation.show',
+  'presentation.showAria',
+  'loader.default',
+  'loader.model',
+  'toast.conversationEnded',
+  'toast.conversationStarting',
+  'toast.connectionError',
+  'toast.micMuted',
+  'toast.micUnmuted',
+  'toast.bargeIn',
+  'toast.agentChanged',
+  'poc.start',
+  'poc.interrupt1',
+  'poc.interrupt2',
+  'poc.done',
+  'poc.transcriptUser',
+  'compare.failedToast',
+  'compare.a2fDownToast',
+  'studio.title',
+  'studio.subtitle',
+  'studio.tabsAria',
+  'studio.closeAria',
+  'studio.leftOpenAria',
+  'studio.leftCloseAria',
+  'panel.errorTitle',
+  'panel.retry',
+  'session.agentTitle',
+  'session.agentPlaceholder',
+  'session.agentSave',
+  'session.agentEmptyError',
+  'session.audioTitle',
+  'session.telemetryTitle',
+  'session.alignEl',
+  'session.alignFallback',
+  'session.locksTitle',
+  'session.lockLabel',
+  'session.profileTitle',
+  'session.exportProfile',
+  'session.importProfile',
+  'session.exported',
+  'session.imported',
+  'session.importRejected',
+  'session.exportFailed',
+  'session.importFailed',
+  'session.stress',
+  'scene.modelTitle',
+  'scene.modelNone',
+  'scene.modelInfo',
+  'scene.loadDemo',
+  'scene.generatingDemo',
+  'scene.demoError',
+  'scene.chooseGlb',
+  'scene.loadingFile',
+  'scene.fileError',
+  'scene.presetsTitle',
+  'scene.presetsHint',
+  'scene.sssLabel',
+  'animation.engineLabel',
+  'animation.engineHint',
+  'animation.sourceLabel',
+  'animation.sourceViseme',
+  'animation.sourceFrames',
+  'animation.sourceHint',
+  'animation.presetsTitle',
+  'animation.phonemesTitle',
+  'animation.phrasePl',
+  'animation.phraseEn',
+  'animation.demoA2f',
+  'animation.geometryTitle',
+  'animation.dynamicsTitle',
+  'animation.save',
+  'animation.reset',
+  'animation.savedToast',
+  'animation.resetToast',
+  'a2f.urlTitle',
+  'a2f.urlPlaceholder',
+  'a2f.save',
+  'a2f.urlInvalid',
+  'a2f.urlSaved',
+  'a2f.checkStatus',
+  'a2f.statusIdle',
+  'a2f.statusChecking',
+  'a2f.statusOk',
+  'a2f.statusDown',
+  'a2f.demoTitle',
+  'a2f.demo',
+  'a2f.stats',
+  'visemes.groupEn',
+  'visemes.groupChar',
+  'visemes.searchPlaceholder',
+  'visemes.pickViseme',
+  'visemes.stateDefault',
+  'visemes.stateOverride',
+  'visemes.noMatches',
+  'visemes.resetKey',
+  'visemes.resetAll',
+  'visemes.hint',
+  'inspector.searchPlaceholder',
+  'inspector.resetAll',
+  'inspector.mirror',
+  'inspector.mirrorHint',
+  'scenePreset.studio-dark',
+  'scenePreset.studio-soft',
+  'scenePreset.cinema',
+  'scenePreset.light',
+  'webgl.title',
+  'webgl.body',
+  'webgl.subtext',
 ];
 
 describe('Phase 15 copy contract', () => {

@@ -17,8 +17,20 @@ class MockDriver implements FaceDriver {
     this.appliedWeights[shape] = weight;
   }
   public listAvailableShapes(): string[] {
-    return ['jawOpen', 'mouthSmileLeft', 'mouthSmileRight', 'cheekSquintLeft', 'cheekSquintRight',
-      'browInnerUp', 'browDownLeft', 'browDownRight', 'eyeWideLeft', 'eyeWideRight', 'eyeBlinkLeft', 'eyeBlinkRight'];
+    return [
+      'jawOpen',
+      'mouthSmileLeft',
+      'mouthSmileRight',
+      'cheekSquintLeft',
+      'cheekSquintRight',
+      'browInnerUp',
+      'browDownLeft',
+      'browDownRight',
+      'eyeWideLeft',
+      'eyeWideRight',
+      'eyeBlinkLeft',
+      'eyeBlinkRight',
+    ];
   }
   public getSpeechMeshes(): never[] {
     return [];
@@ -88,11 +100,7 @@ describe('emotion mix parity (16-02: one policy for both tracks)', () => {
     const { driver, controller } = build();
     controller.setEmotion('happy');
     controller.setAnimationMode('frames');
-    controller.feedFrames(
-      { shapes: ['jawOpen'], fps: 60, frames: [{ timeSec: 0, weights: { jawOpen: 0.3 } }], carriesEyes: false },
-      0,
-      0
-    );
+    controller.feedFrames({ shapes: ['jawOpen'], fps: 60, frames: [{ timeSec: 0, weights: { jawOpen: 0.3 } }], carriesEyes: false }, 0, 0);
     controller.render(0.5);
     expect(driver.appliedWeights['mouthSmileLeft']).toBeCloseTo(0.22 * 0.3, 9);
     expect(driver.appliedWeights['cheekSquintLeft']).toBeCloseTo(0.12 * 0.3, 9);

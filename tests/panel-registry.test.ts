@@ -1,10 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import {
-  PanelContext,
-  PanelDefinition,
-  PanelHandle,
-  PanelRegistry,
-} from '../src/ui/studio/panel-registry';
+import { PanelContext, PanelDefinition, PanelHandle, PanelRegistry } from '../src/ui/studio/panel-registry';
 
 function fakeContext(container: unknown): PanelContext {
   const noopHandle = () => ({ show: vi.fn(), hide: vi.fn(), destroy: vi.fn() });
@@ -21,11 +16,7 @@ function fakeContext(container: unknown): PanelContext {
   };
 }
 
-function makeDefinition(
-  id: string,
-  visibleIn: 'user' | 'studio',
-  mountImpl: (ctx: PanelContext) => PanelHandle
-): PanelDefinition {
+function makeDefinition(id: string, visibleIn: 'user' | 'studio', mountImpl: (ctx: PanelContext) => PanelHandle): PanelDefinition {
   return {
     id,
     title: `Panel ${id}`,
@@ -50,10 +41,7 @@ describe('PanelRegistry', () => {
     const registry = new PanelRegistry();
     const firstDestroy = vi.fn();
     const secondDestroy = vi.fn();
-    const mount = vi
-      .fn()
-      .mockReturnValueOnce({ destroy: firstDestroy })
-      .mockReturnValueOnce({ destroy: secondDestroy });
+    const mount = vi.fn().mockReturnValueOnce({ destroy: firstDestroy }).mockReturnValueOnce({ destroy: secondDestroy });
     registry.register(makeDefinition('a', 'studio', mount));
 
     const ctx = fakeContext({});

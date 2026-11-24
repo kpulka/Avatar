@@ -28,10 +28,7 @@ export interface RequestOptions {
 const DEFAULT_PREDICT_TIMEOUT_MS = 60_000;
 const STATUS_TIMEOUT_MS = 2_000;
 
-function combineTimeout(
-  timeoutMs: number,
-  external?: AbortSignal
-): { controller: AbortController; cleanup: () => void } {
+function combineTimeout(timeoutMs: number, external?: AbortSignal): { controller: AbortController; cleanup: () => void } {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(new Error('A2F: timeout')), timeoutMs);
   const onExternalAbort = () => controller.abort(external?.reason ?? new Error('A2F: cancelled'));
@@ -71,21 +68,14 @@ export async function fetchA2fStatus(baseUrl: string, opts?: RequestOptions): Pr
  * POST /predict — wav → FramesClip (via the parser). Measures predictMs.
  * Abort (barge-in/interruption) and timeout throw a readable error.
  */
-export async function predictFrames(
-  baseUrl: string,
-  wavBlob: Blob,
-  opts?: RequestOptions
-): Promise<PredictFramesResult> {
+export async function predictFrames(baseUrl: string, wavBlob: Blob, opts?: RequestOptions): Promise<PredictFramesResult> {
   const clean = (baseUrl || '').replace(/\/+$/, '');
   const started = performance.now();
 
   const form = new FormData();
   form.append('file', wavBlob, 'speech.wav');
 
-  const { controller, cleanup } = combineTimeout(
-    opts?.timeoutMs ?? DEFAULT_PREDICT_TIMEOUT_MS,
-    opts?.signal
-  );
+  const { controller, cleanup } = combineTimeout(opts?.timeoutMs ?? DEFAULT_PREDICT_TIMEOUT_MS, opts?.signal);
   try {
     const res = await fetch(`${clean}/predict`, {
       method: 'POST',

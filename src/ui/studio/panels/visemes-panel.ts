@@ -4,12 +4,7 @@
  */
 import { PanelContext, PanelDefinition, PanelHandle } from '../panel-registry';
 import { el, uid } from '../../shared/dom';
-import {
-  VISEME_GROUPS,
-  EDITOR_SHAPES,
-  defaultVisemeShapes,
-  VisemeOverrideMap,
-} from '../../../lipsync/viseme-overrides';
+import { VISEME_GROUPS, EDITOR_SHAPES, defaultVisemeShapes, VisemeOverrideMap } from '../../../lipsync/viseme-overrides';
 import { t } from '../../../app/copy';
 
 interface ShapeControl {

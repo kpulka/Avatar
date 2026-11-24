@@ -85,9 +85,7 @@ export function normalizeAlignmentPayload(payload: unknown): CharAlignment | nul
   return {
     chars: chars,
     char_start_times_ms: startTimes.map((s) => Math.max(0, s)),
-    char_durations_ms: hasFullDurations
-      ? durations.map((d) => Math.max(0, d))
-      : (chars).map(() => FLAT_DURATION_MS),
+    char_durations_ms: hasFullDurations ? durations.map((d) => Math.max(0, d)) : chars.map(() => FLAT_DURATION_MS),
     source: 'elevenlabs',
   };
 }

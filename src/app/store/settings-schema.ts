@@ -8,12 +8,7 @@
  *   prototype pollution and DoS via import (ASVS L1, T-11-01/T-11-02),
  * - no dead microphone-sensitivity field (removed in F11, UI-05).
  */
-import {
-  CalibrationProfile,
-  DEFAULT_CALIBRATION_PROFILE,
-  LEGACY_SYNC_OFFSETS,
-  SYNC_CLOCK_VERSION,
-} from '../../lipsync/calibration';
+import { CalibrationProfile, DEFAULT_CALIBRATION_PROFILE, LEGACY_SYNC_OFFSETS, SYNC_CLOCK_VERSION } from '../../lipsync/calibration';
 import { VisemeOverrideMap } from '../../lipsync/viseme-overrides';
 import { DEFAULT_LIP_SYNC_ENGINE, LipSyncEngine, parseLipSyncEngine } from '../../lipsync/lipsync-engine';
 import { DEFAULT_AGENT_CONFIG } from '../../audio/agent-config';

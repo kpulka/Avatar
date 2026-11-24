@@ -81,12 +81,7 @@ export function createScenePanel(): PanelDefinition {
             store.setUser('scenePresetManual', true);
             services.scenePresets.apply(preset.id);
           });
-          presetList.append(
-            el('label', { className: 'engine-toggle' }, [
-              radio,
-              el('span', { text: preset.label }),
-            ])
-          );
+          presetList.append(el('label', { className: 'engine-toggle' }, [radio, el('span', { text: preset.label })]));
         }
       }
 

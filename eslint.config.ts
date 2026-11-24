@@ -29,9 +29,7 @@ const SRC = join(ROOT, 'src');
 function resolveModule(fromModule: string, spec: string): string | undefined {
   if (!spec.startsWith('.') || /\.(css|json|svg|png|glb)$/.test(spec)) return undefined;
   const base = posix.normalize(posix.join(posix.dirname(fromModule), spec));
-  return [`${base}.ts`, `${base}/index.ts`, base].find(
-    (candidate) => candidate.endsWith('.ts') && existsSync(join(SRC, candidate)),
-  );
+  return [`${base}.ts`, `${base}/index.ts`, base].find((candidate) => candidate.endsWith('.ts') && existsSync(join(SRC, candidate)));
 }
 
 const importLayers: Rule.RuleModule = {
@@ -80,10 +78,7 @@ export default defineConfig(
       // one cannot appear silently (`npm run lint` runs with --max-warnings 0).
       'no-console': ['warn', { allow: ['warn', 'error'] }],
       // The usual convention: a leading underscore marks a deliberately unused parameter / catch binding.
-      '@typescript-eslint/no-unused-vars': [
-        'error',
-        { argsIgnorePattern: '^_', varsIgnorePattern: '^_', caughtErrorsIgnorePattern: '^_' },
-      ],
+      '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_', varsIgnorePattern: '^_', caughtErrorsIgnorePattern: '^_' }],
     },
   },
   {
@@ -97,5 +92,5 @@ export default defineConfig(
     files: ['src/**/*.ts'],
     plugins: { layering: { rules: { 'import-layers': importLayers } } },
     rules: { 'layering/import-layers': 'error' },
-  },
+  }
 );

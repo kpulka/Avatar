@@ -6,8 +6,18 @@ import { AudioEngine } from '../src/audio/audio-engine';
 import { defined } from './helpers/defined';
 
 const SHAPES = [
-  'jawOpen', 'mouthClose', 'mouthFunnel', 'mouthPucker', 'mouthSmileLeft', 'mouthSmileRight',
-  'mouthPressLeft', 'cheekSquintLeft', 'browInnerUp', 'eyeWideLeft', 'eyeBlinkLeft', 'eyeBlinkRight',
+  'jawOpen',
+  'mouthClose',
+  'mouthFunnel',
+  'mouthPucker',
+  'mouthSmileLeft',
+  'mouthSmileRight',
+  'mouthPressLeft',
+  'cheekSquintLeft',
+  'browInnerUp',
+  'eyeWideLeft',
+  'eyeBlinkLeft',
+  'eyeBlinkRight',
 ];
 
 class CountingDriver implements FaceDriver {
@@ -34,10 +44,28 @@ const engine = { ctx: { currentTime: 0 }, getEpoch: () => 0, hasPendingAudio: ()
 /** Fixed char -> pose mapper: independent of the viseme tables (Phase 17 owns those). */
 function fixedMapper(_chars: string[], i: number): Map<string, number> {
   switch (i % 4) {
-    case 0: return new Map([['jawOpen', 0.6], ['mouthSmileLeft', 0.3]]);
-    case 1: return new Map([['mouthClose', 0.5], ['mouthPressLeft', 0.3], ['jawOpen', 0.1]]);
-    case 2: return new Map([['mouthFunnel', 0.5], ['mouthPucker', 0.4]]);
-    default: return new Map([['mouthSmileLeft', 0.4], ['mouthSmileRight', 0.4], ['cheekSquintLeft', 0.2]]);
+    case 0:
+      return new Map([
+        ['jawOpen', 0.6],
+        ['mouthSmileLeft', 0.3],
+      ]);
+    case 1:
+      return new Map([
+        ['mouthClose', 0.5],
+        ['mouthPressLeft', 0.3],
+        ['jawOpen', 0.1],
+      ]);
+    case 2:
+      return new Map([
+        ['mouthFunnel', 0.5],
+        ['mouthPucker', 0.4],
+      ]);
+    default:
+      return new Map([
+        ['mouthSmileLeft', 0.4],
+        ['mouthSmileRight', 0.4],
+        ['cheekSquintLeft', 0.2],
+      ]);
   }
 }
 
@@ -188,8 +216,7 @@ describe('hot path is allocation-free (16-05)', () => {
 
   it('(d) RELAXING: zero-to-zero shapes are not written, completion still correct', () => {
     const { driver, controller, setAudible, setWall } = build();
-    controller.onAudioChunk(
-      { chars: ['x'], char_start_times_ms: [0], char_durations_ms: [2000] }, 0, 0);
+    controller.onAudioChunk({ chars: ['x'], char_start_times_ms: [0], char_durations_ms: [2000] }, 0, 0);
     setAudible(0.5);
     for (let i = 0; i < 20; i++) controller.render(1 / 60); // case 0: jawOpen + mouthSmileLeft only
     controller.onInterruption();

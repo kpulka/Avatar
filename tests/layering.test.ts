@@ -30,7 +30,7 @@ const SRC = join(dirname(fileURLToPath(import.meta.url)), '..', 'src');
 
 function walk(dir: string): string[] {
   return readdirSync(dir, { withFileTypes: true }).flatMap((entry) =>
-    entry.isDirectory() ? walk(join(dir, entry.name)) : [join(dir, entry.name)],
+    entry.isDirectory() ? walk(join(dir, entry.name)) : [join(dir, entry.name)]
   );
 }
 
@@ -60,7 +60,9 @@ export function importSpecifiers(fileName: string, text: string): string[] {
 const NON_CODE_TARGET = /\.(css|json|svg|png|glb)$/;
 
 function collectModules(): { files: string[]; edges: Edge[]; unresolved: string[] } {
-  const files = walk(SRC).filter((f) => f.endsWith('.ts') && !f.endsWith('.d.ts')).map(toRel);
+  const files = walk(SRC)
+    .filter((f) => f.endsWith('.ts') && !f.endsWith('.d.ts'))
+    .map(toRel);
   const known = new Set(files);
   const edges: Edge[] = [];
   const unresolved: string[] = [];
@@ -110,9 +112,18 @@ export function topLevelGlobalUses(fileName: string, text: string): string[] {
   const visit = (node: ts.Node): void => {
     if (ts.isFunctionLike(node) || ts.isClassLike(node)) return; // bodies run later, not at load
     if (ts.isTypeNode(node) || ts.isTypeOfExpression(node)) return; // `typeof window` guards / type positions
-    if (ts.isPropertyAccessExpression(node)) { visit(node.expression); return; } // skip the member name
-    if (ts.isPropertyAssignment(node)) { visit(node.initializer); return; } // skip the property key
-    if (ts.isVariableDeclaration(node)) { if (node.initializer) visit(node.initializer); return; } // skip the binding name
+    if (ts.isPropertyAccessExpression(node)) {
+      visit(node.expression);
+      return;
+    } // skip the member name
+    if (ts.isPropertyAssignment(node)) {
+      visit(node.initializer);
+      return;
+    } // skip the property key
+    if (ts.isVariableDeclaration(node)) {
+      if (node.initializer) visit(node.initializer);
+      return;
+    } // skip the binding name
     if (ts.isIdentifier(node) && SIDE_EFFECT_GLOBALS.includes(node.text)) found.add(node.text);
     ts.forEachChild(node, visit);
   };
@@ -158,7 +169,10 @@ describe('layering gate: import contract (14-02)', () => {
   it('every exception is documented with a reason and still matches a real edge', () => {
     for (const exception of EXCEPTIONS) {
       expect(exception.reason.length, exception.from).toBeGreaterThan(40);
-      expect(edges.some((e) => e.from === exception.from && e.to === exception.to), `stale exception ${exception.from} -> ${exception.to}`).toBe(true);
+      expect(
+        edges.some((e) => e.from === exception.from && e.to === exception.to),
+        `stale exception ${exception.from} -> ${exception.to}`
+      ).toBe(true);
     }
     expect(EXCEPTIONS).toHaveLength(1);
   });
@@ -242,7 +256,7 @@ describe('layering gate: negative self-tests', () => {
         "import './side';",
         "const lazy = () => import('./lazy');",
         "import * as THREE from 'three';",
-      ].join('\n'),
+      ].join('\n')
     );
     expect(specs).toEqual(['./a', '../b', './c', './d', './side', './lazy']);
   });

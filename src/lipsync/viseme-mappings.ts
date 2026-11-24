@@ -62,12 +62,12 @@ function tryMapDigraph(c1: string, c2: string, context?: CharContext): Map<strin
     case 'CZ':
       return new Map([
         ['jawOpen', 0.14],
-        ['mouthFunnel', 0.60],
+        ['mouthFunnel', 0.6],
         ['mouthPucker', 0.25],
         ['mouthUpperUpLeft', 0.22],
         ['mouthUpperUpRight', 0.22],
-        ['mouthLowerDownLeft', 0.20],
-        ['mouthLowerDownRight', 0.20],
+        ['mouthLowerDownLeft', 0.2],
+        ['mouthLowerDownRight', 0.2],
       ]);
     case 'RZ':
     case 'DŻ':
@@ -160,8 +160,8 @@ function mapSingleChar(char: string, nextChar?: string): Map<string, number> {
       return new Map([
         ['jawOpen', 0.12],
         ['mouthRollLower', 0.65],
-        ['mouthUpperUpLeft', 0.50],
-        ['mouthUpperUpRight', 0.50],
+        ['mouthUpperUpLeft', 0.5],
+        ['mouthUpperUpRight', 0.5],
         ['mouthShrugLower', 0.18],
       ]);
 
@@ -309,10 +309,7 @@ export function mapCharToShapes(chars: string[], index: number, context?: CharCo
 }
 
 // Digraphs recognised by mapCharToShapes (EN + PL) — used by the override tokenizer.
-const KNOWN_DIGRAPH_PAIRS = new Set([
-  'SH', 'CH', 'TH', 'PH', 'WH', 'QU', 'NG',
-  'SZ', 'CZ', 'RZ', 'DŻ', 'DZ', 'DŹ', 'SI', 'ZI', 'NI', 'CI',
-]);
+const KNOWN_DIGRAPH_PAIRS = new Set(['SH', 'CH', 'TH', 'PH', 'WH', 'QU', 'NG', 'SZ', 'CZ', 'RZ', 'DŻ', 'DZ', 'DŹ', 'SI', 'ZI', 'NI', 'CI']);
 
 /**
  * Returns the "token" (viseme override key) for the character at the given index:

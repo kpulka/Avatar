@@ -70,11 +70,30 @@ describe('design tokens (src/style.css)', () => {
 
   it('(e) dead selectors from the 15-CONTEXT C1 audit are gone', () => {
     const dead = [
-      '.top-dock', '.dock-left', '.dock-center', '.dock-right', '.brand ', '.brand{',
-      '.telemetry-pill-card', '.pill-header', '.pill-label', '.pill-val', '.pill-fps-badge',
-      '.fps-unit', '.pill-meta', '.pill-buttons', '.status-idle', '.status-loading',
-      '.status-ready', '.status-error', '.align-badge', '.align-el', '.align-fallback',
-      '.modal-buttons', '.select-input', '.btn-presentation',
+      '.top-dock',
+      '.dock-left',
+      '.dock-center',
+      '.dock-right',
+      '.brand ',
+      '.brand{',
+      '.telemetry-pill-card',
+      '.pill-header',
+      '.pill-label',
+      '.pill-val',
+      '.pill-fps-badge',
+      '.fps-unit',
+      '.pill-meta',
+      '.pill-buttons',
+      '.status-idle',
+      '.status-loading',
+      '.status-ready',
+      '.status-error',
+      '.align-badge',
+      '.align-el',
+      '.align-fallback',
+      '.modal-buttons',
+      '.select-input',
+      '.btn-presentation',
     ];
     expect(dead.filter((selector) => CSS.includes(selector))).toEqual([]);
   });

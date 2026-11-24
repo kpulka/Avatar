@@ -45,7 +45,10 @@ describe('EmbedBridge', () => {
   });
 
   it('accepts same-origin parent messages and dispatches callbacks', () => {
-    const onConnect = vi.fn(), onDisconnect = vi.fn(), onInterrupt = vi.fn(), onSay = vi.fn();
+    const onConnect = vi.fn(),
+      onDisconnect = vi.fn(),
+      onInterrupt = vi.fn(),
+      onSay = vi.fn();
     new EmbedBridge({ onConnect, onDisconnect, onInterrupt, onSay }, { devMode: false });
     send(connect, 'https://widget.example');
     send({ type: 'avatar:disconnect' }, 'https://widget.example');

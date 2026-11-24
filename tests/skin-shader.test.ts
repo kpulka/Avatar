@@ -1,12 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
-import {
-  injectSkinSSS,
-  configureEyeCornea,
-  skinLightUniforms,
-  updateSkinLightUniforms,
-  setSkinSSSEnabled,
-} from '../src/scene/skin-shader';
+import { injectSkinSSS, configureEyeCornea, skinLightUniforms, updateSkinLightUniforms, setSkinSSSEnabled } from '../src/scene/skin-shader';
 import { enhanceAvatarMaterials } from '../src/scene/materials';
 import { defined } from './helpers/defined';
 
@@ -93,16 +87,10 @@ describe('Skin Shader & Eye Wetness (REAL-04)', () => {
   it('automatically applies SSS to skin meshes and cornea settings to eye meshes in avatar hierarchy', () => {
     const root = new THREE.Group();
 
-    const headMesh = new THREE.Mesh(
-      new THREE.BufferGeometry(),
-      new THREE.MeshStandardMaterial({ name: 'Head_Mat' })
-    );
+    const headMesh = new THREE.Mesh(new THREE.BufferGeometry(), new THREE.MeshStandardMaterial({ name: 'Head_Mat' }));
     headMesh.name = 'Avatar_Head';
 
-    const eyeMesh = new THREE.Mesh(
-      new THREE.BufferGeometry(),
-      new THREE.MeshStandardMaterial({ name: 'Eye_Mat' })
-    );
+    const eyeMesh = new THREE.Mesh(new THREE.BufferGeometry(), new THREE.MeshStandardMaterial({ name: 'Eye_Mat' }));
     eyeMesh.name = 'Avatar_RightEye';
 
     root.add(headMesh);

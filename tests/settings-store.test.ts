@@ -1,9 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import {
-  DEFAULT_SETTINGS,
-  MAX_VISEME_OVERRIDES,
-  validateSettings,
-} from '../src/app/store/settings-schema';
+import { DEFAULT_SETTINGS, MAX_VISEME_OVERRIDES, validateSettings } from '../src/app/store/settings-schema';
 import { BLOB_KEY, LEGACY_KEYS, migrateLegacy } from '../src/app/store/migrate';
 import { SettingsStore } from '../src/app/store/settings-store';
 import { attachLegacyBridge } from '../src/app/store/legacy-bridge';
@@ -149,7 +145,11 @@ describe('migrateLegacy', () => {
   });
 
   it('maps the legacy lip-sync engine value "phoneme" to "phoneme-en" and keeps the new ids (17-04)', () => {
-    for (const [legacy, expected] of [['phoneme', 'phoneme-en'], ['phoneme-pl', 'phoneme-pl'], ['char', 'char']] as const) {
+    for (const [legacy, expected] of [
+      ['phoneme', 'phoneme-en'],
+      ['phoneme-pl', 'phoneme-pl'],
+      ['char', 'char'],
+    ] as const) {
       const storage = createMemoryStorage({ [LEGACY_KEYS.lipSyncEngine]: legacy });
       expect(migrateLegacy(storage, () => 1)?.studio.lipSyncEngine).toBe(expected);
     }
