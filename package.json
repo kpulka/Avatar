@@ -7,15 +7,16 @@
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
-    "test": "vitest run"
+    "test": "vitest run",
+    "build:dict": "node scripts/build-dict-en.mjs"
   },
   "dependencies": {
     "@elevenlabs/client": "^1.23.0",
-    "cmu-pronouncing-dictionary": "^3.0.0",
     "three": "^0.174.0"
   },
   "devDependencies": {
     "@types/three": "^0.174.0",
+    "cmu-pronouncing-dictionary": "^3.0.0",
     "jsdom": "^29.1.1",
     "typescript": "^5.7.3",
     "vite": "^6.2.0",
