@@ -27,7 +27,7 @@ Before you open a pull request, run locally:
 1. `npm run build` exits 0.
 2. `npm test` exits 0. This includes the language gate in `tests/language.test.ts`, which requires English text in the enforced scopes (README, `docs/`, root documents) and resolves relative `.md` links.
 
-A CI workflow is planned but not in the repository yet. Until it lands, these local runs are the only gates.
+CI (`.github/workflows/ci.yml`) runs `npm ci`, `npm run typecheck`, `npm test` and `npm run build` on every push to `master` and every pull request. Run the same commands locally before you push.
 
 ## Language
 

@@ -98,7 +98,10 @@ npm run build       # tsc (strict, src only) + vite production build
 
 705 tests in 75 files, measured 2026-11-24 with `npx vitest run --dir tests`. `npm run typecheck` also covers the test suite, which the build's `tsc` does not.
 
-<!-- 18-03: CI badge here — [![CI](https://github.com/kpulka/Avatar/actions/workflows/ci.yml/badge.svg)](https://github.com/kpulka/Avatar/actions/workflows/ci.yml) -->
+The workflow in [`.github/workflows/ci.yml`](.github/workflows/ci.yml) runs `npm ci`, `typecheck`, `test` and `build` on Node 22 for every push to `master` and every pull request. Its status:
+
+[![CI](https://github.com/kpulka/Avatar/actions/workflows/ci.yml/badge.svg)](https://github.com/kpulka/Avatar/actions/workflows/ci.yml)
+
 ## License
 
 Copyright (c) 2026 kpulka. All rights reserved. This project is **All Rights Reserved**: no license is granted to use, copy, modify or distribute it. See [LICENSE](LICENSE) for the terms. Commercial use requires written permission from the owner, requested through [github.com/kpulka](https://github.com/kpulka).
