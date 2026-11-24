@@ -149,8 +149,10 @@ export function mergeCharAlignmentToPhonemes(alignment: CharAlignment): PhonemeS
     const wordEndMs = (starts[lastIdx] ?? wordStartMs) + (durations[lastIdx] ?? 0);
     const wordSpanMs = Math.max(0, wordEndMs - wordStartMs);
 
-    const phonemes = wordToPhonemesSync(wordText);
-    if (!phonemes || phonemes.length === 0 || wordSpanMs <= 0) continue;
+    // A run without a single letter (a lone "-" or "'") has no sound: the rules return [''] for it,
+    // which must not become a silent span that eats part of the word window.
+    const phonemes = (wordToPhonemesSync(wordText) ?? []).filter((p) => p !== '');
+    if (phonemes.length === 0 || wordSpanMs <= 0) continue;
 
     const units = toUnits(phonemes);
     const lengths = distributeDurations(units.map((u) => u.weight), wordSpanMs);

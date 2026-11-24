@@ -223,6 +223,14 @@ describe('degenerate alignments (pinned behavior)', () => {
     expect(spans[0].durationMs).toBeCloseTo(80, 6);
   });
 
+  it('a lone hyphen or apostrophe produces no empty-phoneme span', () => {
+    for (const text of ['yes - no', "yes ' no"]) {
+      const spans = mergeCharAlignmentToPhonemes(alignmentFor(text, 100));
+      expect(spans.every((s) => s.phoneme !== '')).toBe(true);
+      expect(spans.map((s) => s.phoneme)).toEqual([...wordToPhonemesSync('yes')!, ...wordToPhonemesSync('no')!]);
+    }
+  });
+
   it('digits only -> no spans, no crash', () => {
     expect(mergeCharAlignmentToPhonemes(alignmentFor('123', 50))).toEqual([]);
   });
