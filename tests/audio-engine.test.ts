@@ -43,7 +43,11 @@ class MockGainNode {
     value: 1,
     setValueAtTime: vi.fn(),
   };
+  public disconnected = false;
   public connect(): void {}
+  public disconnect(): void {
+    this.disconnected = true;
+  }
 }
 
 class MockAudioContext {
@@ -67,6 +71,10 @@ class MockAudioContext {
   public async resume(): Promise<void> {
     this.state = 'running';
   }
+
+  public close = vi.fn(async (): Promise<void> => {
+    this.state = 'closed';
+  });
 }
 
 describe('AudioEngine', () => {
@@ -126,5 +134,46 @@ describe('AudioEngine', () => {
     // Should be ignored
     expect(scheduled).toBe(0);
     expect(engine.getActiveNodesCount()).toBe(0);
+  });
+
+  describe('dispose()', () => {
+    it('stops pending nodes, disconnects the master gain and ignores later chunks', () => {
+      engine.playChunk(new Uint8Array(8820), 44100);
+      expect(engine.getActiveNodesCount()).toBe(1);
+
+      engine.dispose();
+
+      expect(engine.getActiveNodesCount()).toBe(0);
+      expect((engine.masterGain as unknown as MockGainNode).disconnected).toBe(true);
+      expect(engine.playChunk(new Uint8Array(8820), 44100)).toBe(0);
+    });
+
+    it('does not close an injected AudioContext it does not own', () => {
+      engine.dispose();
+      expect(mockCtx.close).not.toHaveBeenCalled();
+    });
+
+    it('closes an AudioContext it created itself, exactly once', () => {
+      const created = new MockAudioContext();
+      class OwnedContext {
+        constructor() {
+          return created;
+        }
+      }
+      vi.stubGlobal('window', { AudioContext: OwnedContext });
+      try {
+        const owning = new AudioEngine();
+        owning.dispose();
+        owning.dispose();
+        expect(created.close).toHaveBeenCalledTimes(1);
+      } finally {
+        vi.unstubAllGlobals();
+      }
+    });
+
+    it('is idempotent', () => {
+      engine.dispose();
+      expect(() => engine.dispose()).not.toThrow();
+    });
   });
 });

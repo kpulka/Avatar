@@ -380,6 +380,8 @@ export function createApp(canvas: HTMLCanvasElement): AppHandle {
       unsubSceneAttr();
       unsubSceneReload();
       embedBridge.dispose();
+      // Closes the AudioContext (created by AudioEngine in this function), exactly once.
+      audioEngine.dispose();
       shell.destroy();
       compareController.dispose();
       lastTurnBuffer.dispose();
@@ -392,9 +394,6 @@ export function createApp(canvas: HTMLCanvasElement): AppHandle {
       environment.dispose();
       loader.dispose();
       renderer.dispose();
-      // The context is created by AudioEngine in this function, so this function owns closing it.
-      // close() rejects when the context is already closed; nothing to do then.
-      void audioEngine.ctx.close().catch(() => undefined);
     },
   };
 }

@@ -13,8 +13,11 @@ export class AudioEngine {
   private activeNodes: AudioBufferSourceNode[] = [];
   private tailTime = 0;
   private epoch = 0;
+  private readonly ownsCtx: boolean;
+  private disposed = false;
 
   constructor(existingCtx?: AudioContext) {
+    this.ownsCtx = !existingCtx;
     if (existingCtx) {
       this.ctx = existingCtx;
     } else {
@@ -39,7 +42,7 @@ export class AudioEngine {
    */
   public playChunk(pcmBytes: Uint8Array, sampleRate = 44100, chunkEpoch = this.epoch): number {
     // If a delayed chunk from the previous utterance arrived (race condition), ignore it
-    if (chunkEpoch !== this.epoch) {
+    if (chunkEpoch !== this.epoch || this.disposed) {
       return 0;
     }
 
@@ -97,6 +100,26 @@ export class AudioEngine {
     this.tailTime = 0;
     // eslint-disable-next-line no-console -- trace log, not a diagnostic: kept as console.log on purpose (warn/error are the diagnostic channels)
     console.log(`[AudioEngine] hardStop() — epoch: ${this.epoch}`);
+  }
+
+  /**
+   * Releases audio resources: stops scheduled nodes, disconnects the master gain and
+   * closes the AudioContext (only when this engine created it). Idempotent.
+   */
+  public dispose(): void {
+    if (this.disposed) return;
+    this.disposed = true;
+
+    this.hardStop();
+    try {
+      this.masterGain.disconnect();
+    } catch {
+      // Already disconnected
+    }
+    if (this.ownsCtx && this.ctx.state !== 'closed') {
+      // close() rejects when the context is already closing; nothing left to release then.
+      void this.ctx.close().catch(() => undefined);
+    }
   }
 
   public hasPendingAudio(): boolean {

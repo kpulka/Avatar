@@ -112,6 +112,10 @@ vi.mock('../src/audio/audio-engine', () => ({
     getTailTime = vi.fn(() => 0);
     getActiveNodesCount = vi.fn(() => 0);
     unlock = vi.fn(async () => undefined);
+    // Like the real engine: it owns the context it created and closes it on dispose.
+    dispose = vi.fn(() => {
+      void this.ctx.close();
+    });
   },
 }));
 vi.mock('../src/audio/speech-backend', () => ({
