@@ -44,7 +44,7 @@ export function createToast(container: HTMLElement, autoHideMs = 5000): ToastHan
         {
           className: `toast ${isError ? '' : 'toast-success'}`.trim(),
           role: isError ? 'alert' : 'status',
-          attrs: { 'aria-atomic': 'true' },
+          attrs: isError ? { 'aria-atomic': 'true' } : { 'aria-atomic': 'true', 'aria-live': 'polite' },
         },
         [el('span', { className: 'toast-message', text: message })]
       );
