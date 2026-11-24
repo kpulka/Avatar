@@ -16,6 +16,7 @@ export const COPY: Readonly<Record<string, string>> = {
   'status.listening': 'Listening…',
   'status.speaking': 'Speaking…',
   'status.thinking': 'Thinking…',
+  'chip.simplifiedLipsync': 'Simplified lip-sync',
   'dock.start': 'Start conversation',
   'dock.end': 'End conversation',
   'dock.mute': 'Mute',

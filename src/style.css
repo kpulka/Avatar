@@ -282,6 +282,7 @@ body, html {
 .voice-listening { color: var(--success); background: var(--success-soft); box-shadow: 0 0 8px var(--success-glow); }
 .voice-speaking { color: var(--accent); background: var(--accent-soft); box-shadow: 0 0 8px var(--accent-glow); }
 .voice-thinking { color: var(--warning); background: var(--warning-soft); }
+.lipsync-chip { color: var(--warning); background: var(--warning-soft); }
 
 .user-status {
   position: fixed;
