@@ -97,7 +97,8 @@ export function createApp(canvas: HTMLCanvasElement): AppHandle {
   const telemetryManager = new TelemetryManager();
 
   const hostRoot = document.getElementById('ui-root') ?? document.getElementById('app') ?? document.body;
-  hostRoot.append(el('div', { className: 'vignette-overlay' }));
+  const vignette = el('div', { className: 'vignette-overlay' });
+  hostRoot.append(vignette);
   const toast = createToast(hostRoot);
   // The retry of an avatar load failure falls back to the synchronous demo avatar (known good).
   const loaderUi = createLoader(hostRoot, {
@@ -382,6 +383,7 @@ export function createApp(canvas: HTMLCanvasElement): AppHandle {
       embedBridge.dispose();
       // Closes the AudioContext (created by AudioEngine in this function), exactly once.
       audioEngine.dispose();
+      vignette.remove();
       shell.destroy();
       compareController.dispose();
       lastTurnBuffer.dispose();

@@ -336,6 +336,13 @@ describe('createApp (container smoke, jsdom)', () => {
     expect(bus.handlerCount()).toBe(1);
   });
 
+  it('dispose() removes the vignette overlay it created', () => {
+    const app = createApp(setupDom());
+    expect(document.querySelectorAll('.vignette-overlay')).toHaveLength(1);
+    app.dispose();
+    expect(document.querySelector('.vignette-overlay')).toBeNull();
+  });
+
   it('dispose() removes the shell and does not throw', () => {
     const app = createApp(setupDom());
     app.start();
