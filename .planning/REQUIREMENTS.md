@@ -247,7 +247,7 @@ Milestone v1.1 (2026-11): publiczne repo jako produkt rekruterski — język ang
 | UIX-01..11 | Phase 15 | Partial: 01-06, 08-11 complete (automated; 02/04 static gates in 15-UIX-STATIC-CHECKS.md, manual UAT pending); 07 manual (zoom/responsive) |
 | ANIM-01..10 | Phase 16 | Complete (automated PASS; manual UAT and behavior sign-off pending) |
 | LIP-01..07 | Phase 17 | LIP-01..06 complete (automated); LIP-07 partial (17-05 UAT deferred) |
-| QUAL-01..08 | Phase 18 | Partial: 01, 03, 04, 05, 08 complete (08: verify gate + cold-export check by the auditor); 02 partial (CI never run on GitHub); 06, 07 pending (18-05, 18-06 blocked) |
+| QUAL-01..08 | Phase 18 | Partial: 01, 03, 04, 05, 08 complete (08: verify gate + cold-export check by the auditor); 02 partial (CI green on draft PR #1, 2026-11-24; green on master after merge still pending); 06, 07 pending (18-05, 18-06 blocked) |
 
 **Coverage:**
 

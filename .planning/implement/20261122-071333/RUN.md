@@ -74,3 +74,4 @@ Drift: the UIX agent applied 44px (REQUIREMENTS UIX-02). `15-DRAFT-ui-spec.md` s
 - **18-05 Pages demo: deferred.** It needs the 11.2-03 clip, and generating that clip spends ElevenLabs quota, which stays an owner action.
 - **LICENSE wording:** left for the owner because it is a legal choice.
 - **CI:** branch pushed and draft PR opened against `master` to get the first GitHub run (ci.yml triggers on pull_request). Not merged.
+- **First GitHub CI run: PASS** (`verify` job on draft PR #1, 2026-11-24). This closes audit M-1 for the PR ref; QUAL-02's "green on master" waits for the merge.
