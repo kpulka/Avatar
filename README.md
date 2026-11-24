@@ -92,10 +92,11 @@ The project uses GSD (Get Shit Done), a spec-driven planning workflow: every pha
 
 ```bash
 npm test            # vitest: unit tests plus the language gate
-npm run build       # tsc (strict) + vite production build
+npm run typecheck   # tsc over src AND tests (tsconfig.test.json), noUncheckedIndexedAccess on
+npm run build       # tsc (strict, src only) + vite production build
 ```
 
-417 tests in 66 files, measured 2026-11-24 with `npx vitest run --dir tests`. There is no separate typecheck script; `npm run build` runs `tsc` first.
+678 tests in 73 files, measured 2026-11-24 with `npx vitest run --dir tests`. `npm run typecheck` also covers the test suite, which the build's `tsc` does not.
 
 <!-- 18-03: CI badge here — [![CI](https://github.com/kpulka/Avatar/actions/workflows/ci.yml/badge.svg)](https://github.com/kpulka/Avatar/actions/workflows/ci.yml) -->
 <!-- 18-02: License badge + section here — MIT (link to LICENSE). -->

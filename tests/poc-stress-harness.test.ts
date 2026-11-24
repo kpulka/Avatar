@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { FaceController } from '../src/lipsync/face-controller';
 import { FaceDriver } from '../src/types/avatar';
 import { AudioEngine } from '../src/audio/audio-engine';
+import { defined } from './helpers/defined';
 
 class MockFaceDriver implements FaceDriver {
   public appliedWeights: Record<string, number> = {};
@@ -132,7 +133,7 @@ describe('PoC Stress Test Harness (5 Phased Interruptions & Leak-Free Lifecycle)
     ];
 
     for (let i = 0; i < speechChunks.length; i++) {
-      const scenario = speechChunks[i];
+      const scenario = defined(speechChunks[i]);
       const epoch = engine.getEpoch();
 
       // Start wypowiedzi

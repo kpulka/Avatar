@@ -37,7 +37,7 @@ export function detectWordLanguage(word: string, fallback: G2pLanguage): G2pLang
 export function charsLookPolish(chars: readonly string[]): boolean {
   let word = '';
   for (let i = 0; i <= chars.length; i++) {
-    const ch = i < chars.length ? chars[i] : '';
+    const ch = chars[i] ?? ''; // '' past the end flushes the last word
     if (ch !== '' && WORD_CHAR.test(ch)) {
       word += ch;
       continue;

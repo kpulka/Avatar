@@ -51,9 +51,11 @@ export function rmsDiff(a: Float32Array, b: Float32Array): number {
   let diffSum = 0;
   let baseSum = 0;
   for (let i = 0; i < length; i += 1) {
-    const diff = a[i] - b[i];
+    const av = a[i] ?? 0; // i < length = min(a.length, b.length)
+    const bv = b[i] ?? 0;
+    const diff = av - bv;
     diffSum += diff * diff;
-    baseSum += a[i] * a[i];
+    baseSum += av * av;
   }
   const diffRms = Math.sqrt(diffSum / length);
   const baseRms = Math.sqrt(baseSum / length);
@@ -142,9 +144,7 @@ export class CompareController {
         if (!this.isCurrent(token)) return true;
       }
 
-      const a2fDurationSec = a2f?.clip.frames.length
-        ? a2f.clip.frames[a2f.clip.frames.length - 1].timeSec
-        : 0;
+      const a2fDurationSec = a2f?.clip.frames.at(-1)?.timeSec ?? 0;
       const liveDurationSec = liveDurationMs / 1000;
       const result: CompareResultEvent = {
         order: liveFirst ? ['live', 'a2f'] : ['a2f', 'live'],

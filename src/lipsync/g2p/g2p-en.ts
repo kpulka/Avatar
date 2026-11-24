@@ -168,10 +168,11 @@ function letterRules(w: string): string[] {
   let i = 0;
   const n = w.length;
 
-  const at = (offset: number) => (i + offset < n ? w[i + offset] : '');
+  // charAt returns '' out of range (no undefined under noUncheckedIndexedAccess)
+  const at = (offset: number) => (i + offset < n ? w.charAt(i + offset) : '');
 
   while (i < n) {
-    const c = w[i];
+    const c = w.charAt(i);
     const pair = c + at(1);
     const triple = pair + at(2);
 
@@ -189,7 +190,7 @@ function letterRules(w: string): string[] {
       //   after t/d            -> IH D  (wanted, needed)
       //   after voiceless stop -> T     (jumped, asked, laughed, pushed)
       //   otherwise            -> D     (played, opened)
-      const prev = w[i - 1];
+      const prev = w.charAt(i - 1);
       if (prev === 't' || prev === 'd') out.push('IH', 'D');
       else if ('pkfsx'.includes(prev) || w.slice(i - 2, i) === 'sh' || w.slice(i - 2, i) === 'ch') out.push('T');
       else out.push('D');
@@ -212,7 +213,7 @@ function letterRules(w: string): string[] {
       case 'wr': if (i === 0) { out.push('R'); i += 2; continue; } break;
       case 'mb': if (i === n - 2) { out.push('M'); i += 2; continue; } break;
       case 'gh':
-        if (i === n - 2 || (i > 0 && isVowelLetter(w[i - 1]))) {
+        if (i === n - 2 || (i > 0 && isVowelLetter(w.charAt(i - 1)))) {
           i += 2; // silent gh (end of word or after a vowel)
           continue;
         }
@@ -246,7 +247,7 @@ function letterRules(w: string): string[] {
     }
 
     // Word-internal silent letters: S in "isl-" (island, isle), B before T (doubt, subtle, debt).
-    if (c === 's' && at(1) === 'l' && w[i - 1] === 'i') { i += 1; continue; }
+    if (c === 's' && at(1) === 'l' && w.charAt(i - 1) === 'i') { i += 1; continue; }
     if (c === 'b' && at(1) === 't' && i > 0) { i += 1; continue; }
 
     // Doubled consonant letters (mopping, attention) are one sound, not two visemes.
@@ -263,7 +264,7 @@ function letterRules(w: string): string[] {
       case 'g': out.push('G'); i += 1; continue;
       case 'h':
         if (i === 0) { out.push('HH'); }
-        else if (i > 0 && i < n - 1 && isVowelLetter(w[i - 1]) && isVowelLetter(at(1))) {
+        else if (i > 0 && i < n - 1 && isVowelLetter(w.charAt(i - 1)) && isVowelLetter(at(1))) {
           // h between vowels — silent in many cases
         } else { out.push('HH'); }
         i += 1; continue;

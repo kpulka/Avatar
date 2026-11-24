@@ -486,7 +486,7 @@ export class FaceController {
 
     // Schedule visemes on the audio timeline
     for (let i = 0; i < alignment.chars.length; i++) {
-      const char = alignment.chars[i];
+      const char = alignment.chars[i] ?? ''; // i < alignment.chars.length
       const startMs = alignment.char_start_times_ms[i] ?? 0;
       // A consonant digraph (th, sh, ch ...) is ONE viseme: it spans both letters and the second
       // letter is skipped, so it never fires a phantom pulse of its own.
@@ -592,7 +592,7 @@ export class FaceController {
     let idx = -1;
     while (lo <= hi) {
       const mid = (lo + hi) >> 1;
-      if (base + buf[mid].timeSec <= nowSec) {
+      if (base + (buf[mid]?.timeSec ?? Infinity) <= nowSec) { // mid in [lo, hi] within buf
         idx = mid;
         lo = mid + 1;
       } else {
@@ -611,6 +611,7 @@ export class FaceController {
       buf.length -= idx;
     }
     const frame = buf[0];
+    if (!frame) return; // idx >= 0 means at least one frame survives the drop above
 
     // Apply the shapes owned by the clip (owned = absolute, zero is meaningful).
     for (const shape of meta.shapes) {
@@ -674,6 +675,7 @@ export class FaceController {
       if (gaze) {
         for (let i = 0; i < EYE_LOOK_SHAPES.length; i++) {
           const shape = EYE_LOOK_SHAPES[i];
+          if (!shape) continue; // i < EYE_LOOK_SHAPES.length
           this.driver.applyWeight(shape, gaze[shape] * gazeConfig.morphWeight);
         }
       }

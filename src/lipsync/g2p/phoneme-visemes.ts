@@ -89,6 +89,9 @@ export function lipPoseToShapes(p: LipPose): Map<string, number> {
  */
 const BILABIAL: LipPose = { jaw: 0.02, close: 0.5, press: 0.58, rollLower: 0.25, rollUpper: 0.15 };
 
+/** Sibilant pose shared by S / Z (and by the Polish dental affricates PL_TS / PL_DZ). */
+const SIBILANT: LipPose = { jaw: 0.16, smile: 0.2, upperUp: 0.16, lowerDown: 0.16 };
+
 /** ARPAbet phoneme → pose. The ONE table every consumer reads (see the module doc for layering). */
 export const PHONEME_POSES: Readonly<Record<string, Readonly<LipPose>>> = {
   // ---- Front vowels (ladder: jaw + smile + teeth; the higher, the more "speech smile") ----
@@ -132,8 +135,8 @@ export const PHONEME_POSES: Readonly<Record<string, Readonly<LipPose>>> = {
   L: { jaw: 0.32, tongue: 0.12, lowerDown: 0.08 }, // L = tongue UP; tongueOut only symbolic
 
   // ---- Sibilants (strong teeth exposure) ----
-  S: { jaw: 0.16, smile: 0.2, upperUp: 0.16, lowerDown: 0.16 },
-  Z: { jaw: 0.16, smile: 0.2, upperUp: 0.16, lowerDown: 0.16 },
+  S: SIBILANT,
+  Z: SIBILANT,
 
   // ---- Palatals / affricates (funnel + teeth; CH has a closed start) ----
   SH: { jaw: 0.22, funnel: 0.55, pucker: 0.16, upperUp: 0.14, lowerDown: 0.14 },
@@ -173,8 +176,8 @@ export const PL_PHONEME_POSES: Readonly<Record<string, Readonly<LipPose>>> = {
   PL_DZI: SOFT_SIBILANT,
   PL_NI: { jaw: 0.18, smile: 0.12, upperUp: 0.05 },
   // Dental affricates c / dz share the English sibilant pose.
-  PL_TS: PHONEME_POSES.S,
-  PL_DZ: PHONEME_POSES.Z,
+  PL_TS: SIBILANT,
+  PL_DZ: SIBILANT,
   // Nasal vowels: open + slight funnel (a), half-open + slight smile and funnel (e).
   PL_AN: { jaw: 0.42, funnel: 0.2, pucker: 0.1 },
   PL_EN: { jaw: 0.36, smile: 0.14, funnel: 0.12 },
@@ -191,12 +194,16 @@ export const DIPHTHONG_END_POSES: Readonly<Record<string, string>> = {
   AW: 'UH',
 };
 
+/** Own-property lookup (a phoneme named `constructor` must not resolve through the prototype chain). */
+function ownPose(table: Readonly<Record<string, Readonly<LipPose>>>, phoneme: string): Readonly<LipPose> | undefined {
+  return Object.prototype.hasOwnProperty.call(table, phoneme) ? table[phoneme] : undefined;
+}
+
 /**
  * Maps an ARPAbet phoneme to target ARKit weights.
  * Returns null for an unknown phoneme (the queue consumer skips it without an error).
  */
 export function mapPhonemeToShapes(phoneme: string): Map<string, number> | null {
-  if (Object.prototype.hasOwnProperty.call(PHONEME_POSES, phoneme)) return lipPoseToShapes(PHONEME_POSES[phoneme]);
-  if (Object.prototype.hasOwnProperty.call(PL_PHONEME_POSES, phoneme)) return lipPoseToShapes(PL_PHONEME_POSES[phoneme]);
-  return null; // unknown phoneme -> no viseme
+  const pose = ownPose(PHONEME_POSES, phoneme) ?? ownPose(PL_PHONEME_POSES, phoneme);
+  return pose ? lipPoseToShapes(pose) : null; // unknown phoneme -> no viseme
 }

@@ -171,6 +171,6 @@ export function enhanceAvatarMaterials(root: THREE.Object3D, renderer: THREE.Web
       return mat;
     });
 
-    mesh.material = Array.isArray(mesh.material) ? enhancedMaterials : enhancedMaterials[0];
+    mesh.material = Array.isArray(mesh.material) ? enhancedMaterials : (enhancedMaterials[0] ?? mesh.material); // materials has exactly one entry here
   });
 }

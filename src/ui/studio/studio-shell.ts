@@ -88,7 +88,8 @@ export function createStudioShell(options: StudioShellOptions): StudioShell {
     tablist.append(button);
   }
   // Before the first selection the first tab must be reachable by keyboard.
-  const firstTab = rightPanels.length > 0 ? tabButtons.get(rightPanels[0].id) : undefined;
+  const firstPanel = rightPanels[0];
+  const firstTab = firstPanel ? tabButtons.get(firstPanel.id) : undefined;
   if (firstTab) firstTab.tabIndex = 0;
 
   // WAI-ARIA Tabs keyboard model: arrows move + select (selection follows focus), Home/End jump.
@@ -114,8 +115,10 @@ export function createStudioShell(options: StudioShellOptions): StudioShell {
         return;
     }
     event.preventDefault();
-    openTab(ids[nextIndex]);
-    tabButtons.get(ids[nextIndex])?.focus();
+    const nextId = ids[nextIndex];
+    if (nextId === undefined) return;
+    openTab(nextId);
+    tabButtons.get(nextId)?.focus();
   });
 
   // ---- left drawers (Visemes, Inspector)
@@ -185,8 +188,9 @@ export function createStudioShell(options: StudioShellOptions): StudioShell {
     open(): void {
       root.classList.remove('hidden');
       drawer.classList.remove('hidden');
-      if (!activeId && rightPanels.length > 0) {
-        openTab(rightPanels[0].id);
+      const firstPanel = rightPanels[0];
+      if (!activeId && firstPanel) {
+        openTab(firstPanel.id);
       }
     },
     close,

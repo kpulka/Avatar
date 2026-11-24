@@ -3,6 +3,7 @@ import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { COPY, t } from '../src/app/copy';
+import { defined } from './helpers/defined';
 
 const ROOT = fileURLToPath(new URL('..', import.meta.url));
 
@@ -74,7 +75,7 @@ describe('copy registry (English UI strings)', () => {
     for (const file of listTs('src')) {
       const text = readFileSync(file, 'utf8');
       for (const match of text.matchAll(re)) {
-        if (!(match[1] in COPY)) missing.push(`${file.slice(ROOT.length)}: ${match[1]}`);
+        if (!(defined(match[1]) in COPY)) missing.push(`${file.slice(ROOT.length)}: ${match[1]}`);
       }
     }
     expect(missing).toEqual([]);
@@ -142,7 +143,7 @@ const PHASE15_SLOTS = [
 
 describe('Phase 15 copy contract', () => {
   it('every Phase 15 slot exists with a non-empty value', () => {
-    expect(PHASE15_SLOTS.filter((slot) => !(slot in COPY) || COPY[slot].trim() === '')).toEqual([]);
+    expect(PHASE15_SLOTS.filter((slot) => !(slot in COPY) || defined(COPY[slot]).trim() === '')).toEqual([]);
   });
 
   it('index.html holds no visible copy: the WebGL card is rendered by webgl-fallback.ts', () => {

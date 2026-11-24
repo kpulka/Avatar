@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { predictFrames, fetchA2fStatus } from '../src/audio/a2f-backend';
+import { defined } from './helpers/defined';
 
 function okResponse(body: string | object, status = 200): Response {
   const json = typeof body === 'string' ? body : JSON.stringify(body);
@@ -41,11 +42,11 @@ describe('a2f-backend (09-03, klient wrappera /predict)', () => {
     expect(res.parsed.clip.frames).toHaveLength(2);
     expect(res.parsed.clip.fps).toBe(60);
     expect(res.parsed.clip.carriesEyes).toBe(true);
-    expect(res.parsed.clip.frames[0].weights['jawOpen']).toBe(0.1);
+    expect(defined(res.parsed.clip.frames[0]).weights['jawOpen']).toBe(0.1);
     expect(typeof res.predictMs).toBe('number');
 
     // Sent FormData to /predict.
-    const [url, init] = fetchMock.mock.calls[0];
+    const [url, init] = defined(fetchMock.mock.calls[0]);
     expect(url).toBe('http://127.0.0.1:8000/predict');
     expect(init.method).toBe('POST');
     expect(init.body instanceof FormData).toBe(true);
@@ -54,7 +55,7 @@ describe('a2f-backend (09-03, klient wrappera /predict)', () => {
   it('strips the trailing slash from baseUrl', async () => {
     fetchMock.mockResolvedValue(okResponse(samples.ok));
     await predictFrames('http://127.0.0.1:8000/', new Blob(['x']));
-    expect(fetchMock.mock.calls[0][0]).toBe('http://127.0.0.1:8000/predict');
+    expect(defined(fetchMock.mock.calls[0])[0]).toBe('http://127.0.0.1:8000/predict');
   });
 
   it('HTTP 500 → readable error', async () => {
@@ -95,7 +96,7 @@ describe('a2f-backend (09-03, klient wrappera /predict)', () => {
   it('fetchA2fStatus: GET /status → JSON', async () => {
     fetchMock.mockResolvedValue(okResponse({ status: 'ready', gpu: 'RTX 3090' }));
     const st = await fetchA2fStatus('http://127.0.0.1:8000');
-    expect(fetchMock.mock.calls[0][0]).toBe('http://127.0.0.1:8000/status');
+    expect(defined(fetchMock.mock.calls[0])[0]).toBe('http://127.0.0.1:8000/status');
     expect(st.status).toBe('ready');
     expect(st.gpu).toBe('RTX 3090');
   });

@@ -31,7 +31,10 @@ function samplesPerWindow(sampleRate: number): number {
 /** RMS (0..1) of the samples [start, end). */
 function rmsOf(int16: Int16Array, start: number, end: number): number {
   let sumSq = 0;
-  for (let i = start; i < end; i++) sumSq += int16[i] * int16[i];
+  for (let i = start; i < end; i++) {
+    const sample = int16[i] ?? 0; // i < end <= int16.length: always defined
+    sumSq += sample * sample;
+  }
   return Math.sqrt(sumSq / Math.max(1, end - start)) / 32768;
 }
 

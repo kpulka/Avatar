@@ -85,6 +85,7 @@ export class AppScene {
   public clearAvatar(): void {
     while (this.avatarContainer.children.length > 0) {
       const child = this.avatarContainer.children[0];
+      if (!child) break; // length > 0 above
       this.avatarContainer.remove(child);
       disposeObject3D(child);
     }

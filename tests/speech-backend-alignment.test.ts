@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { normalizeAlignmentPayload } from '../src/audio/alignment-normalize';
+import { defined } from './helpers/defined';
 
 const CHARS = ['h', 'i', ' ', 'y', 'o', 'u'];
 const STARTS_MS = [0, 60, 120, 180, 240, 300];
@@ -52,13 +53,13 @@ describe('normalizeAlignmentPayload (T-1 matrix)', () => {
         alignment: {
           characters: CHARS,
           character_start_times_seconds: STARTS_MS.map((v) => v / 1000),
-          character_end_times_seconds: STARTS_MS.map((v, i) => (v + DURS_MS[i]) / 1000),
+          character_end_times_seconds: STARTS_MS.map((v, i) => (v + defined(DURS_MS[i])) / 1000),
         },
       });
       expect(sec).not.toBeNull();
       expect(sec!.chars).toEqual(ms!.chars);
-      sec!.char_start_times_ms.forEach((v, i) => expect(v).toBeCloseTo(ms!.char_start_times_ms[i], 6));
-      sec!.char_durations_ms.forEach((v, i) => expect(v).toBeCloseTo(ms!.char_durations_ms[i], 6));
+      sec!.char_start_times_ms.forEach((v, i) => expect(v).toBeCloseTo(defined(ms!.char_start_times_ms[i]), 6));
+      sec!.char_durations_ms.forEach((v, i) => expect(v).toBeCloseTo(defined(ms!.char_durations_ms[i]), 6));
     });
 
     it('derives durations from end times with a 25 ms floor', () => {

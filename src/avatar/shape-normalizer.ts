@@ -56,30 +56,28 @@ const ALIAS_MAP: Record<string, string> = {
  */
 export function normalizeShapeName(rawName: string): string {
   const clean = rawName.trim();
-  if (clean in ALIAS_MAP) {
-    return ALIAS_MAP[clean];
-  }
+  const direct = ALIAS_MAP[clean];
+  if (direct !== undefined) return direct;
 
   const lower = clean.toLowerCase();
-  if (lower in ALIAS_MAP) {
-    return ALIAS_MAP[lower];
-  }
+  const lowerAlias = ALIAS_MAP[lower];
+  if (lowerAlias !== undefined) return lowerAlias;
 
   // Remove a possible namespace prefix such as "head." or "Avatar_"
   const parts = clean.split(/[.:]/);
-  const baseName = parts[parts.length - 1];
+  const baseName = parts[parts.length - 1] ?? clean; // split() always yields >= 1 element
   const lowerBase = baseName.toLowerCase();
 
-  if (baseName in ALIAS_MAP) return ALIAS_MAP[baseName];
-  if (lowerBase in ALIAS_MAP) return ALIAS_MAP[lowerBase];
+  const baseAlias = ALIAS_MAP[baseName] ?? ALIAS_MAP[lowerBase];
+  if (baseAlias !== undefined) return baseAlias;
 
   // Handle underscore prefixes, e.g. Avatar_eye_blink_left
   const underscoreIndex = clean.indexOf('_');
   if (underscoreIndex !== -1) {
     const afterPrefix = clean.slice(underscoreIndex + 1);
     const lowerAfter = afterPrefix.toLowerCase();
-    if (afterPrefix in ALIAS_MAP) return ALIAS_MAP[afterPrefix];
-    if (lowerAfter in ALIAS_MAP) return ALIAS_MAP[lowerAfter];
+    const prefixAlias = ALIAS_MAP[afterPrefix] ?? ALIAS_MAP[lowerAfter];
+    if (prefixAlias !== undefined) return prefixAlias;
   }
 
   return baseName;

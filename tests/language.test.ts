@@ -19,6 +19,7 @@ import { describe, it, expect } from 'vitest';
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { basename, dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { defined } from './helpers/defined';
 
 const ROOT = fileURLToPath(new URL('..', import.meta.url));
 
@@ -219,9 +220,9 @@ const MD_LINK_RE = /\[[^\]]*\]\(([^)\s]+)(?:\s+"[^"]*")?\)/g;
 function relativeMdTargets(text: string): string[] {
   const targets: string[] = [];
   for (const match of text.matchAll(MD_LINK_RE)) {
-    const raw = match[1];
+    const raw = defined(match[1]);
     if (/^[a-z][a-z0-9+.-]*:/i.test(raw) || raw.startsWith('/') || raw.startsWith('#')) continue;
-    const target = raw.split('#')[0];
+    const target = defined(raw.split('#')[0]);
     if (target.endsWith('.md')) targets.push(target);
   }
   return targets;

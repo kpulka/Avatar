@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createAlgorithmSwitcher } from '../src/ui/user/algorithm-switcher';
 import { CompareResultEvent } from '../src/app/app-types';
 import { createUiFixture, UiFixture } from './helpers/ui-fixtures';
+import { defined } from './helpers/defined';
 
 function result(overrides: Partial<CompareResultEvent> = {}): CompareResultEvent {
   return {
@@ -47,7 +48,9 @@ describe('compare UI (15-05)', () => {
     expect(cancel.classList.contains('hidden')).toBe(true);
 
     fixture.events.emit('compare:state', 'playing-a');
-    const [chipA, chipB] = [...fixture.host.querySelectorAll<HTMLElement>('.compare-chip')];
+    const chips = [...fixture.host.querySelectorAll<HTMLElement>('.compare-chip')];
+    const chipA = defined(chips[0]);
+    const chipB = defined(chips[1]);
     expect(chipA.getAttribute('aria-current')).toBe('true');
     expect(chipB.hasAttribute('aria-current')).toBe(false);
     expect(cancel.classList.contains('hidden')).toBe(false);

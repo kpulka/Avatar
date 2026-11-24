@@ -99,7 +99,7 @@ describe('EmbedBridge', () => {
     send(connect, 'https://other.example');
     expect(onConnect).toHaveBeenCalledTimes(devMode ? 1 : 0);
     bridge.emit('x');
-    expect(mockWindow.parent.postMessage.mock.calls[0][1]).toBe(devMode ? '*' : 'https://widget.example');
+    expect(mockWindow.parent.postMessage.mock.calls[0]?.[1]).toBe(devMode ? '*' : 'https://widget.example');
   });
 
   it('posts to each configured origin before a trusted message and then replies to its origin', () => {
@@ -110,7 +110,7 @@ describe('EmbedBridge', () => {
     send(connect, 'https://b.example');
     bridge.emit('ping');
     expect(mockWindow.parent.postMessage).toHaveBeenCalledOnce();
-    expect(mockWindow.parent.postMessage.mock.calls[0][1]).toBe('https://b.example');
+    expect(mockWindow.parent.postMessage.mock.calls[0]?.[1]).toBe('https://b.example');
   });
 
   it('reads the parent origin list from the URL', () => {

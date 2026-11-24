@@ -56,7 +56,7 @@ export class MetaPersonLoader implements AvatarLoader {
           const keys = Object.keys(dict).map(normalizeShapeName);
           const hasFacialKeys = keys.some(
             (k) =>
-              REQUIRED_SHAPES.includes(k as any) ||
+              (REQUIRED_SHAPES as readonly string[]).includes(k) ||
               k.startsWith('eye') ||
               k.startsWith('brow') ||
               k.startsWith('mouth') ||

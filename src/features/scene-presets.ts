@@ -17,7 +17,8 @@ export interface ScenePreset {
   framing: 'bust' | 'head';
 }
 
-export const SCENE_PRESETS: ScenePreset[] = [
+// Non-empty tuple: guarantees SCENE_PRESETS[0] (the default / fallback preset) exists at the type level.
+export const SCENE_PRESETS: readonly [ScenePreset, ...ScenePreset[]] = [
   {
     id: 'studio-dark',
     label: t('scenePreset.studio-dark'),

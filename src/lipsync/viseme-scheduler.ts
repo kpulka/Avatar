@@ -100,6 +100,7 @@ export class VisemeScheduler {
     let write = 0;
     for (let read = 0; read < queue.length; read++) {
       const item = queue[read];
+      if (!item) continue; // read < queue.length
       if (item.epoch !== activeEpoch) continue;
       if (nowSec > item.startTimeSec + item.durationSec + this.blendOutSec) continue;
       queue[write++] = item;

@@ -360,7 +360,7 @@ export function charPathSpan(chars: string[], index: number): 1 | 2 {
 export function charDefaultShapesForToken(token: string): Map<string, number> | null {
   if (!token) return null;
   if (token.length >= 2) {
-    const digraph = tryMapDigraph(token[0], token[1]);
+    const digraph = tryMapDigraph(token.charAt(0), token.charAt(1));
     if (digraph && digraph.size > 0) return digraph;
   }
   if (token.length === 1) {

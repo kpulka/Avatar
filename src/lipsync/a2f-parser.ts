@@ -50,7 +50,7 @@ function looksLikeEyeShape(camel: string): boolean {
  */
 export function decapitalizeArKit(raw: string): string {
   if (raw.length === 0) return raw;
-  return raw[0].toLowerCase() + raw.slice(1);
+  return raw.charAt(0).toLowerCase() + raw.slice(1);
 }
 
 export interface A2fPayload {

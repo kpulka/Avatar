@@ -13,6 +13,7 @@ import { createA2fPanel } from '../src/ui/studio/panels/a2f-panel';
 import { createAnimationPanel } from '../src/ui/studio/panels/animation-panel';
 import { ICON_NAMES, icon } from '../src/ui/shared/icons';
 import { createUiFixture } from './helpers/ui-fixtures';
+import { defined } from './helpers/defined';
 
 function dummyPanel(id: string): PanelDefinition {
   return {
@@ -54,12 +55,12 @@ describe('studio tablist (WAI-ARIA Tabs)', () => {
     const { tabs, panel } = mountShell();
     expect(tabs.map((tab) => tab.getAttribute('aria-selected'))).toEqual(['true', 'false', 'false']);
     expect(tabs.map((tab) => tab.tabIndex)).toEqual([0, -1, -1]);
-    expect(panel.getAttribute('aria-labelledby')).toBe(tabs[0].id);
+    expect(panel.getAttribute('aria-labelledby')).toBe(defined(tabs[0]).id);
 
-    tabs[2].click();
+    defined(tabs[2]).click();
     expect(tabs.map((tab) => tab.getAttribute('aria-selected'))).toEqual(['false', 'false', 'true']);
     expect(tabs.map((tab) => tab.tabIndex)).toEqual([-1, -1, 0]);
-    expect(panel.getAttribute('aria-labelledby')).toBe(tabs[2].id);
+    expect(panel.getAttribute('aria-labelledby')).toBe(defined(tabs[2]).id);
   });
 
   it('every tab aria-controls points at an existing role=tabpanel', () => {
@@ -72,20 +73,20 @@ describe('studio tablist (WAI-ARIA Tabs)', () => {
 
   it('ArrowRight/ArrowLeft move focus and select, wrapping around; Home/End jump', () => {
     const { tabs } = mountShell();
-    tabs[0].focus();
-    key(tabs[0], 'ArrowRight');
+    defined(tabs[0]).focus();
+    key(defined(tabs[0]), 'ArrowRight');
     expect(document.activeElement).toBe(tabs[1]);
-    expect(tabs[1].getAttribute('aria-selected')).toBe('true');
+    expect(defined(tabs[1]).getAttribute('aria-selected')).toBe('true');
 
-    key(tabs[1], 'End');
+    key(defined(tabs[1]), 'End');
     expect(document.activeElement).toBe(tabs[2]);
-    key(tabs[2], 'ArrowRight');
+    key(defined(tabs[2]), 'ArrowRight');
     expect(document.activeElement).toBe(tabs[0]);
-    key(tabs[0], 'ArrowLeft');
+    key(defined(tabs[0]), 'ArrowLeft');
     expect(document.activeElement).toBe(tabs[2]);
-    key(tabs[2], 'Home');
+    key(defined(tabs[2]), 'Home');
     expect(document.activeElement).toBe(tabs[0]);
-    expect(tabs[0].getAttribute('aria-selected')).toBe('true');
+    expect(defined(tabs[0]).getAttribute('aria-selected')).toBe('true');
   });
 });
 
@@ -133,7 +134,7 @@ describe('form label association', () => {
     createUserSettings().mount(fixture.ctx);
     (fixture.host.querySelector('.user-settings-btn') as HTMLButtonElement).click();
     return vi.waitFor(() => expect(fixture.modalCalls).toHaveLength(1)).then(() => {
-      const form = fixture.modalCalls[0].content;
+      const form = defined(fixture.modalCalls[0]).content;
       // Controls live in the form; labels too (ids are stable, same document).
       document.body.append(form);
       assertLabelled(form);
@@ -188,7 +189,7 @@ describe('keyboard-reachable file upload', () => {
     expect(fileInput.tabIndex).toBe(-1);
     const click = vi.spyOn(fileInput, 'click');
     const buttons = [...fixture.host.querySelectorAll<HTMLButtonElement>('.panel-actions button')];
-    buttons[1].click();
+    defined(buttons[1]).click();
     expect(click).toHaveBeenCalledTimes(1);
   });
 });
@@ -214,9 +215,9 @@ describe('SVG icons', () => {
       expect(button.querySelector('.btn-label')?.textContent).toBeTruthy();
       expect(button.getAttribute('aria-label')).toBeTruthy();
     }
-    const before = buttons[1].querySelector('svg')?.getAttribute('class');
+    const before = defined(buttons[1]).querySelector('svg')?.getAttribute('class');
     fixture.events.emit('voice:muted', true);
-    expect(buttons[1].querySelector('svg')?.getAttribute('class')).not.toBe(before);
+    expect(defined(buttons[1]).querySelector('svg')?.getAttribute('class')).not.toBe(before);
   });
 
   it('settings gear is an svg icon button with an accessible name', () => {

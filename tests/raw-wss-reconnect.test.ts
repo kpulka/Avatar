@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { RawWssClient } from '../src/audio/raw-wss-client';
+import { defined } from './helpers/defined';
 
 class FakeSocket {
   static instances: FakeSocket[] = [];
@@ -31,13 +32,13 @@ describe('reconnect failures', () => {
     const client = new RawWssClient('agent', { onError });
     client.connect();
     for (let i = 0; i < 6; i++) {
-      FakeSocket.instances[i].onerror?.({} as Event);
-      FakeSocket.instances[i].fail(1006);
+      defined(FakeSocket.instances[i]).onerror?.({} as Event);
+      defined(FakeSocket.instances[i]).fail(1006);
       vi.advanceTimersByTime(16000);
     }
     expect(FakeSocket.instances).toHaveLength(6);
     expect(onError).toHaveBeenCalledTimes(1);
-    expect(onError.mock.calls[0][0].message).toContain('5 attempts');
+    expect(defined(onError.mock.calls[0])[0].message).toContain('5 attempts');
     expect(client.getState()).toBe('disconnected');
   });
 
@@ -46,8 +47,8 @@ describe('reconnect failures', () => {
     const client = new RawWssClient('agent', { onError });
     client.connect();
     for (let i = 0; i < 6; i++) {
-      FakeSocket.instances[i].open();
-      FakeSocket.instances[i].fail(1006);
+      defined(FakeSocket.instances[i]).open();
+      defined(FakeSocket.instances[i]).fail(1006);
       vi.advanceTimersByTime(16000);
     }
     expect(FakeSocket.instances).toHaveLength(6);
@@ -60,12 +61,12 @@ describe('reconnect failures', () => {
     const client = new RawWssClient('agent', { onError });
     client.connect();
     for (let i = 0; i < 5; i++) {
-      FakeSocket.instances[i].fail(1006);
+      defined(FakeSocket.instances[i]).fail(1006);
       vi.advanceTimersByTime(16000);
     }
-    FakeSocket.instances[5].open();
-    FakeSocket.instances[5].metadata();
-    FakeSocket.instances[5].fail(1006);
+    defined(FakeSocket.instances[5]).open();
+    defined(FakeSocket.instances[5]).metadata();
+    defined(FakeSocket.instances[5]).fail(1006);
     vi.advanceTimersByTime(1000);
     expect(FakeSocket.instances).toHaveLength(7);
     expect(onError).not.toHaveBeenCalled();
@@ -74,9 +75,9 @@ describe('reconnect failures', () => {
   it('fails immediately on an agent rejection', () => {
     const onError = vi.fn();
     new RawWssClient('agent', { onError }).connect();
-    FakeSocket.instances[0].fail(4001, 'invalid agent');
+    defined(FakeSocket.instances[0]).fail(4001, 'invalid agent');
     expect(onError).toHaveBeenCalledTimes(1);
-    expect(onError.mock.calls[0][0].message).toContain('invalid agent');
+    expect(defined(onError.mock.calls[0])[0].message).toContain('invalid agent');
     expect(vi.getTimerCount()).toBe(0);
   });
 });

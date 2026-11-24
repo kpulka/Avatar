@@ -12,7 +12,7 @@ export interface MemoryStorage {
 export function createMemoryStorage(seed: Record<string, string> = {}): MemoryStorage {
   const map: Record<string, string> = { ...seed };
   return {
-    getItem: (key: string) => (key in map ? map[key] : null),
+    getItem: (key: string) => (key in map ? (map[key] ?? null) : null),
     setItem: (key: string, value: string) => {
       map[key] = value;
     },
