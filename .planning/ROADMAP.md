@@ -25,14 +25,14 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [ ] **Phase 10: A2F w chmurze — Cloud Run MVP (L4)** - po lokalnym go/no-go: deploy serverless GPU scale-to-zero (płacimy tylko za przetwarzanie), cold start, koszty, UAT
 - [ ] **Phase 11: UI dual-persona i modularny frontend** - user/studio, porównywarka algorytmów, scene presets, refaktor modułowy (równolegle z Fazą 9)
 - [ ] **Phase 11.1: Hardening & bugfix pack (INSERTED)** - embed-bridge security (public repo), agentId single source, chunk sampleRate, avatar GPU dispose, A/B compare lanes (v1.1)
-- [ ] **Phase 11.2: Showcase wow pack (INSERTED)** - demo "Listen" without agent, visible error states, skin SSS + shadows + eyes, latency-aware lip clock, bilabial closure, committed avatar, hero capture (v1.1)
+- [ ] **Phase 11.2: Showcase wow pack (INSERTED)** - demo "Listen" without agent, visible error states, skin SSS + shadows + eyes, latency-aware lip clock, bilabial closure, committed avatar, hero capture (v1.1) — PARTIAL: 7/9 executed; 11.2-03 and 11.2-09 blocked (owner)
 - [ ] **Phase 12: English language (i18n)** - docs, UI strings, comments, tests, runtime messages → English; language gate (v1.1)
-- [ ] **Phase 13: README — recruiter showcase** - English, truthful, verified quickstart, visual assets, badge slots (v1.1)
-- [ ] **Phase 14: Architecture — documentation, strictness, guards** - ARCHITECTURE.md, full typecheck, layering gate, lifecycle test, dead code (v1.1)
-- [ ] **Phase 15: Web UI refactor** - design tokens, light theme, states matrix, a11y, microcopy (v1.1)
-- [ ] **Phase 16: Animation mechanics refactor** - state machine, single writer, timebase, config extraction, hot path, extensibility (v1.1)
-- [ ] **Phase 17: Lip-sync phonemes refactor** - pruned CMU lexicon, PL G2P, table-doc reconciliation, quality harness (v1.1)
-- [ ] **Phase 18: CI, security, license, deploy, hygiene** - secrets scan, CI+badge, project rights notice, offline Pages demo, ESLint/Prettier, `npm run verify` (v1.1)
+- [ ] **Phase 13: README — recruiter showcase** - English, truthful, verified quickstart, visual assets, badge slots (v1.1) — PARTIAL: 3/4 executed; 13-03 blocked (owner), 13-04 partial; manual UAT pending
+- [ ] **Phase 14: Architecture — documentation, strictness, guards** - ARCHITECTURE.md, full typecheck, layering gate, lifecycle test, dead code (v1.1) — executed 6/6; automated PASS; manual UAT pending
+- [ ] **Phase 15: Web UI refactor** - design tokens, light theme, states matrix, a11y, microcopy (v1.1) — executed 7/7; automated PASS; manual UAT pending
+- [ ] **Phase 16: Animation mechanics refactor** - state machine, single writer, timebase, config extraction, hot path, extensibility (v1.1) — PARTIAL: executed 7/7; automated PASS; manual UAT and behavior sign-off DEFERRED-HUMAN
+- [ ] **Phase 17: Lip-sync phonemes refactor** - pruned CMU lexicon, PL G2P, table-doc reconciliation, quality harness (v1.1) — PARTIAL: executed 6/6 (17-05 partial); live UAT DEFERRED-HUMAN
+- [ ] **Phase 18: CI, security, license, deploy, hygiene** - secrets scan, CI+badge, project rights notice, offline Pages demo, ESLint/Prettier, `npm run verify` (v1.1) — PARTIAL: 5/7 executed; 18-05 and 18-06 blocked (owner); 18-03 and 18-07 partial
 
 ## Phase Details
 
@@ -303,14 +303,14 @@ Uzasadnienie: 12 przed 13/14/15/16/17 (tłumaczenie komentarzy przed refaktorami
 | 10. A2F Cloud Run MVP | 0/4 | Not Started (po go/no-go z Fazy 9) | - |
 | 11. UI dual-persona | 6/7 | Executed — kod 7/7, automated PASS; UAT manualny pending (11-VERIFICATION §3) | - |
 | 11.1. Hardening & bugfix pack (INSERTED) | 5/5 | 11.1 automated gates passed. Manual UAT pending. Next: 11.2 wave 1. | - |
-| 11.2. Showcase wow pack (INSERTED) | 2/9 | Wave 1 verified; Listen asset gate next | - |
+| 11.2. Showcase wow pack (INSERTED) | 7/9 | PARTIAL — executed 01, 02, 04-08; 03 (Listen recording) and 09 (hero capture) blocked on owner | - |
 | 12. English language (i18n) | 7/7 | Executed; automated PASS; manual UAT pending (12-VERIFICATION §3) | - |
-| 13. README recruiter showcase | 0/4 | Planned — CONTEXT + DRAFT-README + VERIFICATION gotowe | - |
-| 14. Architecture guards | 0/6 | Planned — CONTEXT + DRAFT-ARCHITECTURE + VERIFICATION gotowe | - |
-| 15. Web UI refactor | 0/7 | Planned — CONTEXT + plany + DRAFT-ui-spec + VERIFICATION gotowe | - |
-| 16. Animation mechanics refactor | 0/7 | Planned — CONTEXT + plany + DRAFT-animation-runtime + VERIFICATION gotowe | - |
-| 17. Lip-sync phonemes refactor | 0/6 | Planned — CONTEXT + plany + DRAFT-lipsync-deep-dive + VERIFICATION gotowe | - |
-| 18. CI/security/license/deploy | 0/7 | Planned — CONTEXT + plany + VERIFICATION gotowe | - |
+| 13. README recruiter showcase | 3/4 | PARTIAL — 13-01/02 complete, 13-04 partial, 13-03 blocked (visual capture, owner); READ-02 stale count FAIL; manual UAT pending | - |
+| 14. Architecture guards | 6/6 | Executed; automated PASS; manual UAT pending (14-VERIFICATION §4) | - |
+| 15. Web UI refactor | 7/7 | Executed; automated PASS; manual UAT pending (15-VERIFICATION §2-5) | - |
+| 16. Animation mechanics refactor | 7/7 | PARTIAL — automated PASS; manual UAT and 5 behavior-change sign-offs DEFERRED-HUMAN | - |
+| 17. Lip-sync phonemes refactor | 6/6 | PARTIAL — 17-05 live UAT DEFERRED-HUMAN; T-8 a2f-parser gap unowned | - |
+| 18. CI/security/license/deploy | 5/7 | PARTIAL — 18-05 (demo) and 18-06 (hygiene) blocked (owner); 18-03 first CI run DEFERRED-HUMAN; 18-07 partial | - |
 
 ### Phase 11: UI dual-persona i modularny frontend — user/studio, scene presets, porównywarka algorytmów
 

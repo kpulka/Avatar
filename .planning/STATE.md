@@ -5,15 +5,15 @@ milestone_name: Portfolio Polish
 current_phase: 11.2
 current_phase_name: Showcase wow pack
 status: in_progress
-stopped_at: "11.2-03 Task 1 reviewed. Blocking checkpoint: real ElevenLabs WAV and alignment JSON, or a fresh local ELEVENLABS_API_KEY."
-last_updated: "2026-11-19"
-last_activity: "2026-11-19"
-last_activity_desc: "11.2 wave 1 passed (245 tests, cold-clone build and Chromium). 11.2-03 generator syntax, mock and drift checks passed. Real recording checkpoint pending."
+stopped_at: "Implement run 20261122-071333 closed. Owner-blocked: 11.2-03, 11.2-09, 13-03, 18-05, 18-06. Partial: 13-04, 17-05, 18-03, 18-07."
+last_updated: "2026-11-24"
+last_activity: "2026-11-24"
+last_activity_desc: "Implement run 20261122-071333: waves A-F executed; gate 75 files / 706 tests, npm run verify green. Owner-blocked plans recorded."
 progress:
   total_phases: 20
-  completed_phases: 6
+  completed_phases: 10
   total_plans: 108
-  completed_plans: 46
+  completed_plans: 84
 ---
 
 # Project State
@@ -23,16 +23,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-09-01)
 
 **Core value:** Płynna rozmowa głosowa z realistycznym awatarem — usta idealnie zsynchronizowane z mową, naturalne przerwania bez zamrożonej miny.
-**Current focus:** 11.2 wave 2 — prepare the Listen generator and wait for the real recording checkpoint. 11.1 automated gates and 11.2 wave 1 are complete.
+**Current focus:** v1.1 implement run 20261122-071333 closed at automated level. Remaining work is owner-blocked (see Blockers/Pending human).
 
 ## Current Position
 
-Phase: 11.2 — Showcase wow pack, wave 1 complete.
-Plan: 11.1-01..05 + 11.2-01.. + 44 plany 12–18; kolejność: **18-01 → 11.1 → 11.2 → 12 → 13 → 15 → 16 → 17 → 14 → 18 (02..07)**
-Status: execution started; 18-01 code reviewed, downstream checks pending. v1.0: F11/F8 manual UAT pending, F9 blocked on OOM, F10 subject to go/no-go.
-Last activity: 2026-11-19 — 11.2 wave 1 passed: 245 tests, cold-clone production build, Chromium avatar loading with 100% loader and no CSP violations.
+Phase: v1.1 Portfolio Polish — implement run closed (11.2 7/9, 12, 14-17 executed, 13 and 18 partial).
+Plan: 11.2-03 and 11.2-09 blocked on owner; 13-03 blocked; 18-05 and 18-06 blocked; 13-04, 17-05, 18-03, 18-07 partial.
+Status: implement run done. Automated gates green (npm run verify: typecheck 0, 75 files / 706 tests, build, lint, format). v1.0: F11/F8 manual UAT pending, F9 blocked on OOM, F10 subject to go/no-go.
+Last activity: 2026-11-24 — implement run 20261122-071333 results recorded in ROADMAP and REQUIREMENTS.
 
-Progress: 46/108 plans executed, including 7/58 v1.1 plans fully gated. 18-01 remains partial pending Listen.
+Progress: 84/108 plan SUMMARY files without PARTIAL status (4 partial excluded; 5 owner-blocked plans have no SUMMARY). Completed phases: 1-6, 11.1, 12, 14, 15.
 
 ## Performance Metrics
 
@@ -72,6 +72,7 @@ Progress: 46/108 plans executed, including 7/58 v1.1 plans fully gated. 18-01 re
 Decisions are logged in PROJECT.md Key Decisions table.
 Recent decisions affecting current work:
 
+- Implement run 20261122-071333 (v1.1 Portfolio Polish, 2026-11-22/24): ARR license (All Rights Reserved; wording approval pending); cmu-pronouncing-dictionary is ISC (not BSD-2 as 18-CONTEXT said); anim-config and alloc-probe moved to `realism/` (no shim); `npm test` scoped to `tests/` (`vitest run --dir tests`, agent worktrees excluded); Prettier 140 cols, es5, quoteProps preserve; ESLint 10 needs Node >= 20.19; total JS gzip 1162 -> 277 kB (CMU dictionary pruned 961 -> 64.5 kB gz).
 - v1.1 owner decisions (2026-11-19): GitHub Pages demo is offline, with no live agent. Keep the original showcase GLB for 11.2-01. In 18-06, preserve the local config.json changes and remove the backup. Project code: all rights reserved. README directs commercial licensing inquiries to the owner via GitHub. Third-party terms are preserved. This decision supersedes MIT and the GitHub standard-license recognition gate in 18-02.
 
 - Init: ElevenAgents (Tryb A) jako mózg konwersacji — barge-in i alignment serwerowo
@@ -130,6 +131,10 @@ Recent decisions affecting current work:
 
 ### Blockers/Concerns
 
+- **Implement run 20261122-071333 — not executed (owner):** 11.2-03 (Listen recording, real ElevenLabs), 11.2-09 (hero capture), 13-03 (visual assets), 18-05 (Pages demo, needs D4 decision), 18-06 (`.claude/`, `scripts/make-demo-clip.mjs`, `config.json.bak-*` dispositions, repo metadata). PARTIAL: 13-04, 17-05, 18-03, 18-07.
+- **Deferred human sign-offs:** 11.2-04..08 visual on real GPU; 12 UI/console UAT; 13 manual; 14 cold-open doc review and `npm run dev` boot; 15 sections 2-5 (a11y, states, responsive, screenshots); 16 UAT and 5 intentional behavior changes; 17 live UAT (`17-UAT-PROTOCOL.md`) and unowned T-8 a2f-parser gap; 18 LICENSE wording and first GitHub CI run.
+- **18-07 close-out leftovers:** `@elevenlabs/client` unused runtime dependency; 5 dev-only npm audit advisories; Node 22 CI not run locally (local Node 25.6.1); EmbedBridge window listener, AudioEngine.dispose, vignette DOM gaps (Phase 14); language gate matches diacritics only.
+
 - 11.2 wave 1 fresh clone: npm ci passed. npm audit reported two moderate and three high advisories in the current lockfile (Vite, Vitest and transitive development dependencies). Review during CI/security work.
 
 - **Rate limit API OpenCode (miesięczny, reset ~23 dni od 2026-11-18):** subagenci padają natychmiast na RateLimitError — planning v1.1 wykonany w całości inline przez orkiestratora. Przy wykonaniu faz 12–18: albo czekać na reset, albo wykonywać plany inline (`/gsd-fast`/`/gsd-quick` zamiast swarmów), albo delegować pojedynczo z dużymi przerwami. Wpływa na tempo, nie na treść planów.
@@ -156,6 +161,6 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-11-18
-Stopped at: 11.2-03 Task 1 at the blocking audio checkpoint. Resume from 11.2-03 Task 2 after generating and checking both assets.
+Last session: 2026-11-24
+Stopped at: implement run 20261122-071333 closed. Resume with owner decisions (18-05/18-06), real ElevenLabs recording (11.2-03) and manual UAT sessions.
 Resume file: .planning/ROADMAP.md (§Progress — v1.1 execution order) + .planning/STATE.md (Tor D)
