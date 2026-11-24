@@ -60,3 +60,33 @@ Checker: haiku, read-only. Verdict: DRIFT (15 SEMANTIC, 28 LINE-SHIFT groups in 
 
 ## LINE-SHIFT
 24 src files changed line counts (user-settings, session-panel, visemes-panel, studio-shell, status-pill, container, animation-controller, …). Re-anchor by content, never by line. Any anchor quoting a Polish comment/string → search the English equivalent.
+
+# Drift C1 — after merges 23078ad (Phase 16) + da72a3f (Phase 15)
+Checker: haiku, read-only. Verdict: DRIFT (21 SEMANTIC). Supersedes earlier anchors where they conflict.
+
+## Phase 17
+- 17-02 t4, 17-06 t4: `CLOSE_SAFETY_CAP` gone → `ANIM_DEFAULTS.common.mouthCloseCap` (0.85), applied face-controller.ts ~:658, viseme-scheduler.ts ~:181.
+- 17-02 t4: hardcoded mouthClose===0.8 already gone; tests/phoneme-visemes.test.ts ~:31-57 asserts <=0.5/<=0.35/<=0.36; table close 0.5, press 0.58 → extend that block, don't duplicate.
+- 17-02 t3/t4: `PHONEME_POSES` / `DIPHTHONG_END_POSES` do NOT exist; table is an inline switch (phoneme-visemes.ts ~:65-165) → extraction is new work, values identical.
+- 17-02 t5: SPEAKING guard already in testPhoneme (face-controller.ts ~:522) → keep it when replacing literals (~:535-583, setManualOverride w/ profile.jawScale).
+- 17-01 t4: FC imports g2p-en at ~:15 (ensureG2pLoaded, isG2pReady, g2pAvailable), never wordToPhonemesSync → only phoneme-merge.ts changes.
+- 17-01 t5, 17-02 t1: char loop → onAudioChunk ~:484-505 (charTokenFor override ~:488); no digraph second-letter skip yet. Anchor by charTokenFor/charMapper.
+- 17-*: docs/EN-visemes.md → docs/en-visemes.md. 17-05 §1 → see A1 #2.
+- 16-07-SUMMARY lists face-controller seams for 17 (enqueue blocks, isSpeechShape/speechShapeList, testPhoneme pose duplication D-7, jaw-gate keys); golden test uses fixed setCharMapper.
+- LINE-SHIFT: speech-backend normalize ~89-119; testPhoneme ~520-596; onAudioChunk ~415; getVisemeQueueLength ~880; alignment-rescale MAX_FACTOR ~17 (=2.0).
+
+## Phase 14
+- 14-04 4a: KEEP `voice:error` (listener src/ui/user/connection-banner.ts ~:39). Delete only `compare:disposed` (app-types.ts ~:69).
+- 14-02 MODULE_RULES: add app/copy.ts (22 importers features/ui/app-root); record edges scene-panel→scene/skin-shader, container→core/adaptive-resolution; face-controller→audio/audible-clock downward OK.
+- 14-03: dispose has 12 unsub* calls (container.ts ~:371-400); still lacks speechBackend.stop, conversation teardown, renderer.dispose, AudioContext.close.
+- 14-05: AppEvents has 17 keys (16 after compare:disposed removal) → derive rows by grep.
+- 14-01 t2: casts at speech-backend.ts ~:89 (two `as any`), meta-person-loader.ts ~:59, audio-engine.ts ~:52.
+- 14-04: editable check container.ts ~:315-316; isEditableTarget (ui-mode.ts ~:41) unexported. environment.ts setupRoomEnvironment only test-mock caller → decide.
+- 14-04 dead-code list: 16-04 already removed some dead code — verify before deleting.
+
+## Phase 13 / 18
+- 13-01: docs/animation-runtime.md and docs/lipsync-deep-dive.md do NOT exist → retarget to docs/4-audio-and-barge-in.md, docs/3-lip-sync-and-coarticulation.md. 13-01 t4: remove README from the language-gate exemption (tests/language.test.ts ~:210) per plan.
+- 13-02 t4: no-agent error string wording → read live code.
+- 18-01: SECURITY.md exists & tracked → amend; src/config doesn't exist → scan src/audio/agent-config.ts, src/app/store/.
+- 18-02/03: README slot placeholders absent until 13-01 lands.
+- 18-06: scripts/ is untracked (owner's make-demo-clip.mjs) → "tracked files" checks fail until owner commits it.

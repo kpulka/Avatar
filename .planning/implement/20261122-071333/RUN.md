@@ -43,3 +43,4 @@ Skipped per user; plans stop at checkpoint:human-* and are recorded as PARTIAL/B
 - 2026-11-22/23: Wave C interrupted (weekly API limit on 15; session end on 16). Progress saved: 15-01..04 (ce6c53c), 16-01..04 (acbde32). 2026-11-24: both agents resumed via SendMessage at 15-05 / 16-05.
 - C/16 merged 23078ad [sonnet]: 16-01..07 DONE. 6 test conflicts (12-07 EN names vs 16 logic) resolved by orchestrator: 16 logic + EN names. Gate 59/346. DEFERRED-HUMAN: 5 manual UAT + sign-off of 5 intentional behavior changes (16-VERIFICATION).
 - C/15 merged da72a3f [sonnet]: 15-01..07 DONE. 1 conflict tests/container.test.ts resolved (15 tests, EN names). Gate 66/417. DEFERRED-HUMAN: 15-VERIFICATION §2-5 (visual matrix, keyboard walk, failure injection, viewport tiers, screenshots for 13-03). style.css grew 1229→1510 (plan expected shrink).
+- Drift C1 recorded. D started: track-lip 17-01..06 [sonnet] ∥ track-readme 13-01,13-02 [haiku].
