@@ -16,6 +16,8 @@
 
 import { CharAlignment } from '../../types/avatar';
 import { wordToPhonemesSync } from './g2p-en';
+import { g2pPl } from './g2p-pl';
+import { detectWordLanguage, WORD_CHAR, G2pLanguage } from './language';
 import { DIPHTHONG_END_POSES } from './phoneme-visemes';
 
 export interface PhonemeSpan {
@@ -32,6 +34,7 @@ export interface PhonemeSpan {
 /** Vowel-like phonemes — they get a larger share of the word time. */
 const VOWEL_PHONEMES = new Set([
   'AA', 'AH', 'AE', 'AO', 'AW', 'AY', 'EH', 'ER', 'EY', 'IH', 'IY', 'OW', 'OY', 'UH', 'UW',
+  'PL_AN', 'PL_EN', // Polish nasal vowels (17-04)
 ]);
 
 /** Soft minimum span (ms). */
@@ -111,8 +114,17 @@ function toUnits(phonemes: readonly string[]): Unit[] {
 /**
  * Splits the character alignment into phoneme spans (start+duration, in ms relative to the chunk).
  * Returns [] when the source is the acoustic fallback (no text) or there are no words.
+ *
+ * Language (17-04): each word is routed per word. Polish evidence (a diacritic, or a Polish-only digraph
+ * the English lexicon does not know) sends it to the rule-based Polish G2P; every other word follows
+ * `options.defaultLanguage` (default 'en'). Both languages produce the same `PhonemeSpan[]` shape and the
+ * same weighting / renormalization.
  */
-export function mergeCharAlignmentToPhonemes(alignment: CharAlignment): PhonemeSpan[] {
+export function mergeCharAlignmentToPhonemes(
+  alignment: CharAlignment,
+  options: { defaultLanguage?: G2pLanguage } = {},
+): PhonemeSpan[] {
+  const defaultLanguage = options.defaultLanguage ?? 'en';
   if (alignment.source !== undefined && alignment.source !== 'elevenlabs') {
     return [];
   }
@@ -128,7 +140,7 @@ export function mergeCharAlignmentToPhonemes(alignment: CharAlignment): PhonemeS
 
   while (i < n) {
     // Boundary: look for the start of a run of letters
-    if (!/[A-Za-z'’-]/.test(chars[i])) {
+    if (!WORD_CHAR.test(chars[i])) {
       i += 1;
       continue;
     }
@@ -136,7 +148,7 @@ export function mergeCharAlignmentToPhonemes(alignment: CharAlignment): PhonemeS
     // Collect the run of letters (the word)
     let j = i;
     let wordText = '';
-    while (j < n && /[A-Za-z'’-]/.test(chars[j])) {
+    while (j < n && WORD_CHAR.test(chars[j])) {
       wordText += chars[j];
       j += 1;
     }
@@ -151,7 +163,9 @@ export function mergeCharAlignmentToPhonemes(alignment: CharAlignment): PhonemeS
 
     // A run without a single letter (a lone "-" or "'") has no sound: the rules return [''] for it,
     // which must not become a silent span that eats part of the word window.
-    const phonemes = (wordToPhonemesSync(wordText) ?? []).filter((p) => p !== '');
+    const language = detectWordLanguage(wordText, defaultLanguage);
+    const raw = language === 'pl' ? g2pPl(wordText) : wordToPhonemesSync(wordText);
+    const phonemes = (raw ?? []).filter((p) => p !== '');
     if (phonemes.length === 0 || wordSpanMs <= 0) continue;
 
     const units = toUnits(phonemes);

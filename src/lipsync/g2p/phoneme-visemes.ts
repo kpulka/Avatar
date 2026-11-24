@@ -156,6 +156,31 @@ export const PHONEME_POSES: Readonly<Record<string, Readonly<LipPose>>> = {
 };
 
 /**
+ * Polish-only viseme classes (17-04). The Polish G2P (`g2p-pl.ts`) emits the shared ARPAbet class keys
+ * above wherever the mouth shape coincides (AA, EH, IY, AO, UW, IH, SH, ZH, CH, JH, W, Y, ...) and
+ * these `PL_*` keys for the classes English has no pose for. Kept apart from `PHONEME_POSES` so the
+ * English table (and its snapshot / distinctness guards) is untouched.
+ */
+const SOFT_SIBILANT: LipPose = { jaw: 0.16, smile: 0.22, funnel: 0.18, upperUp: 0.12, lowerDown: 0.1 };
+
+export const PL_PHONEME_POSES: Readonly<Record<string, Readonly<LipPose>>> = {
+  // Velar fricative [x] (ch, h): open, no smile, no rounding - NOT the English CH funnel.
+  PL_H: { jaw: 0.3, lowerDown: 0.06 },
+  // Soft sibilants / affricates (the acute letters and the i-softened clusters): smile + a little funnel.
+  PL_SI: SOFT_SIBILANT,
+  PL_ZI: SOFT_SIBILANT,
+  PL_CI: SOFT_SIBILANT,
+  PL_DZI: SOFT_SIBILANT,
+  PL_NI: { jaw: 0.18, smile: 0.12, upperUp: 0.05 },
+  // Dental affricates c / dz share the English sibilant pose.
+  PL_TS: PHONEME_POSES.S,
+  PL_DZ: PHONEME_POSES.Z,
+  // Nasal vowels: open + slight funnel (a), half-open + slight smile and funnel (e).
+  PL_AN: { jaw: 0.42, funnel: 0.2, pucker: 0.1 },
+  PL_EN: { jaw: 0.36, smile: 0.14, funnel: 0.12 },
+};
+
+/**
  * Diphthong glide targets (docs/en-visemes.md section 5.5, option 2 for AY and AW): the merge layer
  * emits the diphthong's own pose first and then this end pose, so the mouth visibly MOVES instead of
  * holding one static shape. AY glides to [ɪ], AW to [ʊ]. EY/OW/OY stay single static poses.
@@ -171,6 +196,7 @@ export const DIPHTHONG_END_POSES: Readonly<Record<string, string>> = {
  * Returns null for an unknown phoneme (the queue consumer skips it without an error).
  */
 export function mapPhonemeToShapes(phoneme: string): Map<string, number> | null {
-  if (!Object.prototype.hasOwnProperty.call(PHONEME_POSES, phoneme)) return null; // unknown phoneme -> no viseme
-  return lipPoseToShapes(PHONEME_POSES[phoneme]);
+  if (Object.prototype.hasOwnProperty.call(PHONEME_POSES, phoneme)) return lipPoseToShapes(PHONEME_POSES[phoneme]);
+  if (Object.prototype.hasOwnProperty.call(PL_PHONEME_POSES, phoneme)) return lipPoseToShapes(PL_PHONEME_POSES[phoneme]);
+  return null; // unknown phoneme -> no viseme
 }
