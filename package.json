@@ -16,7 +16,6 @@
     "format:check": "prettier --check \"src/**/*.ts\" \"tests/**/*.ts\" eslint.config.ts vite.config.ts"
   },
   "dependencies": {
-    "@elevenlabs/client": "^1.23.0",
     "three": "^0.174.0"
   },
   "devDependencies": {
