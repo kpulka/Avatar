@@ -28,4 +28,19 @@ describe('animation-router (PoseRouter — wybór źródła per tura)', () => {
   it('mode=viseme → wizemy niezależnie od reszty kontekstu', () => {
     expect(resolveAnimationSource({ mode: 'viseme', liveTurn: false, language: 'en' })).toBe('viseme');
   });
+
+  it('policy table for non-live turns (documented behavior for the future per-turn router, 16-06)', () => {
+    const cases: Array<[Parameters<typeof resolveAnimationSource>[0], 'viseme' | 'frames']> = [
+      [{ mode: 'frames', liveTurn: false }, 'frames'],
+      [{ mode: 'frames', liveTurn: false, language: 'en', a2fHealthy: true }, 'frames'],
+      [{ mode: 'frames', liveTurn: false, language: 'pl' }, 'viseme'],
+      [{ mode: 'frames', liveTurn: false, a2fHealthy: false }, 'viseme'],
+      [{ mode: 'viseme', liveTurn: false }, 'viseme'],
+      // liveTurn always wins, whatever else the context says
+      [{ mode: 'frames', liveTurn: true, language: 'en', a2fHealthy: true }, 'viseme'],
+    ];
+    for (const [ctx, expected] of cases) {
+      expect(resolveAnimationSource(ctx), JSON.stringify(ctx)).toBe(expected);
+    }
+  });
 });
