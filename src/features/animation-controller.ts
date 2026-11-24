@@ -17,6 +17,7 @@ import {
   DEFAULT_CALIBRATION_PROFILE,
 } from '../lipsync/calibration';
 import { VisemeOverrideMap } from '../lipsync/viseme-overrides';
+import type { LipSyncEngine } from '../lipsync/lipsync-engine';
 import { TypedEventBus, Unsub } from '../app/events';
 import { AnimationService, AppEvents } from '../app/app-types';
 import { t } from '../app/copy';
@@ -69,7 +70,7 @@ export class AnimationController implements AnimationService {
   private attachFaceController(driver: FaceDriver): void {
     const fc = new FaceController(driver, this.audioEngine);
     fc.setCalibrationProfile(this.calibration);
-    fc.setLipSyncEngine(this.store.getEffective<'phoneme' | 'char'>('lipSyncEngine'));
+    fc.setLipSyncEngine(this.store.getEffective<LipSyncEngine>('lipSyncEngine'));
     fc.setAnimationMode(this.animMode);
     fc.setGazeProvider(this.gazeProvider);
     this.faceController = fc;
@@ -187,7 +188,7 @@ export class AnimationController implements AnimationService {
     return { ...this.calibration };
   }
 
-  public setLipSyncEngine(engine: 'phoneme' | 'char'): void {
+  public setLipSyncEngine(engine: LipSyncEngine): void {
     this.store.setStudio('lipSyncEngine', engine);
     this.faceController?.setLipSyncEngine(engine);
   }

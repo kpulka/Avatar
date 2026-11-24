@@ -57,6 +57,19 @@ describe('validateSettings (schema)', () => {
     expect('micSensitivity' in DEFAULT_SETTINGS.studio).toBe(false);
   });
 
+  it('lip-sync engine (17-04): new ids round-trip, legacy "phoneme" becomes "phoneme-en", unknown keeps the default', () => {
+    const withEngine = (value: unknown) => validateSettings({ schemaVersion: 1, user: {}, studio: { lipSyncEngine: value } });
+    for (const id of ['phoneme-en', 'phoneme-pl', 'char']) {
+      const r = withEngine(id);
+      expect(r.ok && r.value.studio.lipSyncEngine).toBe(id);
+    }
+    const legacy = withEngine('phoneme');
+    expect(legacy.ok && legacy.value.studio.lipSyncEngine).toBe('phoneme-en');
+    const bogus = withEngine('klingon');
+    expect(bogus.ok && bogus.value.studio.lipSyncEngine).toBe(DEFAULT_SETTINGS.studio.lipSyncEngine);
+    expect(DEFAULT_SETTINGS.studio.lipSyncEngine).toBe('phoneme-en');
+  });
+
   it('rejects an unsupported schema version', () => {
     const result = validateSettings({ schemaVersion: 99 });
     expect(result.ok).toBe(false);
@@ -133,6 +146,21 @@ describe('migrateLegacy', () => {
     expect(dump[BLOB_KEY]).toBeDefined();
     expect(Object.keys(dump).some((key) => key.startsWith('avatar_settings_backup_'))).toBe(true);
     expect('micSensitivity' in state.user).toBe(false);
+  });
+
+  it('maps the legacy lip-sync engine value "phoneme" to "phoneme-en" and keeps the new ids (17-04)', () => {
+    for (const [legacy, expected] of [['phoneme', 'phoneme-en'], ['phoneme-pl', 'phoneme-pl'], ['char', 'char']] as const) {
+      const storage = createMemoryStorage({ [LEGACY_KEYS.lipSyncEngine]: legacy });
+      expect(migrateLegacy(storage, () => 1)?.studio.lipSyncEngine).toBe(expected);
+    }
+  });
+
+  it('a persisted pre-17-04 blob with lipSyncEngine "phoneme" loads without error (17-04)', () => {
+    const storage = createMemoryStorage({
+      [BLOB_KEY]: JSON.stringify({ schemaVersion: 1, user: {}, studio: { lipSyncEngine: 'phoneme' } }),
+    });
+    const store = new SettingsStore(storage);
+    expect(store.getEffective('lipSyncEngine')).toBe('phoneme-en');
   });
 
   it('is idempotent — the second call returns null', () => {

@@ -11,7 +11,9 @@ import {
 } from '../types/avatar';
 import { AudioEngine } from '../audio/audio-engine';
 import { VisemeScheduler, isSpeechShape } from './viseme-scheduler';
-import { mapCharToShapes, charTokenFor, charPathSpan } from './viseme-mappings';
+import { mapCharToShapes, charTokenFor, charPathSpan, CharContext, POLISH_CHAR_CONTEXT } from './viseme-mappings';
+import { LipSyncEngine, DEFAULT_LIP_SYNC_ENGINE } from './lipsync-engine';
+import { charsLookPolish } from './g2p/language';
 import { ensureG2pLoaded, isG2pReady, g2pAvailable } from './g2p/g2p-en';
 import { mergeCharAlignmentToPhonemes } from './g2p/phoneme-merge';
 import { mapPhonemeToShapes } from './g2p/phoneme-visemes';
@@ -116,10 +118,10 @@ export class FaceController {
   private readonly speechShapeList: string[];
 
   // Character-to-shape mapping function
-  private charMapper: (chars: string[], index: number) => Map<string, number> = mapCharToShapes;
+  private charMapper: (chars: string[], index: number, context?: CharContext) => Map<string, number> = mapCharToShapes;
 
-  // Lip-sync engine: 'phoneme' = G2P layer (EN), 'char' = legacy char table (PL/fallback)
-  private lipSyncEngine: 'phoneme' | 'char' = 'phoneme';
+  // Lip-sync engine: 'phoneme-en' / 'phoneme-pl' = G2P layer per language, 'char' = character table (fallback)
+  private lipSyncEngine: LipSyncEngine = DEFAULT_LIP_SYNC_ENGINE;
 
   // Per-VISEME blendshape pose overrides (Viseme Editor, localStorage) —
   // they take precedence over the default mapping tables.
@@ -366,12 +368,12 @@ export class FaceController {
     }
   }
 
-  public setCharMapper(mapper: (chars: string[], index: number) => Map<string, number>): void {
+  public setCharMapper(mapper: (chars: string[], index: number, context?: CharContext) => Map<string, number>): void {
     this.charMapper = mapper;
   }
 
-  /** Selects the lip-sync engine: 'phoneme' (G2P, EN) or 'char' (character table). */
-  public setLipSyncEngine(engine: 'phoneme' | 'char'): void {
+  /** Selects the lip-sync engine: 'phoneme-en' / 'phoneme-pl' (G2P per language) or 'char' (character table). */
+  public setLipSyncEngine(engine: LipSyncEngine): void {
     this.lipSyncEngine = engine;
     this.scheduler.clear();
   }
@@ -447,15 +449,16 @@ export class FaceController {
       return; // do NOT run the per-character loop for the fallback
     }
 
-    // EN phoneme layer (LIPS-05): character alignment -> ARPAbet phonemes (G2P) -> visemes.
-    // Silent letters produce no movement; word timings come from the ElevenLabs alignment.
+    // Phoneme layer (LIPS-05, 17-04): character alignment -> phonemes (EN: CMUdict G2P, PL: rules) -> visemes.
+    // Silent letters produce no movement; word timings come from the ElevenLabs alignment. The Polish engine
+    // needs no lexicon, so it does not wait for the English dictionary.
+    const polishEngine = this.lipSyncEngine === 'phoneme-pl';
     if (
-      this.lipSyncEngine === 'phoneme' &&
-      g2pAvailable() &&
-      isG2pReady() &&
+      (this.lipSyncEngine === 'phoneme-en' || polishEngine) &&
+      (polishEngine || (g2pAvailable() && isG2pReady())) &&
       (alignment.source === undefined || alignment.source === 'elevenlabs')
     ) {
-      const spans = mergeCharAlignmentToPhonemes(alignment);
+      const spans = mergeCharAlignmentToPhonemes(alignment, { defaultLanguage: polishEngine ? 'pl' : 'en' });
       if (spans.length > 0) {
         const profile = this.scheduler.getCalibrationProfile();
         const syncOffsetSec = profile.syncOffsetMs / 1000;
@@ -477,6 +480,10 @@ export class FaceController {
       // No spans (e.g. non-letter text only) -> fall through to the per-character loop
     }
 
+    // Character path language context (17-04): the Polish engine, or a chunk with Polish evidence,
+    // switches the "ch" digraph to the Polish velar fricative. One scan per chunk, no allocation.
+    const charContext = this.lipSyncEngine === 'phoneme-pl' || charsLookPolish(alignment.chars) ? POLISH_CHAR_CONTEXT : undefined;
+
     // Schedule visemes on the audio timeline
     for (let i = 0; i < alignment.chars.length; i++) {
       const char = alignment.chars[i];
@@ -494,7 +501,7 @@ export class FaceController {
       if (tokenOverride) {
         shapes = new Map(tokenOverride);
       } else {
-        shapes = this.charMapper(alignment.chars, i);
+        shapes = this.charMapper(alignment.chars, i, charContext);
       }
 
       const profile = this.scheduler.getCalibrationProfile();

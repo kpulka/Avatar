@@ -16,6 +16,7 @@ import {
 import {
   DEFAULT_CALIBRATION_PROFILE,
 } from '../../lipsync/calibration';
+import { DEFAULT_LIP_SYNC_ENGINE, parseLipSyncEngine } from '../../lipsync/lipsync-engine';
 
 export const BLOB_KEY = 'avatar_settings_v1';
 
@@ -78,7 +79,7 @@ export function migrateLegacy(storage: StorageLike, now: () => number = Date.now
     studio: {
       agentId: typeof rawAgentId === 'string' ? rawAgentId : undefined,
       a2fUrl: typeof rawA2fUrl === 'string' ? rawA2fUrl : undefined,
-      lipSyncEngine: rawEngine === 'phoneme' || rawEngine === 'char' ? rawEngine : undefined,
+      lipSyncEngine: parseLipSyncEngine(rawEngine),
       calibration: parsedCalibration,
       visemeOverrides: parseJson(rawOverrides),
     },
@@ -125,7 +126,7 @@ function validateDefaults(): SettingsStateV1 {
     studio: {
       agentId: '',
       a2fUrl: 'http://127.0.0.1:8000',
-      lipSyncEngine: 'phoneme',
+      lipSyncEngine: DEFAULT_LIP_SYNC_ENGINE,
       calibration: { ...DEFAULT_CALIBRATION_PROFILE },
       visemeOverrides: {},
       locks: {},
