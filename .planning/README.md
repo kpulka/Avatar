@@ -105,6 +105,7 @@ names. Use this map to resolve them:
 ## Where to start
 
 - To see what the project is and where it stands: [ROADMAP.md](ROADMAP.md), then [STATE.md](STATE.md).
+- To see how the code is put together (layers, events, lifecycle, extension seams): [ARCHITECTURE.md](../ARCHITECTURE.md).
 - To see how a phase was decided and checked: its `NN-CONTEXT.md` and `NN-VERIFICATION.md`.
   The English example is [phases/12-english-language/12-CONTEXT.md](phases/12-english-language/12-CONTEXT.md)
   and [phases/12-english-language/12-VERIFICATION.md](phases/12-english-language/12-VERIFICATION.md).

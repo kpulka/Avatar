@@ -175,7 +175,7 @@ const GATE_A_SCOPES: readonly GateAScope[] = [
     // ON in 12-07. README.md entered enforced scope in Phase 13 (13-01) once the English
     // rewrite landed; the former README exemption is removed.
     enforced: true,
-    files: () => ['README.md', 'TODO_humanInTheLoop.md', 'index.html'].filter((f) => existsSync(join(ROOT, f))),
+    files: () => ['README.md', 'ARCHITECTURE.md', 'TODO_humanInTheLoop.md', 'index.html'].filter((f) => existsSync(join(ROOT, f))),
   },
 ];
 
@@ -208,6 +208,7 @@ function gateBFiles(): string[] {
   return [
     ...listFiles('docs', ['.md']),
     'README.md',
+    'ARCHITECTURE.md',
     'TODO_humanInTheLoop.md',
     'a2f/README.md',
     ...planningRoot,
