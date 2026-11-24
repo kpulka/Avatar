@@ -95,3 +95,22 @@ Checker: haiku, read-only. Verdict: DRIFT (21 SEMANTIC). Supersedes earlier anch
 Checker: orchestrator inline. Slots present: 13-03 hero (l.5), 18-05 demo (l.36), 18-03 CI badge (l.100), 18-02 license (l.101, 106).
 - SEMANTIC (owner decision): README 18-02 placeholder says "MIT", but ROADMAP Phase 18 / 18-02 say "All Rights Reserved (owner-confirmed)". 18-02 must follow the owner's confirmed choice, not the placeholder text. Blocked on owner.
 - README truthfully omits ARCHITECTURE.md, typecheck script, layering/lifecycle gates → 14-01 (typecheck), 14-02/03 (gates), 14-05 (ARCHITECTURE.md) should add a README line/link when they land (README is in Gate A root scope — English only).
+
+# Drift D2 — after merge 4a0e79e (Phase 17)
+Checker: haiku, read-only. Verdict: DRIFT. Re-verifies C1 for 14/18 (this section wins on conflict).
+
+## Phase 14
+- 14-01: speech-backend `as any` already gone (17); real casts left: meta-person-loader.ts ~:59 (`k as any`), audio-engine.ts ~:52 (`floatData as any`) — 2, not 3. tsconfig still lacks noUncheckedIndexedAccess, include:["src"]; tsconfig.test.json + typecheck script absent → create.
+- 14-02: NEW upward edges realism → lipsync (emotion-layer.ts, gaze-saccades.ts, head-micro-movements.ts import lipsync/anim-config and lipsync/alloc-probe, from 16-04/16-05). Baseline will NOT pass unchanged → fix properly (move ANIM_DEFAULTS / allocProbe to a lower layer, or a reasoned EXCEPTIONS entry); never freeze silently. Add MODULE_RULES app/copy.ts. Record edges scene-panel→scene/skin-shader, container→core/adaptive-resolution.
+- 14-03: no handlerCount in events.ts; dispose (container.ts ~:371-400) lacks speechBackend.stop, conversation teardown, renderer.dispose, AudioContext.close → implement as written.
+- 14-04: eleven-client-smoke.ts ALREADY deleted (0a08e8c) → no-op. model-cache.ts + test: zero prod importers → delete. KEEP voice:error; delete compare:disposed (app-types.ts ~:70). Editable check container.ts ~:315-316; export isEditableTarget (ui-mode.ts ~:41) and reuse. environment.ts setupRoomEnvironment test-mock only → decide.
+- 14-05: create ARCHITECTURE.md; AppEvents 17 keys now (16 after compare:disposed removal). Add README link (README in Gate A, English).
+
+## Phase 18 / 13
+- 18-01: CSP exists as build-only Vite transform (vite.config.ts ~:6-22) → no meta tag; already has SUMMARY.
+- 18-02: owner chose All Rights Reserved (plan header) but tasks/README placeholders (README ~:101,106-107) say MIT → write ARR notice, update README; D2 superseded.
+- 18-03: no .github/; trigger branch must be `master` (no main). typecheck script comes from 14-01.
+- 18-04: blocked until 14-01/14-02 land (layering-rules.ts, tsconfig.test.json); no eslint/prettier yet.
+- 18-05: no demo=1 flag, no BASE_PATH; "Listen" (11.2-03) not executed → BLOCKED. Dict JSON is committed (no build:dict step in CI).
+- 18-06: .claude/ untracked and not in .gitignore; scripts/make-demo-clip.mjs untracked; config.json.bak-* untracked → dispositions (owner).
+- 13-01 t4 done. 13-04 t1: docs/0 status preamble still to do; execute 13-VERIFICATION.
