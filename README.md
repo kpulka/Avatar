@@ -5,7 +5,7 @@ An interactive 3D avatar that **holds a voice conversation with you**. It listen
 <!-- 13-03: hero screenshot (dark theme, avatar mid-speech). Alt: "The Avatar talking —
      mouth shapes match the audio waveform playing in real time." ≤ 300 kB. -->
 
-**What makes it interesting:** lip-sync is not canned blendshape playback. The client converts English text to phonemes with the CMU Pronouncing Dictionary (with fallback rules for unknown words), maps them to ARKit viseme targets, and schedules them against the same audible clock that plays the audio. Interrupted turns are tagged with an epoch, so late audio from a cancelled turn is ignored by construction. A second animation source, neural frames in the Audio2Face style, goes through the same router. The codebase is TypeScript in strict mode with 705 automated tests in 75 files (measured 2026-11-24), and the planning process records each architectural decision.
+**What makes it interesting:** lip-sync is not canned blendshape playback. The client converts English text to phonemes with the CMU Pronouncing Dictionary (with fallback rules for unknown words), maps them to ARKit viseme targets, and schedules them against the same audible clock that plays the audio. Interrupted turns are tagged with an epoch, so late audio from a cancelled turn is ignored by construction. A second animation source, neural frames in the Audio2Face style, goes through the same router. The codebase is TypeScript in strict mode with 706 automated tests in 75 files (measured 2026-11-24), and the planning process records each architectural decision.
 
 ## Quickstart
 
@@ -16,7 +16,7 @@ npm install
 npm run dev        # → http://localhost:5310
 ```
 
-Requires **Node.js 20 or newer** (the test runner, vitest 4, sets that floor).
+Requires **Node.js 20.19 or newer** (ESLint 10 sets that floor; CI runs Node 22).
 
 - **The avatar appears with no setup.** The MetaPerson model is committed in the repo (`public/models/avatar.glb`, 11.9 MB) and loads at startup.
 - **Hear it right away (no agent, no microphone, no backend):** open the studio with `?studio=1` (or press Ctrl+Shift+D), go to the **Animation** tab, and press **▶ Sample speech (EN)**. The sentence is spoken with generated speech-like audio (synthetic tones, not a recorded voice), character-timed lip-sync and captions. **▶ A2F demo (frames)** plays the bundled recording `public/demo/demo-speech.wav` with generated frames.
@@ -91,14 +91,22 @@ The project uses GSD (Get Shit Done), a spec-driven planning workflow: every pha
 ## Verification
 
 ```bash
-npm test            # vitest: unit tests plus the language gate
-npm run typecheck   # tsc over src AND tests (tsconfig.test.json), noUncheckedIndexedAccess on
-npm run build       # tsc (strict, src only) + vite production build
+npm run verify
 ```
 
-705 tests in 75 files, measured 2026-11-24 with `npx vitest run --dir tests`. `npm run typecheck` also covers the test suite, which the build's `tsc` does not.
+One chain, stops at the first failing step (the failing step is the last one named in the output). It is `typecheck && test && build && lint && format:check`; the steps also run on their own:
 
-The workflow in [`.github/workflows/ci.yml`](.github/workflows/ci.yml) runs `npm ci`, `typecheck`, `test` and `build` on Node 22 for every push to `master` and every pull request. Its status:
+```bash
+npm run typecheck     # tsc over src AND tests (tsconfig.test.json), noUncheckedIndexedAccess on
+npm test              # vitest: unit tests, the language gate, the import-layer gate
+npm run build         # tsc (strict, src only) + vite production build
+npm run lint          # ESLint (typescript-eslint, type-checked), zero warnings, layering rule
+npm run format:check  # Prettier over src, tests and the TS config files
+```
+
+706 tests in 75 files, measured 2026-11-24 with `npx vitest run --dir tests`; `npm run verify` took about 22 s on the development machine. The CI workflow runs the same steps on every push and pull request.
+
+The workflow in [`.github/workflows/ci.yml`](.github/workflows/ci.yml) runs `npm ci`, `typecheck`, `lint`, `format:check`, `test` and `build` on Node 22 for every push to `master` and every pull request. Its status:
 
 [![CI](https://github.com/kpulka/Avatar/actions/workflows/ci.yml/badge.svg)](https://github.com/kpulka/Avatar/actions/workflows/ci.yml)
 
