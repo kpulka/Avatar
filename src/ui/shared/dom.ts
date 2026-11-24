@@ -14,6 +14,18 @@ export interface ElOptions {
   placeholder?: string;
   title?: string;
   ariaLabel?: string;
+  /** ARIA role (e.g. `status`, `alert`, `log`). */
+  role?: string;
+  /** Sets the `hidden` attribute (kept out of the accessibility tree). */
+  hidden?: boolean;
+}
+
+let uidCounter = 0;
+
+/** Unique DOM id for `for` / `aria-controls` / `aria-labelledby` wiring (`a15-<prefix>-<n>`). */
+export function uid(prefix: string): string {
+  uidCounter += 1;
+  return `a15-${prefix}-${uidCounter}`;
 }
 
 export function el<K extends keyof HTMLElementTagNameMap>(
@@ -30,6 +42,8 @@ export function el<K extends keyof HTMLElementTagNameMap>(
   if (options.placeholder) node.setAttribute('placeholder', options.placeholder);
   if (options.title) node.title = options.title;
   if (options.ariaLabel) node.setAttribute('aria-label', options.ariaLabel);
+  if (options.role) node.setAttribute('role', options.role);
+  if (options.hidden) node.setAttribute('hidden', '');
   if (options.attrs) {
     for (const [name, value] of Object.entries(options.attrs)) {
       node.setAttribute(name, value);

@@ -10,13 +10,21 @@ export function createCaptions(): PanelDefinition {
   return {
     id: 'captions',
     title: t('panel.title.captions'),
-    icon: '💬',
+    icon: '',
     visibleIn: 'user',
     mount(ctx: PanelContext): PanelHandle {
       const { events, container } = ctx;
       const userText = el('span', { className: 'transcript-text', text: t('captions.empty') });
       const agentText = el('span', { className: 'transcript-text', text: t('captions.empty') });
-      const root = el('div', { className: 'cinema-captions user-captions' }, [
+      const root = el(
+        'div',
+        {
+          className: 'cinema-captions user-captions',
+          role: 'log',
+          ariaLabel: t('captions.regionAria'),
+          attrs: { 'aria-live': 'polite' },
+        },
+        [
         el('div', { className: 'transcript-box' }, [
           el('div', { className: 'transcript-line user-line' }, [
             el('span', { className: 'speaker-tag', text: t('captions.you') }),
@@ -33,6 +41,13 @@ export function createCaptions(): PanelDefinition {
       const unsubUser = events.on('transcript:user', (text) => {
         userText.textContent = text;
       });
+      // S4: a barge-in is acknowledged by a short flash on the agent line (CSS, reduced-motion aware).
+      const agentLine = root.querySelector('.agent-line') as HTMLElement;
+      const unsubInterrupt = events.on('speech:interruption', () => {
+        agentLine.classList.remove('caption-flash');
+        void agentLine.offsetWidth; // restart the animation on back-to-back interruptions
+        agentLine.classList.add('caption-flash');
+      });
       const unsubAgent = events.on('transcript:agent', (text) => {
         agentText.textContent = text;
       });
@@ -41,6 +56,7 @@ export function createCaptions(): PanelDefinition {
         destroy(): void {
           unsubUser();
           unsubAgent();
+          unsubInterrupt();
           root.remove();
         },
       };

@@ -31,10 +31,12 @@ import { LastTurnBuffer } from '../features/last-turn-buffer';
 import { CompareController } from '../features/compare-controller';
 import { ScenePresetController, ScenePresetHost } from '../features/scene-preset-controller';
 import { createDefaultAnimationSources } from '../lipsync/animation-sources';
+import { createConnectionBanner } from '../ui/user/connection-banner';
 import { createToast } from '../ui/shared/toast';
 import { createLoader } from '../ui/shared/loader';
 import { createModal } from '../ui/shared/modal';
 import { el } from '../ui/shared/dom';
+import { icon } from '../ui/shared/icons';
 import { PanelContext, PanelRegistry, PanelUi } from '../ui/studio/panel-registry';
 import { createStudioShell, StudioShell } from '../ui/studio/studio-shell';
 import { createAnimationPanel } from '../ui/studio/panels/animation-panel';
@@ -103,7 +105,11 @@ export function createApp(canvas: HTMLCanvasElement): AppHandle {
   const hostRoot = document.getElementById('ui-root') ?? document.getElementById('app') ?? document.body;
   hostRoot.append(el('div', { className: 'vignette-overlay' }));
   const toast = createToast(hostRoot);
-  const loaderUi = createLoader(hostRoot);
+  // The retry of an avatar load failure falls back to the synchronous demo avatar (known good).
+  const loaderUi = createLoader(hostRoot, {
+    onRetry: () => sceneController.loadDemo(),
+    retryLabel: t('errors.avatarRetry'),
+  });
   const modal = createModal(hostRoot);
   const unsubToast = events.on('toast', (payload) => toast.show(payload.message, payload.type));
   // The loader disappears when the avatar is ready — also on the fallback path (demo avatar),
@@ -120,10 +126,10 @@ export function createApp(canvas: HTMLCanvasElement): AppHandle {
       fraction === null ? t('loader.avatar') : t('loader.avatarProgress', { percent: Math.round(fraction * 100) })
     );
   });
-  const unsubAvatarError = events.on('avatar:error', ({ message }) => {
+  // S1: a double failure keeps the loader pill visible as an error with a retry (demo avatar), no dead end.
+  const unsubAvatarError = events.on('avatar:error', () => {
     avatarReady = true;
-    loaderUi.hide();
-    events.emit('toast', { message, type: 'error' });
+    loaderUi.error(t('errors.avatarBody'));
   });
 
   const ui: PanelUi = { toast, loader: loaderUi, modal };
@@ -206,6 +212,7 @@ export function createApp(canvas: HTMLCanvasElement): AppHandle {
       list: () => scenePresetController.list().map((preset) => ({ id: preset.id, label: preset.label })),
       getCurrentId: () => scenePresetController.getCurrentId(),
     },
+    uiMode,
   };
 
   // Microphone device from the profile (F11) — applied at capture start and on change.
@@ -246,6 +253,7 @@ export function createApp(canvas: HTMLCanvasElement): AppHandle {
   registry.register(createStatusPill());
   registry.register(createConversationDock());
   registry.register(createCaptions());
+  registry.register(createConnectionBanner());
   registry.register(createAlgorithmSwitcher());
   registry.register(createUserSettings());
   for (const panel of registry.list('user')) {
@@ -254,10 +262,19 @@ export function createApp(canvas: HTMLCanvasElement): AppHandle {
 
   const shell = createStudioShell({ registry, contextFactory, host: hostRoot });
 
-  // The studio opens automatically in studio mode (refreshed at start).
+  // The studio opens automatically in studio mode (refreshed at start) and follows later mode switches
+  // (Ctrl+Shift+D, Settings toggle). Subscribing here keeps ui-mode.ts untouched.
   if (uiMode.getMode() === 'studio') {
     shell.open();
   }
+  let shellMode = uiMode.getMode();
+  const unsubUiModeShell = store.subscribe(() => {
+    const next = uiMode.getMode();
+    if (next === shellMode) return;
+    shellMode = next;
+    if (next === 'studio') shell.open();
+    else shell.close();
+  });
 
   // ---- Global listeners (composition root only)
   const onPointerMove = (event: PointerEvent): void => {
@@ -274,12 +291,15 @@ export function createApp(canvas: HTMLCanvasElement): AppHandle {
   window.addEventListener('resize', onResize);
 
   // ---- Presentation mode (H/Esc) — a single global keyboard handler in src/app
-  const exitPresentation = el('button', {
-    className: 'btn-exit-presentation hidden',
-    type: 'button',
-    text: t('presentation.show'),
-    ariaLabel: t('presentation.showAria'),
-  });
+  const exitPresentation = el(
+    'button',
+    {
+      className: 'btn-exit-presentation hidden',
+      type: 'button',
+      ariaLabel: t('presentation.showAria'),
+    },
+    [icon('eye'), el('span', { className: 'btn-label', text: t('presentation.show') })]
+  );
   hostRoot.append(exitPresentation);
   let presentation = false;
   const setPresentation = (value: boolean): void => {
@@ -294,6 +314,8 @@ export function createApp(canvas: HTMLCanvasElement): AppHandle {
     const target = event.target as HTMLElement | null;
     const tag = target?.tagName?.toLowerCase();
     if (tag === 'input' || tag === 'textarea' || tag === 'select' || target?.isContentEditable) return;
+    // A11: Esc belongs to an open dialog (native close) — it must not also flip presentation mode.
+    if (document.querySelector('dialog[open]')) return;
     if (event.key === 'Escape' || event.key === 'h' || event.key === 'H') {
       setPresentation(!presentation);
     }
@@ -358,6 +380,7 @@ export function createApp(canvas: HTMLCanvasElement): AppHandle {
       unsubAvatarProgress();
       unsubAvatarError();
       unsubUiModeShortcut();
+      unsubUiModeShell();
       unsubLegacyBridge();
       unsubSceneTheme();
       unsubSceneAttr();

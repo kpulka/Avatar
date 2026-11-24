@@ -54,12 +54,15 @@ vi.mock('../src/avatar/meta-person-loader', async () => {
   const THREE = await import('three');
   return {
     MetaPersonLoader: class {
-      load = vi.fn(async () => ({
+      load = vi.fn(async () => {
+        if ((globalThis as { __failAvatarLoad?: boolean }).__failAvatarLoad) throw new Error('avatar.glb missing');
+        return {
         root: new THREE.Group(),
         faceDriver: { listAvailableShapes: () => [] },
         speechMeshes: [],
         morphTargetDictionary: {},
-      }));
+        };
+      });
       dispose = vi.fn();
     },
   };
@@ -189,6 +192,66 @@ describe('createApp (container smoke, jsdom)', () => {
     expect(document.body.classList.contains('theme-light')).toBe(true);
     app.store.setUser('theme', 'dark');
     expect(document.body.classList.contains('theme-light')).toBe(false);
+  });
+
+  it('Esc with an open dialog does not toggle presentation mode (15-04, A10); h works', () => {
+    const app = createApp(setupDom());
+    const dialog = document.createElement('dialog');
+    dialog.setAttribute('open', '');
+    document.body.append(dialog);
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+    expect(document.body.classList.contains('presentation-mode')).toBe(false);
+
+    dialog.remove();
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+    expect(document.body.classList.contains('presentation-mode')).toBe(true);
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'h' }));
+    expect(document.body.classList.contains('presentation-mode')).toBe(false);
+    app.dispose();
+  });
+
+  it('double avatar load failure: loader shows an error with retry (demo), no dead end (15-05, S1)', async () => {
+    const { createTestAvatar } = await import('../src/avatar/test-avatar-generator');
+    (globalThis as { __failAvatarLoad?: boolean }).__failAvatarLoad = true;
+    vi.mocked(createTestAvatar).mockImplementationOnce(() => {
+      throw new Error('demo failed');
+    });
+    vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    try {
+      const app = createApp(setupDom());
+      app.start();
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      const loader = document.querySelector('.loader-overlay') as HTMLElement;
+      expect(loader.classList.contains('hidden')).toBe(false);
+      expect(loader.classList.contains('loader-error')).toBe(true);
+      const retry = loader.querySelector('button.loader-retry') as HTMLButtonElement;
+      expect(retry.classList.contains('hidden')).toBe(false);
+      retry.click(); // retry = demo avatar (createTestAvatar works again)
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      expect(loader.classList.contains('hidden')).toBe(true);
+      expect(loader.classList.contains('loader-error')).toBe(false);
+      app.dispose();
+    } finally {
+      delete (globalThis as { __failAvatarLoad?: boolean }).__failAvatarLoad;
+    }
+  });
+
+  it('Ctrl+Shift+D toggles the mode and opens/closes the studio shell (15-06)', () => {
+    const app = createApp(setupDom());
+    const shellEl = document.querySelector('.studio-shell') as HTMLElement;
+    expect(shellEl.classList.contains('hidden')).toBe(true);
+    const press = (): void => {
+      window.dispatchEvent(new KeyboardEvent('keydown', { key: 'D', ctrlKey: true, shiftKey: true }));
+    };
+    press();
+    expect(document.body.getAttribute('data-mode')).toBe('studio');
+    expect(shellEl.classList.contains('hidden')).toBe(false);
+    expect(app.shell.isOpen()).toBe(true);
+    press();
+    expect(document.body.getAttribute('data-mode')).toBe('user');
+    expect(app.shell.isOpen()).toBe(false);
+    app.dispose();
   });
 
   it('dispose() removes the shell and does not throw', () => {

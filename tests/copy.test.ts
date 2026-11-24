@@ -96,3 +96,72 @@ describe('copy registry (English UI strings)', () => {
     expect(offenders).toEqual([]);
   });
 });
+
+/**
+ * Phase 15 slot contract (15-02). The IDs below are what Phase 15 plans reference; Phase 12
+ * renamed a few of the originally planned IDs, the mapping is documented in 15-02-SUMMARY.md
+ * (animation.sliderLabels -> animation.slider.*, visemes.shapeLabels -> visemes.shape.*,
+ * inspector.categoryTitles -> inspector.category.*, poc.phases -> poc.phase1..3,
+ * boot.loadingModel -> loader.avatar, webgl.fallbackBtn -> webgl.browserHint).
+ * The gate is "every Phase 15 slot exists", not "COPY has exactly N keys".
+ */
+const PHASE15_SLOTS = [
+  'brand.title', 'status.idle', 'status.listening', 'status.speaking', 'status.thinking',
+  'dock.start', 'dock.end', 'dock.mute', 'dock.unmute', 'dock.muteAria', 'dock.unmuteAria',
+  'dock.interrupt', 'dock.interruptAria', 'captions.you', 'captions.agent', 'captions.empty',
+  'algo.segmentAria', 'algo.compare', 'algo.blind', 'algo.empty', 'algo.predicting', 'algo.playingA',
+  'algo.playingB', 'algo.resultOrder', 'algo.orderLiveFirst', 'algo.orderA2fFirst', 'algo.result',
+  'algo.resultPredictMs', 'algo.resultFrames', 'algo.partialWarning', 'algo.cancelled',
+  'settings.title', 'settings.volumeLabel', 'settings.micLabel', 'settings.defaultDevice',
+  'settings.themeLabel', 'settings.themeDark', 'settings.themeLight', 'settings.presetLabel',
+  'settings.lockTooltip', 'presentation.show', 'presentation.showAria', 'loader.default', 'loader.model',
+  'toast.conversationEnded', 'toast.conversationStarting', 'toast.connectionError', 'toast.micMuted',
+  'toast.micUnmuted', 'toast.bargeIn', 'toast.agentChanged', 'poc.start', 'poc.interrupt1',
+  'poc.interrupt2', 'poc.done', 'poc.transcriptUser', 'compare.failedToast', 'compare.a2fDownToast',
+  'studio.title', 'studio.subtitle', 'studio.tabsAria', 'studio.closeAria', 'studio.leftOpenAria',
+  'studio.leftCloseAria', 'panel.errorTitle', 'panel.retry', 'session.agentTitle', 'session.agentPlaceholder',
+  'session.agentSave', 'session.agentEmptyError', 'session.audioTitle', 'session.telemetryTitle',
+  'session.alignEl', 'session.alignFallback', 'session.locksTitle', 'session.lockLabel',
+  'session.profileTitle', 'session.exportProfile', 'session.importProfile', 'session.exported',
+  'session.imported', 'session.importRejected', 'session.exportFailed', 'session.importFailed',
+  'session.stress', 'scene.modelTitle', 'scene.modelNone', 'scene.modelInfo', 'scene.loadDemo',
+  'scene.generatingDemo', 'scene.demoError', 'scene.chooseGlb', 'scene.loadingFile', 'scene.fileError',
+  'scene.presetsTitle', 'scene.presetsHint', 'scene.sssLabel', 'animation.engineLabel', 'animation.engineHint',
+  'animation.sourceLabel', 'animation.sourceViseme', 'animation.sourceFrames', 'animation.sourceHint',
+  'animation.presetsTitle', 'animation.phonemesTitle', 'animation.phrasePl', 'animation.phraseEn',
+  'animation.demoA2f', 'animation.geometryTitle', 'animation.dynamicsTitle', 'animation.save', 'animation.reset',
+  'animation.savedToast', 'animation.resetToast', 'a2f.urlTitle', 'a2f.urlPlaceholder', 'a2f.save',
+  'a2f.urlInvalid', 'a2f.urlSaved', 'a2f.checkStatus', 'a2f.statusIdle', 'a2f.statusChecking',
+  'a2f.statusOk', 'a2f.statusDown', 'a2f.demoTitle', 'a2f.demo', 'a2f.stats', 'visemes.groupEn',
+  'visemes.groupChar', 'visemes.searchPlaceholder', 'visemes.pickViseme', 'visemes.stateDefault',
+  'visemes.stateOverride', 'visemes.noMatches', 'visemes.resetKey', 'visemes.resetAll', 'visemes.hint',
+  'inspector.searchPlaceholder', 'inspector.resetAll', 'inspector.mirror', 'inspector.mirrorHint',
+  'scenePreset.studio-dark', 'scenePreset.studio-soft', 'scenePreset.cinema', 'scenePreset.light',
+  'webgl.title', 'webgl.body', 'webgl.subtext',
+];
+
+describe('Phase 15 copy contract', () => {
+  it('every Phase 15 slot exists with a non-empty value', () => {
+    expect(PHASE15_SLOTS.filter((slot) => !(slot in COPY) || COPY[slot].trim() === '')).toEqual([]);
+  });
+
+  it('index.html holds no visible copy: the WebGL card is rendered by webgl-fallback.ts', () => {
+    const html = readFileSync(join(ROOT, 'index.html'), 'utf8');
+    expect(html).toContain('id="webgl-fallback"');
+    expect(html).not.toMatch(/<h2|<button|<p[ >]/);
+  });
+
+  it('no inline user-visible string literals in src/ui or container.ts (all copy flows through t())', () => {
+    // text / placeholder / ariaLabel / title / textContent assigned a literal that contains letters.
+    const sinks = /\b(?:text|placeholder|ariaLabel|title|textContent|tooltip)\s*[:=]\s*(['"`])([^'"`$]*[A-Za-z]{2,}[^'"`$]*)\1/g;
+    const files = [...listTs('src/ui'), join(ROOT, 'src/app/container.ts')];
+    const offenders: string[] = [];
+    for (const file of files) {
+      const text = readFileSync(file, 'utf8');
+      for (const match of text.matchAll(sinks)) {
+        offenders.push(`${file.slice(ROOT.length)}: ${match[0]}`);
+      }
+    }
+    expect(offenders).toEqual([]);
+  });
+});

@@ -3,7 +3,7 @@
  * and calibration sliders, phoneme/phrase tests, A2F demo. 1:1 from the calibrator section of hud.ts.
  */
 import { PanelContext, PanelDefinition, PanelHandle } from '../panel-registry';
-import { el } from '../../shared/dom';
+import { el, uid } from '../../shared/dom';
 import {
   CALIBRATION_PRESETS,
   CalibrationPresetName,
@@ -71,7 +71,7 @@ export function createAnimationPanel(): PanelDefinition {
       );
 
       // 0b. Animation source
-      const sourceSelect = el('select', { className: 'engine-select' }) as HTMLSelectElement;
+      const sourceSelect = el('select', { className: 'engine-select', ariaLabel: t('animation.sourceLabel') }) as HTMLSelectElement;
       sourceSelect.append(
         el('option', { value: 'viseme', text: t('animation.sourceViseme') }),
         el('option', { value: 'frames', text: t('animation.sourceFrames') })
@@ -160,6 +160,7 @@ export function createAnimationPanel(): PanelDefinition {
       for (const spec of SLIDERS) {
         const valueLabel = el('span', { text: '' });
         const input = el('input', {
+          id: uid(`slider-${String(spec.key)}`),
           type: 'range',
           attrs: {
             min: String(spec.min),
@@ -176,7 +177,7 @@ export function createAnimationPanel(): PanelDefinition {
         sliderInputs.set(spec.key, input);
         sliderLabels.set(spec.key, valueLabel);
         const group = el('div', { className: 'slider-group' }, [
-          el('label', {}, [el('span', { text: `${spec.label}: ` }), valueLabel]),
+          el('label', { attrs: { for: input.id } }, [el('span', { text: `${spec.label}: ` }), valueLabel]),
           input,
         ]);
         (spec.key === 'coarticulationSpeed' || spec.key === 'syncOffsetMs' ? dynamicsSection : geometrySection).append(group);

@@ -3,7 +3,7 @@
  * profile export/import, PoC stress. Microphone device selection lives in user settings (11-06).
  */
 import { PanelContext, PanelDefinition, PanelHandle } from '../panel-registry';
-import { el } from '../../shared/dom';
+import { el, uid } from '../../shared/dom';
 import { t } from '../../../app/copy';
 
 const LOCK_KEYS = ['volume', 'theme', 'scenePreset', 'animationSource', 'uiMode'];
@@ -20,7 +20,12 @@ export function createSessionPanel(): PanelDefinition {
       const root = el('div', { className: 'panel panel-session' });
 
       // --- Agent
-      const agentInput = el('input', { className: 'text-input', type: 'text', placeholder: t('session.agentPlaceholder') }) as HTMLInputElement;
+      const agentInput = el('input', {
+        id: uid('agent'),
+        className: 'text-input',
+        type: 'text',
+        placeholder: t('session.agentPlaceholder'),
+      }) as HTMLInputElement;
       agentInput.value = store.getEffective<string>('agentId');
       const agentSave = el('button', { className: 'btn btn-small btn-primary', type: 'button', text: t('session.agentSave') });
       agentSave.addEventListener('click', () => {
@@ -35,7 +40,11 @@ export function createSessionPanel(): PanelDefinition {
 
       // --- Volume + microphone
       const volumeValue = el('span', { text: `${Math.round(store.getEffective<number>('volume') * 100)}%` });
-      const volumeSlider = el('input', { type: 'range', attrs: { min: '0', max: '1', step: '0.05' } }) as HTMLInputElement;
+      const volumeSlider = el('input', {
+        id: uid('session-volume'),
+        type: 'range',
+        attrs: { min: '0', max: '1', step: '0.05' },
+      }) as HTMLInputElement;
       volumeSlider.value = String(store.getEffective<number>('volume'));
       volumeSlider.addEventListener('input', () => {
         const value = parseFloat(volumeSlider.value);
@@ -43,17 +52,13 @@ export function createSessionPanel(): PanelDefinition {
         store.setUser('volume', value);
       });
 
-      const micSelect = el('select', { className: 'engine-select' }) as HTMLSelectElement;
-      micSelect.append(el('option', { value: '', text: t('settings.defaultDevice') }));
-      micSelect.disabled = true;
-
       // --- Telemetry
       const telemetryFields = {
         fps: el('strong', { text: '--' }),
-        ttfb: el('strong', { text: '-- ms' }),
+        ttfb: el('strong', { text: t('session.ttfbIdle') }),
         bargeIn: el('strong', { text: '0' }),
         session: el('strong', { text: '00:00' }),
-        align: el('strong', { text: 'ALIGN: —' }),
+        align: el('strong', { text: t('session.alignIdle') }),
       };
       const telemetryGrid = el('div', { className: 'telemetry-grid' }, [
         el('span', {}, [el('span', { text: t('session.fpsLabel') }), telemetryFields.fps]),
@@ -65,7 +70,7 @@ export function createSessionPanel(): PanelDefinition {
       const telemetryTimer = window.setInterval(() => {
         const sample = services.telemetry.sample();
         telemetryFields.fps.textContent = String(sample.fps);
-        telemetryFields.ttfb.textContent = sample.ttfbMs !== null ? `${sample.ttfbMs} ms` : '-- ms';
+        telemetryFields.ttfb.textContent = sample.ttfbMs !== null ? t('session.ttfbValue', { ms: sample.ttfbMs }) : t('session.ttfbIdle');
         telemetryFields.bargeIn.textContent = String(sample.bargeInCount);
         telemetryFields.session.textContent = sample.session;
         telemetryFields.align.textContent =
@@ -105,7 +110,10 @@ export function createSessionPanel(): PanelDefinition {
       });
 
       const importInput = el('input', { type: 'file', attrs: { accept: '.json,application/json' } }) as HTMLInputElement;
-      importInput.style.display = 'none';
+      // Keyboard users go through the visible button; the native input stays out of the tab order / a11y tree.
+      importInput.classList.add('hidden');
+      importInput.tabIndex = -1;
+      importInput.setAttribute('aria-hidden', 'true');
       importInput.addEventListener('change', async () => {
         const file = importInput.files?.[0];
         importInput.value = '';
@@ -132,16 +140,15 @@ export function createSessionPanel(): PanelDefinition {
 
       root.append(
         el('div', { className: 'drawer-section' }, [
-          el('span', { className: 'section-title', text: t('session.agentTitle') }),
+          el('label', { className: 'section-title', text: t('session.agentTitle'), attrs: { for: agentInput.id } }),
           agentInput,
           agentSave,
         ]),
         el('div', { className: 'drawer-section' }, [
           el('span', { className: 'section-title', text: t('session.audioTitle') }),
-          el('label', {}, [el('span', { text: t('settings.volumeLabel') }), volumeValue]),
+          el('label', { attrs: { for: volumeSlider.id } }, [el('span', { text: t('settings.volumeLabel') }), volumeValue]),
           volumeSlider,
-          micSelect,
-          el('p', { className: 'drawer-subtitle', text: t('session.micComingSoon') }),
+          el('p', { className: 'drawer-subtitle', text: t('session.micInUserSettings') }),
         ]),
         el('div', { className: 'drawer-section' }, [
           el('span', { className: 'section-title', text: t('session.telemetryTitle') }),

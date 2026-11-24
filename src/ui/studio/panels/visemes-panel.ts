@@ -3,7 +3,7 @@
  * Overrides are persisted through the store (`studio.visemeOverrides`) and applied to FaceController.
  */
 import { PanelContext, PanelDefinition, PanelHandle } from '../panel-registry';
-import { el } from '../../shared/dom';
+import { el, uid } from '../../shared/dom';
 import {
   VISEME_GROUPS,
   EDITOR_SHAPES,
@@ -40,7 +40,7 @@ export function createVisemesPanel(): PanelDefinition {
     visibleIn: 'studio',
     region: 'left',
     mount(ctx: PanelContext): PanelHandle {
-      const { store, services, container } = ctx;
+      const { store, services, container, ui } = ctx;
       const root = el('div', { className: 'panel panel-visemes' });
 
       let group: 'en' | 'char' = 'en';
@@ -48,12 +48,17 @@ export function createVisemesPanel(): PanelDefinition {
       let selectedKey: string | null = null;
       let record: VisemeOverrideMap = store.getEffective<VisemeOverrideMap>('visemeOverrides') ?? {};
 
-      const groupSelect = el('select', { className: 'viseme-group-select' }) as HTMLSelectElement;
+      const groupSelect = el('select', { className: 'viseme-group-select', ariaLabel: t('visemes.groupAria') }) as HTMLSelectElement;
       groupSelect.append(
         el('option', { value: 'en', text: t('visemes.groupEn') }),
         el('option', { value: 'char', text: t('visemes.groupChar') })
       );
-      const searchInput = el('input', { className: 'search-input', placeholder: t('visemes.searchPlaceholder'), type: 'text' }) as HTMLInputElement;
+      const searchInput = el('input', {
+        className: 'search-input',
+        placeholder: t('visemes.searchPlaceholder'),
+        ariaLabel: t('visemes.searchAria'),
+        type: 'text',
+      }) as HTMLInputElement;
 
       const chipsEl = el('div', { className: 'viseme-chip-list' });
       const detailName = el('strong', { text: t('visemes.pickViseme') });
@@ -114,6 +119,7 @@ export function createVisemesPanel(): PanelDefinition {
         for (const control of SHAPE_CONTROLS) {
           const valueSpan = el('span', { text: shapeVal(ref.key, control.shapes[0]).toFixed(2) });
           const input = el('input', {
+            id: uid('viseme-shape'),
             type: 'range',
             attrs: { min: '0', max: '1', step: '0.01' },
           }) as HTMLInputElement;
@@ -132,7 +138,7 @@ export function createVisemesPanel(): PanelDefinition {
           });
           slidersEl.append(
             el('div', { className: 'slider-group' }, [
-              el('label', {}, [el('span', { text: `${control.label}: ` }), valueSpan]),
+              el('label', { attrs: { for: input.id } }, [el('span', { text: `${control.label}: ` }), valueSpan]),
               input,
             ])
           );
@@ -177,13 +183,31 @@ export function createVisemesPanel(): PanelDefinition {
         selectViseme(ref ?? { key: selectedKey, label: selectedKey });
       });
 
-      resetAllButton.addEventListener('click', () => {
+      const wipeAll = (): void => {
         record = {};
         selectedKey = null;
         notifyRecord();
         renderChips();
         clearDetail();
         services.animation.previewViseme(null);
+      };
+
+      // S5: wiping every persisted override is destructive, so it goes through a confirm dialog.
+      resetAllButton.addEventListener('click', () => {
+        const accept = el('button', { className: 'btn btn-primary', type: 'button', text: t('visemes.resetAllConfirmAccept') });
+        const cancel = el('button', { className: 'btn btn-secondary', type: 'button', text: t('visemes.resetAllConfirmCancel') });
+        accept.addEventListener('click', () => {
+          ui.modal.close();
+          wipeAll();
+        });
+        cancel.addEventListener('click', () => ui.modal.close());
+        ui.modal.open(
+          t('visemes.resetAllConfirmTitle'),
+          el('div', { className: 'confirm-body' }, [
+            el('p', { text: t('visemes.resetAllConfirmBody') }),
+            el('div', { className: 'drawer-actions' }, [accept, cancel]),
+          ])
+        );
       });
 
       renderChips();

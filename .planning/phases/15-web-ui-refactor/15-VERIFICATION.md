@@ -1,8 +1,8 @@
 ---
 phase: 15
-status: pending
+status: automated-green-human-deferred
 created: "2026-11-17"
-updated: "2026-11-17"
+updated: "2026-11-24"
 ---
 
 # Phase 15 — VERIFICATION (end-of-phase checklist)
@@ -13,28 +13,35 @@ updated: "2026-11-17"
 
 ## 1. Automated gates (must be green)
 
-- [ ] `npm test` — full regression; baseline 41 files / 204 tests; record final count:
-      ____ files / ____ tests. New suites this phase: `ui-tokens`, `copy`, `shared-ui`,
+> Recorded 2026-11-24 on branch worktree-agent-a58d0d3572fe8b509 after 15-07. Sections 2-5 are DEFERRED-HUMAN (no human / real GPU
+> available during autonomous implement): every unchecked item below is a manual step for the owner. Keyboard pass script: Tab order
+> status -> dock (start, mute, interrupt) -> segment -> compare -> blind -> gear; Enter opens settings, Esc closes it without flipping
+> presentation; Ctrl+Shift+D; tablist arrows/Home/End; GLB upload button focusable. Headless screenshots were attempted with Chrome
+> (swiftshader) against the dev server but the page never reached a capturable state in time, so none are committed.
+
+- [x] `npm test` — full regression; baseline (at 15 start) 52 files / 291 tests; final count:
+      59 files / 362 tests. New suites this phase: `ui-tokens`, `copy`, `shared-ui`,
       `a11y-dom`, `compare-ui`, `states-recovery`, `ui-discoverability`, `responsive-layout`.
-- [ ] `npm run build` — `tsc && vite build` passes.
-- [ ] `tests/ui-tokens.test.ts` — tokens only in `:root`/`body.theme-light`; ≥30 tokens;
+- [x] `npm run build` — `tsc && vite build` passes.
+- [x] `tests/ui-tokens.test.ts` — tokens only in `:root`/`body.theme-light`; ≥30 tokens;
       no font-size < 12px; dead selectors absent.
-- [ ] `tests/copy.test.ts` — all slots resolve; interpolation works; zero Polish
+- [x] `tests/copy.test.ts` — all slots resolve; interpolation works; zero Polish
       diacritics outside `src/app/copy.ts` in `src/ui/**`, `src/features/**`,
       `src/app/container.ts`, `index.html`.
-- [ ] `tests/shared-ui.test.ts` — toast stack (3 max, roles, dismiss), modal
+- [x] `tests/shared-ui.test.ts` — toast stack (3 max, roles, dismiss), modal
       (aria-labelledby, close, focus return), loader (role, error+retry).
-- [ ] `tests/a11y-dom.test.ts` — tablist keyboard + ids, form label association, upload
+- [x] `tests/a11y-dom.test.ts` — tablist keyboard + ids, form label association, upload
       button, SVG icons in dock.
-- [ ] `tests/compare-ui.test.ts` — chips/cancel/blind reveal logic.
-- [ ] `tests/states-recovery.test.ts` — voice:error banner, mic-denied honesty,
+- [x] `tests/compare-ui.test.ts` — chips/cancel/blind reveal logic.
+- [x] `tests/states-recovery.test.ts` — voice:error banner, mic-denied honesty,
       avatar:error loader retry, correction wiring, dock disabled logic.
-- [ ] `tests/ui-discoverability.test.ts` — studio toggle + lock respect.
-- [ ] `tests/responsive-layout.test.ts` — guard queries, `.sr-only`, aria-label survival.
-- [ ] Grep gates: no `keydown` listeners outside `src/app/`; no `getElementById` in
+- [x] `tests/ui-discoverability.test.ts` — studio toggle + lock respect.
+- [x] `tests/responsive-layout.test.ts` — guard queries, `.sr-only`, aria-label survival.
+- [x] Grep gates: no `keydown` listeners outside `src/app/`; no `getElementById` in
       `src/ui/user/`; no emoji icons in `src/ui/user/` or presentation button.
-- [ ] `style.css` metrics recorded: lines ______ (baseline 1,229), raw hex outside token
-      blocks ______ (target 0), `var(--…)` usages ______ (baseline 0).
+- [x] `style.css` metrics recorded: lines 1510 (baseline 1,229; it GREW because every rule is now
+      expanded onto tokens and 15-03/05/07 added toast stack, compare, banner, responsive blocks),
+      raw hex outside token blocks 0 (target 0), `var(--…)` usages 490 (baseline 0).
 
 ## 2. Accessibility manual pass (keyboard + reader, both themes)
 

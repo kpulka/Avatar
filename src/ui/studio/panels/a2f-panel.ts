@@ -2,7 +2,7 @@
  * "A2F" panel (Phase 11, 11-04): /predict wrapper URL, /status check, demo frames, statistics.
  */
 import { PanelContext, PanelDefinition, PanelHandle } from '../panel-registry';
-import { el } from '../../shared/dom';
+import { el, uid } from '../../shared/dom';
 import { isValidA2fUrl } from '../../../app/store/settings-schema';
 import { t } from '../../../app/copy';
 
@@ -18,6 +18,7 @@ export function createA2fPanel(): PanelDefinition {
       const root = el('div', { className: 'panel panel-a2f' });
 
       const urlInput = el('input', {
+        id: uid('a2f-url'),
         className: 'text-input',
         type: 'text',
         placeholder: t('a2f.urlPlaceholder'),
@@ -35,7 +36,7 @@ export function createA2fPanel(): PanelDefinition {
         ui.toast.show(t('a2f.urlSaved'), 'success');
       });
 
-      const statusLine = el('p', { className: 'drawer-subtitle', text: t('a2f.statusIdle') });
+      const statusLine = el('p', { className: 'drawer-subtitle', text: t('a2f.statusIdle'), role: 'status' });
       const checkButton = el('button', { className: 'btn btn-small', type: 'button', text: t('a2f.checkStatus') });
       checkButton.addEventListener('click', async () => {
         const base = (urlInput.value.trim() || store.getEffective<string>('a2fUrl')).replace(/\/$/, '');
@@ -70,7 +71,7 @@ export function createA2fPanel(): PanelDefinition {
 
       root.append(
         el('div', { className: 'drawer-section' }, [
-          el('span', { className: 'section-title', text: t('a2f.urlTitle') }),
+          el('label', { className: 'section-title', text: t('a2f.urlTitle'), attrs: { for: urlInput.id } }),
           urlInput,
           el('div', { className: 'panel-actions' }, [saveButton, checkButton]),
           statusLine,
