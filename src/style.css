@@ -13,7 +13,7 @@
 
    Rules of the file: colors, sizes, radii, shadows, z-index and motion come
    from tokens only. Raw hex/rgba literals exist in section 0 and nowhere else.
-   Minimum text size is 12px; interactive targets are 36px (dock 40px).
+   Minimum text size is 12px; interactive targets are at least 44px (--target-min).
    Supported minimum viewport: 1152x648.
    ========================================================================== */
 
@@ -23,6 +23,7 @@
   --c-sky-300: #38bdf8;
   --c-sky-700: #0284c7;
   --c-sky-800: #0369a1;
+  --c-sky-900: #075985;
   --c-slate-950: #0f172a;
   --c-slate-900: #1e293b;
   --c-slate-800: #1e2330;
@@ -63,16 +64,17 @@
   --text-primary: #f1f5f9;
   --text-ctrl: #cbd5e1;
   --text-secondary: #94a3b8;
-  --text-muted: #7d8aa5;
+  --text-muted: #8a97b0;
   --text-on-accent: #ffffff;
 
   /* Semantic: accent and states */
   --accent: #38bdf8;
-  --accent-strong: #0284c7;
-  --accent-strong-hover: #0369a1;
+  --accent-strong: #0369a1;
+  --accent-strong-hover: #075985;
   --accent-soft: rgba(56, 189, 248, 0.15);
   --accent-glow: rgba(56, 189, 248, 0.4);
   --success: #10b981;
+  --success-strong: #047857;
   --success-soft: rgba(16, 185, 129, 0.15);
   --success-glow: rgba(16, 185, 129, 0.3);
   --warning: #eab308;
@@ -95,6 +97,9 @@
   --text-heading: 18px;
   --text-body: 14px;
   --text-label: 12px;
+
+  /* Interactive target floor (UIX-02): every control is at least this large in both axes it declares */
+  --target-min: 44px;
   --fw-regular: 400;
   --fw-semibold: 600;
   --lh-body: 1.5;
@@ -156,16 +161,16 @@ body.theme-light {
   --text-primary: #0f172a;
   --text-ctrl: #334155;
   --text-secondary: #475569;
-  --text-muted: #64748b;
-  --accent: #0284c7;
-  --accent-strong: #0284c7;
-  --accent-strong-hover: #0369a1;
+  --text-muted: #566478;
+  --accent: #0369a1;
+  --accent-strong: #0369a1;
+  --accent-strong-hover: #075985;
   --accent-soft: rgba(2, 132, 199, 0.12);
   --accent-glow: rgba(2, 132, 199, 0.3);
-  --success: #059669;
+  --success: #047857;
   --success-soft: rgba(5, 150, 105, 0.12);
   --success-glow: rgba(5, 150, 105, 0.25);
-  --warning: #a16207;
+  --warning: #854d0e;
   --warning-soft: rgba(161, 98, 7, 0.12);
   --danger: #dc2626;
   --destructive: #dc2626;
@@ -313,7 +318,7 @@ body, html {
   display: inline-flex;
   align-items: center;
   gap: var(--space-2);
-  min-height: 40px;
+  min-height: var(--target-min);
   padding: var(--space-2) var(--space-4);
   border-radius: var(--radius-pill);
   font-size: var(--text-label);
@@ -390,8 +395,8 @@ body, html {
   align-items: center;
   justify-content: center;
   gap: var(--space-1);
-  min-width: 40px;
-  min-height: 40px;
+  min-width: var(--target-min);
+  min-height: var(--target-min);
   padding: var(--space-1) var(--space-3);
   border-radius: var(--radius-pill);
   background: var(--surface-ctrl);
@@ -447,7 +452,7 @@ body, html {
 
 .segment-btn {
   padding: var(--space-2) var(--space-4);
-  min-height: 40px;
+  min-height: var(--target-min);
   background: var(--surface-ctrl);
   color: var(--text-ctrl);
   border: none;
@@ -491,7 +496,7 @@ body, html {
 .compare-chip {
   display: inline-flex;
   align-items: center;
-  min-height: 28px;
+  min-height: var(--target-min);
   padding: 2px var(--space-3);
   border-radius: var(--radius-pill);
   border: 1px solid var(--border-ctrl);
@@ -663,7 +668,7 @@ body[data-mode="user"] .studio-shell {
   display: inline-flex;
   align-items: center;
   gap: var(--space-1);
-  min-height: 36px;
+  min-height: var(--target-min);
   padding: var(--space-1) var(--space-3);
   border-radius: var(--radius-pill);
   background: var(--surface-ctrl);
@@ -781,8 +786,8 @@ body[data-mode="user"] .studio-shell {
   color: var(--text-secondary);
   font-size: var(--text-body);
   cursor: pointer;
-  min-width: 36px;
-  min-height: 36px;
+  min-width: var(--target-min);
+  min-height: var(--target-min);
   padding: var(--space-1) var(--space-2);
   border-radius: var(--radius-sm);
   transition: var(--transition-ctrl);
@@ -833,7 +838,7 @@ body[data-mode="user"] .studio-shell {
   display: inline-flex;
   align-items: center;
   gap: var(--space-2);
-  min-height: 36px;
+  min-height: var(--target-min);
   padding: var(--space-2) var(--space-4);
   border-radius: var(--radius-pill);
   color: var(--text-ctrl);
@@ -878,7 +883,7 @@ body.presentation-mode .btn-exit-presentation {
 
 .preset-btn {
   flex: 1;
-  min-height: 36px;
+  min-height: var(--target-min);
   border: 1px solid var(--border-ctrl);
   background: var(--surface-ctrl);
   color: var(--text-ctrl);
@@ -909,7 +914,7 @@ body.presentation-mode .btn-exit-presentation {
 }
 
 .btn-phoneme {
-  min-height: 36px;
+  min-height: var(--target-min);
   padding: var(--space-1) var(--space-2);
   font-size: var(--text-label);
   background: var(--surface-ctrl);
@@ -939,7 +944,7 @@ body.presentation-mode .btn-exit-presentation {
 
 .sample-speech-buttons button {
   flex: 1;
-  min-height: 36px;
+  min-height: var(--target-min);
   background: var(--success-soft);
   border: 1px solid var(--success);
   color: var(--success);
@@ -951,7 +956,7 @@ body.presentation-mode .btn-exit-presentation {
 }
 
 .sample-speech-buttons button:hover {
-  background: var(--success);
+  background: var(--success-strong);
   color: var(--text-on-accent);
 }
 
@@ -974,6 +979,10 @@ body.presentation-mode .btn-exit-presentation {
   color: var(--text-ctrl);
 }
 
+input[type="range"] {
+  min-height: var(--target-min);
+}
+
 .slider-group input[type="range"] {
   width: 100%;
   accent-color: var(--accent);
@@ -989,6 +998,9 @@ body.presentation-mode .btn-exit-presentation {
 }
 
 .rig-category-title {
+  /* <summary>: keep its disclosure marker (no display override); line-height + padding reach the target floor */
+  min-height: var(--target-min);
+  line-height: calc(var(--target-min) - 2 * var(--space-2));
   padding: var(--space-2) var(--space-3);
   font-size: var(--text-label);
   font-weight: var(--fw-semibold);
@@ -1015,7 +1027,7 @@ body.presentation-mode .btn-exit-presentation {
 .viseme-toolbar { display: flex; flex-direction: column; gap: var(--space-2); margin-bottom: var(--space-2); }
 .viseme-group-select,
 .engine-select {
-  min-height: 36px;
+  min-height: var(--target-min);
   background: var(--surface-input);
   color: var(--text-primary);
   border: 1px solid var(--border-ctrl);
@@ -1026,7 +1038,7 @@ body.presentation-mode .btn-exit-presentation {
 .engine-select { width: 100%; max-width: 260px; }
 .viseme-chip-list { display: flex; flex-wrap: wrap; gap: var(--space-1); max-height: 170px; overflow-y: auto; padding: var(--space-1) 0; }
 .viseme-chip {
-  min-height: 28px;
+  min-height: var(--target-min);
   background: var(--surface-input);
   color: var(--text-ctrl);
   border: 1px solid var(--border-ctrl);
@@ -1094,7 +1106,7 @@ body.presentation-mode .btn-exit-presentation {
 
 /* ===== 5. PRIMITIVES ===== */
 .btn {
-  min-height: 36px;
+  min-height: var(--target-min);
   padding: var(--space-2) var(--space-4);
   border-radius: var(--radius-md);
   font-size: var(--text-label);
@@ -1126,7 +1138,7 @@ body.presentation-mode .btn-exit-presentation {
 
 .btn-tiny {
   flex: 1;
-  min-height: 36px;
+  min-height: var(--target-min);
   padding: var(--space-1) var(--space-2);
   font-size: var(--text-label);
   border-radius: var(--radius-sm);
@@ -1146,7 +1158,7 @@ body.presentation-mode .btn-exit-presentation {
 
 .search-input {
   flex: 1;
-  min-height: 36px;
+  min-height: var(--target-min);
   padding: var(--space-1) var(--space-3);
   border-radius: var(--radius-sm);
   border: 1px solid var(--border-ctrl);
@@ -1221,7 +1233,7 @@ dialog.settings-dialog::backdrop {
 }
 
 .user-settings-form select {
-  min-height: 36px;
+  min-height: var(--target-min);
   background: var(--surface-input);
   color: var(--text-primary);
   border: 1px solid var(--border-ctrl);
@@ -1231,7 +1243,7 @@ dialog.settings-dialog::backdrop {
 }
 
 .text-input {
-  min-height: 36px;
+  min-height: var(--target-min);
   background: var(--surface-input);
   border: 1px solid var(--border-ctrl);
   border-radius: var(--radius-md);
@@ -1249,7 +1261,7 @@ dialog.settings-dialog::backdrop {
   display: flex;
   align-items: center;
   gap: var(--space-2);
-  min-height: 36px;
+  min-height: var(--target-min);
   font-size: var(--text-label);
   color: var(--text-ctrl);
 }
@@ -1296,8 +1308,8 @@ dialog.settings-dialog::backdrop {
 .toast-close,
 .dialog-close {
   flex: none;
-  min-width: 36px;
-  min-height: 36px;
+  min-width: var(--target-min);
+  min-height: var(--target-min);
   margin: calc(var(--space-2) * -1) calc(var(--space-2) * -1) calc(var(--space-2) * -1) 0;
   background: transparent;
   border: none;
@@ -1367,7 +1379,7 @@ dialog.settings-dialog::backdrop {
   align-items: center;
   justify-content: center;
   border-radius: 50%;
-  background: var(--danger);
+  background: var(--danger-strong);
   color: var(--text-on-accent);
   font-size: var(--text-label);
   font-weight: var(--fw-semibold);

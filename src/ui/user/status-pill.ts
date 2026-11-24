@@ -22,13 +22,19 @@ export function createStatusPill(): PanelDefinition {
     mount(ctx: PanelContext): PanelHandle {
       const { events, container } = ctx;
       // role=status makes the label flips (Listening / Speaking / ...) audible to screen readers.
-      const state = el('span', { className: 'status-pill voice-idle', text: LABELS.idle, role: 'status' });
+      const state = el('span', {
+        className: 'status-pill voice-idle',
+        text: LABELS.idle,
+        role: 'status',
+        attrs: { 'aria-live': 'polite' },
+      });
       // Degradation chip (17-06): visible while the lip-sync runs on the acoustic fallback (no real alignment).
       // Studio keeps its detailed ALIGN badge; this is the subtle user-mode signal.
       const degraded = el('span', {
         className: 'status-pill lipsync-chip',
         text: t('chip.simplifiedLipsync'),
         role: 'status',
+        attrs: { 'aria-live': 'polite' },
         hidden: true,
       });
       const root = el('div', { className: 'user-status' }, [

@@ -36,7 +36,12 @@ export function createA2fPanel(): PanelDefinition {
         ui.toast.show(t('a2f.urlSaved'), 'success');
       });
 
-      const statusLine = el('p', { className: 'drawer-subtitle', text: t('a2f.statusIdle'), role: 'status' });
+      const statusLine = el('p', {
+        className: 'drawer-subtitle',
+        text: t('a2f.statusIdle'),
+        role: 'status',
+        attrs: { 'aria-live': 'polite' },
+      });
       const checkButton = el('button', { className: 'btn btn-small', type: 'button', text: t('a2f.checkStatus') });
       // eslint-disable-next-line @typescript-eslint/no-misused-promises -- async DOM event handler: the browser ignores the returned promise
       checkButton.addEventListener('click', async () => {
