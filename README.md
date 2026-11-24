@@ -114,4 +114,4 @@ The workflow in [`.github/workflows/ci.yml`](.github/workflows/ci.yml) runs `npm
 
 Copyright (c) 2026 kpulka. All rights reserved. This project is **All Rights Reserved**: no license is granted to use, copy, modify or distribute it. See [LICENSE](LICENSE) for the terms. Commercial use requires written permission from the owner, requested through [github.com/kpulka](https://github.com/kpulka).
 
-Third-party dependencies keep their own licenses. All 157 lock-file entries declare permissive licenses (MIT, Apache-2.0, BSD, ISC and similar), as recorded in [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md) (audited 2026-11-24).
+Third-party dependencies keep their own licenses. All 235 lock-file entries declare permissive licenses (MIT, Apache-2.0, BSD, ISC and similar), as recorded in [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md) (audited 2026-11-24).
