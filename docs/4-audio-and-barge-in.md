@@ -116,25 +116,27 @@ class FaceController {
     }
   }
 
-  // Called on the interruption event (docs/2)
+  // Called on the interruption event (docs/2) — idempotent (see the transition rules below)
   onInterruption() {
-    this.queue = this.queue.filter(() => false);     // clear everything
-    this.state = 'RELAXING';
-    this.relaxStartedAt = performance.now();
+    this.queue.length = 0; this.frameBuffer = [];    // clear both tracks
+    if (this.commitPendingMode()) return;            // a deferred mode switch lands on this boundary
+    if (this.state === 'IDLE') return;               // nothing to relax from
+    this.state = 'RELAXING';                         // SPEAKING relaxes, RELAXING re-anchors its timer
+    this.relaxStartedAt = this.nowMs();
   }
 
-  // Single loop — from the Three.js render loop, dt in seconds
+    // Single loop — from the Three.js render loop, dt in seconds
   render(dt) {
     if (this.state === 'SPEAKING') {
-      // algorithm from docs/3: sum of active visemes + damping
-      this.renderSpeaking(this.engine.ctx.currentTime, dt);
+      // algorithm from docs/3: sum of active visemes + damping, on the AUDIBLE audio clock
+      this.renderSpeaking(this.audibleClock(), dt);
       if (this.queue.length === 0 && !this.engine.hasPendingAudio()) {
         this.state = 'RELAXING';                     // natural fade-out at the end of the sentence
-        this.relaxStartedAt = performance.now();
+        this.relaxStartedAt = this.nowMs();          // injectable wall clock (see "Timebase contract")
       }
     } else if (this.state === 'RELAXING') {
       // Smooth return to neutral: ~150 ms cosine ease (decay-to-zero rule from docs/3)
-      const t = (performance.now() - this.relaxStartedAt) / 150;
+      const t = (this.nowMs() - this.relaxStartedAt) / 150;
       if (this.renderRelax(Math.min(1, t)) === 0) this.state = 'IDLE';
     }
     // IDLE: the same procedural blinks/micro-movements (docs/6)
@@ -154,8 +156,8 @@ Client: { "type": "interruption" }
    ▼                               ▼
 AudioEngine.hardStop()        FaceController.onInterruption()
    • epoch++                     • epoch ignored in the check
-   • stop() all nodes            • clear the viseme queue
-   • tailTime = 0                 • state → RELAXING (150–300 ms ease)
+   • stop() all nodes            • clear the viseme queue and the frame buffer
+   • tailTime = 0                 • state → RELAXING (150 ms ease; IDLE stays IDLE)
    • (the server itself stops     • mouth returns to neutral
      the TTS generation)             — never a "frozen face"
 ```
@@ -170,6 +172,46 @@ hardStop() {
   this.tailTime = 0;
 }
 ```
+
+### Transition rules (hardened in Phase 16)
+
+Every state × event cell has a defined, tested behavior (`tests/face-controller-transitions.test.ts`, `tests/race-condition-epoch.test.ts`, `tests/face-controller-clock.test.ts`). The rules that matter:
+
+| Situation | Behavior |
+| :--- | :--- |
+| Interruption in `IDLE` | stays `IDLE`; a pending (deferred) mode switch is still committed |
+| Interruption in `SPEAKING` | both tracks cleared → `RELAXING` from the current weights |
+| Interruption in `RELAXING` (double barge-in) | stays `RELAXING`, the relax timer is **re-anchored** (bounded at 2 × 150 ms, never frozen) |
+| Valid chunk / `feedFrames` in `RELAXING` | → `SPEAKING` (resume). Speech paths never zero-write morphs, so rapid turn-taking has no one-frame flicker |
+| Stale-epoch chunk / frames in any state | ignored |
+| Mode switch (viseme ↔ frames), immediate or deferred | always lands on a turn boundary and eases through `RELAXING` from the current weights — never a snap to neutral. Mid-turn requests are deferred to the end of the turn or the next interruption; a LIVE turn from the WSS always forces `viseme` and drops a pending deferred switch by design |
+| `testPhoneme` / `previewViseme` while `SPEAKING` | ignored — a calibrator button cannot cut a live turn |
+
+### Single writer and per-frame layer order
+
+`FaceController` is the **only** module that writes face morphs (`FaceDriver.applyWeight`); the driver's own rAF "relax" loop was deleted precisely because it was a second writer. Procedural layers are *providers* that hand values in: blink (`setBlinkProvider`) and gaze (`setGazeProvider`, eyeLook\* weights computed by `SceneController`, applied by `FaceController`). Bone regions have their own single owners: eyeball bones — `GazeSaccades` (via `SceneController`), head/chest — `HeadMicroMovements`. When an A2F clip `carriesEyes`, **all** procedural eye writers are switched off — blink, gaze morphs *and* eyeball bones.
+
+Write order inside `FaceController.render` (later writers win):
+
+1. blink → `eyeBlink*` (skipped when frames carry the eyes)
+2. gaze morphs → `eyeLook*` (same `carriesEyes` gate)
+3. scheduler → **speech subset only** (`jaw*`, `mouth*`, `tongue*`, `cheek*`, `nose*`), so the decay-to-zero rule of docs/3 can never zero eye or brow regions
+4. emotion mix → `emotion.mixFactorSpeaking` (0.3) on speech shapes and on the non-speech emotion shapes (frames mode: clip-absolute shapes first, then the same mix on the rest)
+5. manual overrides (HUD sliders / previews) — only while not `SPEAKING`
+
+Per frame the app also runs `animationController.update` **before** `sceneController.update` (which calls `renderer.render`), so the picture shows this frame's pose, not the previous one.
+
+### Timebase contract
+
+One clock per concern, **no arithmetic across clocks**:
+
+| Clock | Owns | Why |
+| :--- | :--- | :--- |
+| Audio clock (`audibleClock`: `AudioContext` time compensated for output latency) | viseme scheduling, frames playback (`baseSec + timeSec`), the end-of-turn test | lips must match what is *heard*, not what is queued |
+| Wall clock (`nowMs`, default `performance.now`, injectable) | `RELAXING`, turn-boundary re-anchoring | the 150 ms ease-out is a UI-time ramp, not an audio event; injectable so tests drive it by hand |
+| rAF timestamp / `dt` (capped at 0.1 s by the render loop) | damping `1 − exp(−λ·dt)`, emotion cross-fade, gaze/saccade scheduling | FPS-independent by construction; the cap makes integrators run in deliberate slow motion under very long frames |
+
+Blink deliberately uses the raw `ctx.currentTime` (monotonic, not lip-synced). All tuning constants live in `src/lipsync/anim-config.ts` ([docs/3](3-lip-sync-and-coarticulation.md)).
 
 **Why this is sensitive to races, and why the epoch solves it:** the `audio` event may already be "in flight" when the `interruption` arrives (WS ordering does not guarantee that the browser processed them in the same microtask order). With the epoch: a chunk delayed past the interruption arrives at `onAudioChunk` with the old epoch → ignored. A new agent utterance → a new epoch → everything is clean. No timers.
 
@@ -190,4 +232,4 @@ Without ElevenAgents we have to do the following ourselves:
 - [ ] PCM chunks 44.1 kHz mono 16-bit (`agent_output_audio_format` read from the metadata).
 - [ ] Prebuffer of 2–3 chunks before the first sound.
 - [ ] All `AudioBufferSourceNode`s cleaned up in `onended` (no leaks in a 10-minute conversation).
-- [ ] Interruption: audio stop < 50 ms, face neutral < 300 ms, zero "trapped" chunks (test: interrupt 10× at random moments).
+- [x] Interruption: audio stop < 50 ms, face neutral < 300 ms, zero "trapped" chunks — verified by automated tests: `hardStop()` stops and disconnects every node synchronously (`tests/barge-in-pipeline.test.ts`), the face reaches `IDLE` at the 150 ms relax duration on the injected wall clock (`tests/face-controller-clock.test.ts`), stale-epoch chunks are dropped (`tests/race-condition-epoch.test.ts`). Real-device latency (output device buffers) and the "interrupt 10× at random moments" feel check remain a manual UAT item.

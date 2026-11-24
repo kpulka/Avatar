@@ -142,9 +142,9 @@ Weight
      │BlendIn│      Hold      │  BlendOut   │
 ```
 
-* **Blend-In** ~30–50 ms: rise 0 → target value (cosine ease).
+* **Blend-In** 35 ms (`viseme.blendInSec`): rise 0 → target value (cosine ease).
 * **Hold**: the duration of the phoneme/character (EN: the phoneme span from `phoneme-merge`; PL/fallback: `char_durations_ms`).
-* **Blend-Out** ~40–60 ms: fade out, unless the same key is taken over by the next phoneme.
+* **Blend-Out** 45 ms (`viseme.blendOutSec`): fade out, unless the same key is taken over by the next phoneme.
 
 ### 2. Additive blending with a limit
 
@@ -180,22 +180,28 @@ scaleForShape(shape):           // default 1.0 (balanced preset)
 
 Presets are **tasteful** multipliers around 1.0 (subtle 0.85 / balanced 1.00 / expressive 1.15), not dampers — this way M/B/P reaches a real closure (~1.0), and 'A' jawOpen reaches ~0.55 instead of the squashed ~0.30 (the cause of the visual "flatness" before v1.1).
 
-**The closure-priority rule** still applies: when `mouthClose` > 0.15, `jawOpen` is suppressed (`jaw × max(0, 1 − 0.95 × mouthClose/closeScale)`) — this protects against the MetaPerson artifact where the "lower lip rides up under the nose". The old cap `min(closeScale, 0.28 + 0.5×jaw)`, which prevented full closure, was removed.
+**The closure-priority rule** still applies (bilabial jaw gate, Phase 11.2 SHOW-06): when `mouthClose` **or** `mouthPress` exceeds `viseme.closeJawThreshold` (0.15), `jawOpen` is suppressed: `closure = min(1, max(mouthClose/closeScale, mouthPress/pressRef))`, `jaw × max(0, 1 − closure × closeJawFactor)` with `closeJawFactor` 0.95 and `pressRef` 0.35 (the effective press of a full M/B/P). Press is part of the gate because a bilabial's `mouthClose` alone can be low on MetaPerson — this protects against the MetaPerson artifact where the "lower lip rides up under the nose". The effective `mouthClose` never exceeds `common.mouthCloseCap` (0.85) — one constant shared by the viseme and the frames track (the frames track clamps its absolute `mouthClose` to it). The old cap `min(closeScale, 0.28 + 0.5×jaw)`, which prevented full closure, was removed.
 
 ### 5. Lambda per muscle group (v1.1)
 
-A single lambda = 18 was too slow for short EN consonants (40–80 ms) — the shape did not reach its target before the end of the phoneme (another cause of the "flatness"). Lambda now depends on the muscle group (base: `coarticulationSpeed` from the profile, default 18):
+A single lambda = 18 was too slow for short EN consonants (40–80 ms) — the shape did not reach its target before the end of the phoneme (another cause of the "flatness"). Lambda now depends on the muscle group (base `cs` = `coarticulationSpeed` from the calibration profile — 30 in all presets; there is no fallback constant any more, the old λ = 18 default was dead code and was removed in Phase 16). The tier multipliers are `viseme.lambdaTiers` in `src/lipsync/anim-config.ts`:
 
 | Group | Keys | Lambda |
 | :--- | :--- | :--- |
-| Closure | `mouthClose`, `mouthPress*` | ~1.7 × cs (≈31) — fast, sharp contact |
-| Jaw | `jawOpen`, `tongueOut` | ~1.55 × cs (≈28) |
-| Rounded lips | `pucker`, `funnel`, `roll`, `shrug`, `upperUp`, `lowerDown` | ~1.0 × cs (≈18) |
-| Smile | `mouthSmile*` | ~0.45 × cs (≈8) — slow return after a pause |
+| Closure | `mouthClose`, `mouthPress*` | `closure` 1.7 × cs — fast, sharp contact |
+| Jaw | `jawOpen`, `tongueOut` | `jawTongue` 1.55 × cs |
+| Rounded lips | `pucker`, `funnel`, `roll`, `shrug`, `upperUp`, `lowerDown` | 1.0 × cs |
+| Smile | `mouthSmile*` | `smile` 0.45 × cs — slow return after a pause |
 
 ```ts
 alpha(shape) = 1 − exp(−lambdaForShape(shape) × dt)   // independent of FPS
 ```
+
+### 6. Emotion mix and shared clamps (Phase 16)
+
+* **One emotion policy for both tracks.** While the avatar speaks, the base emotion (brows, cheeks, a gentle smile) is mixed in at `emotion.mixFactorSpeaking` = **0.3** in the viseme track *and* in the frames (A2F) track. **Behavior change:** the frames track used to apply 100 % of the emotion on the shapes the clip does not own; it now matches the viseme track. Rationale: when LIVE and A2F are compared A/B in the Studio, the two sources should differ in their *mouth*, not in how strongly the brows react. The smile emotion is still suppressed while `mouthClose` > `emotion.smileSuppressClose` (0.25), so M/B/P seal cleanly. (The unused A2E `carriesEmotion` path was removed; there is no producer for it.)
+* **Speech subset.** The scheduler only drives `jaw*`, `mouth*`, `tongue*`, `cheek*`, `nose*`; its decay-to-zero rule therefore cannot touch eye/brow regions owned by gaze, blink and emotion ([docs/4](4-audio-and-barge-in.md)).
+* **Shared constants** (`src/lipsync/anim-config.ts`, frozen `ANIM_DEFAULTS`): `common.mouthCloseCap` 0.85, `common.snapEpsilon` 0.001 (weights below it snap to a hard 0), `manual.jawGuardMargin` 0.20 (manual `mouthClose` ≤ `jawOpen` + margin), `relax.durationMs` 150, `relax.finishEpsilon` 0.005, `frame.dtCapSec` 0.1. Six of them are snapshot-tested (`tests/anim-config.test.ts`) so a change is always a conscious one. The user-facing `CalibrationProfile` (studio sliders) is separate and unchanged by this layer.
 
 ---
 
@@ -207,12 +213,12 @@ The previous version of this document had two bugs: (a) keys absent from the dic
 // FaceController.render(dt) — called from the Three.js render loop.
 // The only module that writes to morphTargetInfluences (docs/4).
 render(dt) {
-  const now = this.audioCtx.currentTime;
+  const now = this.audibleClock();   // audio time actually HEARD (output latency compensated), see docs/4
   const targets = new Map(); // (shape → weight)
 
   // 1. Decay to zero (foundation rule): start from zero,
   //    contributions add up — keys without a contribution naturally tend to 0.
-  const SPEECH_KEYS = this.speechShapeNames; // list of speech keys from FaceDriver
+  const SPEECH_KEYS = this.speechShapeNames; // speech subset of the driver shapes (jaw/mouth/tongue/cheek/nose)
 
   // 2. Sum of active visemes (with the epoch — see docs/4)
   for (const item of this.queue) {
@@ -243,7 +249,7 @@ Properties of this loop:
 * **Single owner** of `morphTargetInfluences` — `FaceController` (see the architecture in [docs/4](4-audio-and-barge-in.md)).
 * `lambdaForShape` controls the "size" of the mouth per muscle group (table above): too small = clipped speech, too large = a chewing machine.
 * **Forced closure**: for `M/B/P` aim at `mouthClose: 1.0` with priority — if the additive sum exceeds it, `mouthClose` takes precedence over `jawOpen` (closure is visually dominant).
-* Implementation in code: `src/lipsync/viseme-scheduler.ts` — `scaleForShape()`, `lambdaForShape()`, `update()`.
+* Implementation in code: `src/lipsync/viseme-scheduler.ts` — `scaleForShape()`, `lambdaForShape()`, `update()`; all constants in `src/lipsync/anim-config.ts`. The per-frame hot path allocates nothing (scratch maps, in-place queue compaction — verified in `tests/hot-path-allocations.test.ts`).
 
 
 ---
