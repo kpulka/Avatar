@@ -1,14 +1,14 @@
 import { CharAlignment } from '../types/avatar';
 
 /** Analysis window (ms) matching syllable length; shared by the fallback alignment and the speech-bounds probe. */
-export const ENERGY_WINDOW_MS = 70;
+const ENERGY_WINDOW_MS = 70;
 
 /**
  * RMS (0..1) above which a window counts as speech. Mirrors `fallback.skipEnergyBelow` in
  * anim-config (the face controller skips jaw visemes at or below it); duplicated here on purpose so
  * the audio layer does not import the lipsync layer.
  */
-export const SPEECH_ENERGY_THRESHOLD = 0.02;
+const SPEECH_ENERGY_THRESHOLD = 0.02;
 
 /** Int16 view over PCM bytes; copies when the byte offset is odd (an Int16Array view would throw). */
 function toInt16(pcmBytes: Uint8Array): Int16Array {

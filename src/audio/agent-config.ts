@@ -8,8 +8,6 @@ export interface AgentConfig {
   wssBaseUrl: string;
   /** Audio format of the microphone input */
   inputAudioFormat: 'pcm_16000';
-  /** Audio format of the agent output */
-  outputAudioFormat: 'pcm_44100';
   /** List of subscribed client events */
   clientEvents: string[];
   /** Name and role of the avatar */
@@ -20,7 +18,6 @@ export const DEFAULT_AGENT_CONFIG: AgentConfig = {
   agentId: 'agent_4901m0gnjzpcevev1q5ekvdjhbj3',
   wssBaseUrl: 'wss://api.elevenlabs.io/v1/convai/conversation',
   inputAudioFormat: 'pcm_16000',
-  outputAudioFormat: 'pcm_44100',
   clientEvents: [
     'audio',
     'interruption',

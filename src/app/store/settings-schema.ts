@@ -19,7 +19,7 @@ import { DEFAULT_LIP_SYNC_ENGINE, LipSyncEngine, parseLipSyncEngine } from '../.
 import { DEFAULT_AGENT_CONFIG } from '../../audio/agent-config';
 
 /** Default address of the local A2F wrapper (eventually cloud too, in Phase 10). */
-export const DEFAULT_A2F_URL = 'http://127.0.0.1:8000';
+const DEFAULT_A2F_URL = 'http://127.0.0.1:8000';
 
 /** Maximum number of viseme override entries (DoS protection, T-11-02). */
 export const MAX_VISEME_OVERRIDES = 512;
@@ -84,7 +84,7 @@ export const DEFAULT_SETTINGS: SettingsStateV1 = {
   },
 };
 
-export function clampVolume(value: number): number {
+function clampVolume(value: number): number {
   if (!Number.isFinite(value)) return DEFAULT_SETTINGS.user.volume;
   return Math.max(0, Math.min(1, value));
 }

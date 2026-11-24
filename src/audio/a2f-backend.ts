@@ -8,10 +8,6 @@
 
 import { parseA2fJson, A2fParseResult } from '../lipsync/a2f-parser';
 
-export interface A2fBackendOptions {
-  baseUrl: string;
-}
-
 export interface A2fStatus {
   status: string;
   gpu?: string;

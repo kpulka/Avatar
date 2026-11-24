@@ -27,7 +27,7 @@ export interface SchedulerOptions {
  * foundation rule (no contribution -> decay to 0) cannot clobber eye (gaze/blink) or brow
  * (emotion) regions.
  */
-export const SPEECH_SHAPE_FAMILIES = ['jaw', 'mouth', 'tongue', 'cheek', 'nose'] as const;
+const SPEECH_SHAPE_FAMILIES = ['jaw', 'mouth', 'tongue', 'cheek', 'nose'] as const;
 
 export function isSpeechShape(shape: string): boolean {
   for (const family of SPEECH_SHAPE_FAMILIES) {

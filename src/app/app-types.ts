@@ -67,7 +67,6 @@ export interface AppEvents extends Record<string, unknown> {
   'compare:state': string;
   'compare:result': CompareResultEvent;
   'compare:cancelled': void;
-  'compare:disposed': void;
 }
 
 export interface TelemetrySample {

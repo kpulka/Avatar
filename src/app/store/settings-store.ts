@@ -17,8 +17,8 @@ import {
   validateSettings,
 } from './settings-schema';
 import { BLOB_KEY, migrateLegacy } from './migrate';
+import { Unsub } from '../events';
 
-export type Unsub = () => void;
 export type SettingsListener = (state: SettingsStateV1) => void;
 
 const USER_KEYS: ReadonlyArray<keyof UserSettings> = [

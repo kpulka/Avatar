@@ -9,7 +9,7 @@ function defined<T extends object>(params: T): T {
 /**
  * Configures maximum anisotropy for all textures in the model hierarchy (docs/5)
  */
-export function configureTextures(root: THREE.Object3D, renderer: THREE.WebGLRenderer): void {
+function configureTextures(root: THREE.Object3D, renderer: THREE.WebGLRenderer): void {
   const maxAniso = renderer.capabilities.getMaxAnisotropy();
 
   root.traverse((child) => {

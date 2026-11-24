@@ -38,7 +38,7 @@ const VOWEL_PHONEMES = new Set([
 ]);
 
 /** Soft minimum span (ms). */
-export const MIN_SPAN_MS = 35;
+const MIN_SPAN_MS = 35;
 /** Hard floor (ms) used when the soft minimum cannot fit inside the word window. */
 export const HARD_MIN_SPAN_MS = MIN_SPAN_MS / 2;
 /** Share of a diphthong's time spent on its own pose before the glide end pose. */

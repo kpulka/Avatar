@@ -1,8 +1,25 @@
 /**
  * Legacy bridge (Phase 11, transitional stage): write-through store → old localStorage keys.
  *
- * Reason: during the transitional period of phase 11 the old modules read the legacy
- * keys. The bridge keeps them consistent with the blob so there is no split-brain.
+ * WHAT: mirrors the SettingsStore blob back into the pre-F11 localStorage keys (`LEGACY_KEYS` in
+ * migrate.ts, which holds the one-shot legacy → blob direction). Reason: modules written before
+ * the store still read those keys directly, and the bridge keeps them consistent with the blob so
+ * there is no split-brain. Today the one live reader is `loadVisemeOverrides()` (lipsync/
+ * viseme-overrides.ts, called by the FaceController constructor); the calibration, engine, theme,
+ * volume, animation-source and A2F-URL keys are mirrored but nothing in the production call graph reads them (`loadCalibrationProfile` exists but has no caller).
+ *
+ * REMOVE WHEN (both):
+ *   (a) v1.1 has been public for one full milestone cycle, so users coming from a pre-F11 build
+ *       have already been migrated by `migrateLegacy` on their first store read; AND
+ *   (b) no module reads a legacy key directly: `FaceController` takes the viseme overrides from the
+ *       SettingsStore (injected), and `loadCalibrationProfile` / `saveCalibrationProfile` /
+ *       `loadVisemeOverrides` / `saveVisemeOverrides` (lipsync/) are deleted or re-pointed at the store.
+ *
+ * REMOVE HOW: keep `migrateLegacy` (it is the one-shot upgrade path and stays in migrate.ts);
+ * delete this file, the `attachLegacyBridge` import and call in `app/container.ts` together with
+ * its `unsubLegacyBridge` entry in `dispose()`, drop the `importableBy: ['app-root']` entry for this
+ * file in tests/layering-rules.ts, and extend tests/settings-store.test.ts so the legacy-key
+ * fixtures assert the migration alone.
  */
 import { SettingsStore } from './settings-store';
 import { LEGACY_KEYS } from './migrate';

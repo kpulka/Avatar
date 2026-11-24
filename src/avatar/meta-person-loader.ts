@@ -149,7 +149,7 @@ export class MetaPersonLoader implements AvatarLoader {
 /**
  * Moves the arm bones from the raw T-Pose into a natural resting pose along the body
  */
-export function relaxArmsToNaturalPose(root: THREE.Object3D): void {
+function relaxArmsToNaturalPose(root: THREE.Object3D): void {
   const leftArm = root.getObjectByName('LeftArm');
   const rightArm = root.getObjectByName('RightArm');
   const leftForeArm = root.getObjectByName('LeftForeArm');

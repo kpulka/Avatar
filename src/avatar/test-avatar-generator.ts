@@ -5,7 +5,7 @@ import { ArKitBlendshapeDriver } from './face-driver';
 /**
  * All 52 Apple ARKit blendshapes
  */
-export const ARKIT_52_SHAPES = [
+const ARKIT_52_SHAPES = [
   'eyeBlinkLeft', 'eyeLookDownLeft', 'eyeLookInLeft', 'eyeLookOutLeft', 'eyeLookUpLeft', 'eyeSquintLeft', 'eyeWideLeft',
   'eyeBlinkRight', 'eyeLookDownRight', 'eyeLookInRight', 'eyeLookOutRight', 'eyeLookUpRight', 'eyeSquintRight', 'eyeWideRight',
   'jawForward', 'jawLeft', 'jawRight', 'jawOpen',

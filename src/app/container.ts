@@ -22,7 +22,7 @@ import { t } from './copy';
 import { AppEvents, AppServices } from './app-types';
 import { SettingsStore } from './store/settings-store';
 import { attachLegacyBridge } from './store/legacy-bridge';
-import { createUiMode } from './ui-mode';
+import { createUiMode, isEditableTarget } from './ui-mode';
 import { ConversationController } from '../features/conversation-controller';
 import { AnimationController } from '../features/animation-controller';
 import { TelemetryController } from '../features/telemetry-controller';
@@ -311,9 +311,7 @@ export function createApp(canvas: HTMLCanvasElement): AppHandle {
 
   const onKeydown = (event: KeyboardEvent): void => {
     if (event.ctrlKey || event.metaKey || event.altKey) return;
-    const target = event.target as HTMLElement | null;
-    const tag = target?.tagName?.toLowerCase();
-    if (tag === 'input' || tag === 'textarea' || tag === 'select' || target?.isContentEditable) return;
+    if (isEditableTarget(event.target)) return;
     // A11: Esc belongs to an open dialog (native close) — it must not also flip presentation mode.
     if (document.querySelector('dialog[open]')) return;
     if (event.key === 'Escape' || event.key === 'h' || event.key === 'H') {

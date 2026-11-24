@@ -32,7 +32,6 @@ export const LEGACY_KEYS = {
   a2fUrl: 'avatar_a2f_url',
 } as const;
 
-export type LegacyKeyName = keyof typeof LEGACY_KEYS;
 
 function readRaw(storage: StorageLike, key: string): string | null {
   try {

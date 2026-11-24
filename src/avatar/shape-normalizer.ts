@@ -12,8 +12,6 @@ export const REQUIRED_SHAPES = [
   'eyeBlinkRight',
 ] as const;
 
-export type RequiredShape = (typeof REQUIRED_SHAPES)[number];
-
 /**
  * Map of known aliases and alternative spellings of ARKit key names
  */

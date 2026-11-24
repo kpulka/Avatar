@@ -38,7 +38,8 @@ export interface UiModeController {
   attachShortcut(target: KeyboardTarget): Unsub;
 }
 
-function isEditableTarget(target: unknown): boolean {
+/** Whether a keyboard event target is a text-entry control (global shortcuts must not fire there). */
+export function isEditableTarget(target: unknown): boolean {
   if (target === null || typeof target !== 'object') return false;
   const element = target as { tagName?: string; isContentEditable?: boolean };
   const tag = (element.tagName ?? '').toLowerCase();

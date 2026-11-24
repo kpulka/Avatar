@@ -66,7 +66,6 @@ vi.mock('../src/scene/lighting', async () => {
 });
 vi.mock('../src/scene/environment', () => ({
   EnvironmentManager: class {
-    setupRoomEnvironment = vi.fn();
     setupSoftboxEnvironment = vi.fn();
     dispose = vi.fn();
   },
