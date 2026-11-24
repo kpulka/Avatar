@@ -39,7 +39,7 @@ describe('Lip-Sync Calibration Module', () => {
 
   it('ignores legacy v1 localStorage profile (v2 key isolation -> automatic reset to DEFAULT)', () => {
     // An old record under the v1 key (0.3-0.65 attenuation semantics) must not poison v2:
-    const legacyV1: CalibrationProfile = {
+    const legacyV1: Omit<CalibrationProfile, 'clockVersion'> = {
       jawScale: 0.55,
       closeScale: 0.30,
       puckerScale: 0.50,

@@ -19,6 +19,7 @@ import { describe, it, expect } from 'vitest';
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { basename, dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { defined } from './helpers/defined';
 
 const ROOT = fileURLToPath(new URL('..', import.meta.url));
 
@@ -174,7 +175,7 @@ const GATE_A_SCOPES: readonly GateAScope[] = [
     // ON in 12-07. README.md entered enforced scope in Phase 13 (13-01) once the English
     // rewrite landed; the former README exemption is removed.
     enforced: true,
-    files: () => ['README.md', 'TODO_humanInTheLoop.md', 'index.html'].filter((f) => existsSync(join(ROOT, f))),
+    files: () => ['README.md', 'ARCHITECTURE.md', 'TODO_humanInTheLoop.md', 'index.html'].filter((f) => existsSync(join(ROOT, f))),
   },
 ];
 
@@ -207,6 +208,7 @@ function gateBFiles(): string[] {
   return [
     ...listFiles('docs', ['.md']),
     'README.md',
+    'ARCHITECTURE.md',
     'TODO_humanInTheLoop.md',
     'a2f/README.md',
     ...planningRoot,
@@ -219,9 +221,9 @@ const MD_LINK_RE = /\[[^\]]*\]\(([^)\s]+)(?:\s+"[^"]*")?\)/g;
 function relativeMdTargets(text: string): string[] {
   const targets: string[] = [];
   for (const match of text.matchAll(MD_LINK_RE)) {
-    const raw = match[1];
+    const raw = defined(match[1]);
     if (/^[a-z][a-z0-9+.-]*:/i.test(raw) || raw.startsWith('/') || raw.startsWith('#')) continue;
-    const target = raw.split('#')[0];
+    const target = defined(raw.split('#')[0]);
     if (target.endsWith('.md')) targets.push(target);
   }
   return targets;

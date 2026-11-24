@@ -1,9 +1,10 @@
 import { describe, it, expect } from 'vitest';
 import { FaceController } from '../src/lipsync/face-controller';
-import { ANIM_DEFAULTS } from '../src/lipsync/anim-config';
+import { ANIM_DEFAULTS } from '../src/realism/anim-config';
 
 import { FaceDriver, FramesClip } from '../src/types/avatar';
 import { AudioEngine } from '../src/audio/audio-engine';
+import { defined } from './helpers/defined';
 
 const EMOTION_MIX_SPEAKING = ANIM_DEFAULTS.emotion.mixFactorSpeaking;
 
@@ -76,10 +77,10 @@ describe('emotion mix parity (16-02: one policy for both tracks)', () => {
     expect(frames.controller.getState()).toBe('SPEAKING');
     const profile: Record<string, number> = { browInnerUp: 0.25, eyeWideLeft: 0.15, eyeWideRight: 0.15 };
     for (const shape of BROW_SHAPES) {
-      const expected = profile[shape] * EMOTION_MIX_SPEAKING;
+      const expected = defined(profile[shape]) * EMOTION_MIX_SPEAKING;
       expect(viseme.driver.appliedWeights[shape]).toBeCloseTo(expected, 9);
       expect(frames.driver.appliedWeights[shape]).toBeCloseTo(expected, 9);
-      expect(frames.driver.appliedWeights[shape]).toBeCloseTo(viseme.driver.appliedWeights[shape], 9);
+      expect(frames.driver.appliedWeights[shape]).toBeCloseTo(defined(viseme.driver.appliedWeights[shape]), 9);
     }
   });
 

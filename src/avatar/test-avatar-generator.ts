@@ -5,7 +5,7 @@ import { ArKitBlendshapeDriver } from './face-driver';
 /**
  * All 52 Apple ARKit blendshapes
  */
-export const ARKIT_52_SHAPES = [
+const ARKIT_52_SHAPES = [
   'eyeBlinkLeft', 'eyeLookDownLeft', 'eyeLookInLeft', 'eyeLookOutLeft', 'eyeLookUpLeft', 'eyeSquintLeft', 'eyeWideLeft',
   'eyeBlinkRight', 'eyeLookDownRight', 'eyeLookInRight', 'eyeLookOutRight', 'eyeLookUpRight', 'eyeSquintRight', 'eyeWideRight',
   'jawForward', 'jawLeft', 'jawRight', 'jawOpen',
@@ -104,7 +104,7 @@ export function createTestAvatar(): LoadedAvatar {
   const headGeo = new THREE.SphereGeometry(0.22, 48, 48);
   headGeo.scale(1.0, 1.25, 1.05); // anatomical head shape
 
-  const posAttr = headGeo.attributes.position;
+  const posAttr = headGeo.getAttribute('position');
   const vertexCount = posAttr.count;
 
   // Create morph targets for all 52 ARKit shapes
@@ -205,7 +205,7 @@ export function createTestAvatar(): LoadedAvatar {
 
   // 2. Sub-mesh: Teeth (Teeth Mesh with a synchronized jawOpen)
   const teethGeo = new THREE.BoxGeometry(0.08, 0.02, 0.02);
-  const teethPos = teethGeo.attributes.position;
+  const teethPos = teethGeo.getAttribute('position');
   const teethMorph: THREE.BufferAttribute[] = [];
   const teethDict: Record<string, number> = { jawOpen: 0, mouthClose: 1 };
 

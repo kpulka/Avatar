@@ -9,7 +9,6 @@ import { AudioEngine } from '../src/audio/audio-engine';
 import { TelemetryManager } from '../src/prod/telemetry';
 import { SettingsStore } from '../src/app/store/settings-store';
 import { attachLegacyBridge } from '../src/app/store/legacy-bridge';
-import { EmbedBridge } from '../src/prod/embed-bridge';
 import { createMemoryStorage } from './helpers/memory-storage';
 
 class MockAudioBufferSourceNode {
@@ -30,7 +29,7 @@ class MockAudioContext {
   public createGain() {
     return { gain: { value: 1, setValueAtTime: vi.fn() }, connect: vi.fn() };
   }
-  public createBuffer(ch: number, len: number, rate: number) {
+  public createBuffer(_ch: number, len: number, rate: number) {
     return { duration: len / rate, copyToChannel: vi.fn() };
   }
   public createBufferSource() {

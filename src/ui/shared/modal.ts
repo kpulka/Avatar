@@ -56,9 +56,9 @@ export function createModal(container: HTMLElement): ModalHandle {
       }
       if (key !== 'Tab') return;
       const focusables = [...dialog.querySelectorAll<HTMLElement>(FOCUSABLE)];
-      if (focusables.length === 0) return;
       const first = focusables[0];
       const last = focusables[focusables.length - 1];
+      if (!first || !last) return; // no focusable elements
       const active = document.activeElement;
       if ((event as KeyboardEvent).shiftKey && active === first) {
         event.preventDefault();

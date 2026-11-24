@@ -211,7 +211,7 @@ Presets are **tasteful** multipliers around 1.0 for jaw, pucker, funnel, roll, t
 
 ### 5. Lambda per muscle group (v1.1)
 
-A single lambda = 18 was too slow for short EN consonants (40–80 ms) — the shape did not reach its target before the end of the phoneme (another cause of the "flatness"). Lambda now depends on the muscle group (base `cs` = `coarticulationSpeed` from the calibration profile — 30 in all presets; there is no fallback constant any more, the old λ = 18 default was dead code and was removed in Phase 16). The tier multipliers are `viseme.lambdaTiers` in `src/lipsync/anim-config.ts`:
+A single lambda = 18 was too slow for short EN consonants (40–80 ms) — the shape did not reach its target before the end of the phoneme (another cause of the "flatness"). Lambda now depends on the muscle group (base `cs` = `coarticulationSpeed` from the calibration profile — 30 in all presets; there is no fallback constant any more, the old λ = 18 default was dead code and was removed in Phase 16). The tier multipliers are `viseme.lambdaTiers` in `src/realism/anim-config.ts`:
 
 | Group | Keys | Lambda |
 | :--- | :--- | :--- |
@@ -228,7 +228,7 @@ alpha(shape) = 1 − exp(−lambdaForShape(shape) × dt)   // independent of FPS
 
 * **One emotion policy for both tracks.** While the avatar speaks, the base emotion (brows, cheeks, a gentle smile) is mixed in at `emotion.mixFactorSpeaking` = **0.3** in the viseme track *and* in the frames (A2F) track. **Behavior change:** the frames track used to apply 100 % of the emotion on the shapes the clip does not own; it now matches the viseme track. Rationale: when LIVE and A2F are compared A/B in the Studio, the two sources should differ in their *mouth*, not in how strongly the brows react. The smile emotion is still suppressed while `mouthClose` > `emotion.smileSuppressClose` (0.25), so M/B/P seal cleanly. (The unused A2E `carriesEmotion` path was removed; there is no producer for it.)
 * **Speech subset.** The scheduler only drives `jaw*`, `mouth*`, `tongue*`, `cheek*`, `nose*`; its decay-to-zero rule therefore cannot touch eye/brow regions owned by gaze, blink and emotion ([docs/4](4-audio-and-barge-in.md)).
-* **Shared constants** (`src/lipsync/anim-config.ts`, frozen `ANIM_DEFAULTS`): `common.mouthCloseCap` 0.85, `common.snapEpsilon` 0.001 (weights below it snap to a hard 0), `manual.jawGuardMargin` 0.20 (manual `mouthClose` ≤ `jawOpen` + margin), `relax.durationMs` 150, `relax.finishEpsilon` 0.005, `frame.dtCapSec` 0.1. Six of them are snapshot-tested (`tests/anim-config.test.ts`) so a change is always a conscious one. The user-facing `CalibrationProfile` (studio sliders) is separate and unchanged by this layer.
+* **Shared constants** (`src/realism/anim-config.ts`, frozen `ANIM_DEFAULTS`): `common.mouthCloseCap` 0.85, `common.snapEpsilon` 0.001 (weights below it snap to a hard 0), `manual.jawGuardMargin` 0.20 (manual `mouthClose` ≤ `jawOpen` + margin), `relax.durationMs` 150, `relax.finishEpsilon` 0.005, `frame.dtCapSec` 0.1. Six of them are snapshot-tested (`tests/anim-config.test.ts`) so a change is always a conscious one. The user-facing `CalibrationProfile` (studio sliders) is separate and unchanged by this layer.
 
 ---
 
@@ -276,7 +276,7 @@ Properties of this loop:
 * **Single owner** of `morphTargetInfluences` — `FaceController` (see the architecture in [docs/4](4-audio-and-barge-in.md)).
 * `lambdaForShape` controls the "size" of the mouth per muscle group (table above): too small = clipped speech, too large = a chewing machine.
 * **Forced closure**: for `M/B/P` the closure (press + roll, and `mouthClose` capped at 0.85 of scale) takes precedence over `jawOpen` through the closure-priority rule above — closure is visually dominant.
-* Implementation in code: `src/lipsync/viseme-scheduler.ts` — `scaleForShape()`, `lambdaForShape()`, `update()`; all constants in `src/lipsync/anim-config.ts`. The per-frame hot path allocates nothing (scratch maps, in-place queue compaction — verified in `tests/hot-path-allocations.test.ts`).
+* Implementation in code: `src/lipsync/viseme-scheduler.ts` — `scaleForShape()`, `lambdaForShape()`, `update()`; all constants in `src/realism/anim-config.ts`. The per-frame hot path allocates nothing (scratch maps, in-place queue compaction — verified in `tests/hot-path-allocations.test.ts`).
 
 
 ---

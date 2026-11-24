@@ -1,5 +1,5 @@
 import { CalibrationProfile, DEFAULT_CALIBRATION_PROFILE } from './calibration';
-import { ANIM_DEFAULTS } from './anim-config';
+import { ANIM_DEFAULTS } from '../realism/anim-config';
 
 const { viseme: visemeConfig, common } = ANIM_DEFAULTS;
 
@@ -27,7 +27,7 @@ export interface SchedulerOptions {
  * foundation rule (no contribution -> decay to 0) cannot clobber eye (gaze/blink) or brow
  * (emotion) regions.
  */
-export const SPEECH_SHAPE_FAMILIES = ['jaw', 'mouth', 'tongue', 'cheek', 'nose'] as const;
+const SPEECH_SHAPE_FAMILIES = ['jaw', 'mouth', 'tongue', 'cheek', 'nose'] as const;
 
 export function isSpeechShape(shape: string): boolean {
   for (const family of SPEECH_SHAPE_FAMILIES) {
@@ -100,6 +100,7 @@ export class VisemeScheduler {
     let write = 0;
     for (let read = 0; read < queue.length; read++) {
       const item = queue[read];
+      if (!item) continue; // read < queue.length
       if (item.epoch !== activeEpoch) continue;
       if (nowSec > item.startTimeSec + item.durationSec + this.blendOutSec) continue;
       queue[write++] = item;

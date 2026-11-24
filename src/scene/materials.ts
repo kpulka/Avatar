@@ -9,7 +9,7 @@ function defined<T extends object>(params: T): T {
 /**
  * Configures maximum anisotropy for all textures in the model hierarchy (docs/5)
  */
-export function configureTextures(root: THREE.Object3D, renderer: THREE.WebGLRenderer): void {
+function configureTextures(root: THREE.Object3D, renderer: THREE.WebGLRenderer): void {
   const maxAniso = renderer.capabilities.getMaxAnisotropy();
 
   root.traverse((child) => {
@@ -171,6 +171,6 @@ export function enhanceAvatarMaterials(root: THREE.Object3D, renderer: THREE.Web
       return mat;
     });
 
-    mesh.material = Array.isArray(mesh.material) ? enhancedMaterials : enhancedMaterials[0];
+    mesh.material = Array.isArray(mesh.material) ? enhancedMaterials : (enhancedMaterials[0] ?? mesh.material); // materials has exactly one entry here
   });
 }

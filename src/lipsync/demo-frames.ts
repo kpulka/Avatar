@@ -13,7 +13,7 @@
  */
 
 import { FramesClip, PoseFrame } from '../types/avatar';
-import { clamp01 } from './anim-config';
+import { clamp01 } from '../realism/anim-config';
 
 const FPS = 60;
 
@@ -67,7 +67,7 @@ function smoothChannel(values: number[], radius = 3): number[] {
     let acc = 0;
     for (let k = -radius; k <= radius; k++) {
       const j = Math.max(0, Math.min(n - 1, i + k));
-      acc += values[j] * win[k + radius];
+      acc += (values[j] ?? 0) * (win[k + radius] ?? 0); // j clamped to [0, n-1]; k + radius in [0, 2*radius]
     }
     out[i] = clamp01(acc / winSum);
   }
@@ -91,7 +91,7 @@ export function buildDemoFrames(_sampleRate: number, durationSec: number, phrase
   for (let i = 0; i < n; i++) {
     const t = i / FPS;
     const charIndex = Math.min(chars.length - 1, Math.floor(t / charDur));
-    const pose = poseForChar(chars[charIndex]);
+    const pose = poseForChar(chars[charIndex] ?? ' '); // charIndex clamped to [0, chars.length - 1]
     const weights: Record<string, number> = {};
     for (const [k, v] of Object.entries(pose)) {
       weights[k] = clamp01(v);
@@ -107,11 +107,13 @@ export function buildDemoFrames(_sampleRate: number, durationSec: number, phrase
     if (Math.max(...raw) < 0.001) continue;
     const smooth = smoothChannel(raw);
     for (let i = 0; i < n; i++) {
-      const w = smooth[i];
+      const w = smooth[i] ?? 0; // smoothChannel returns n values; i < n
+      const frameWeights = frames[i]?.weights; // frames has n entries
+      if (!frameWeights) continue;
       if (w < 0.001) {
-        delete frames[i].weights[shape];
+        delete frameWeights[shape];
       } else {
-        frames[i].weights[shape] = w;
+        frameWeights[shape] = w;
         usedShapes.add(shape);
       }
     }
@@ -161,7 +163,7 @@ export function synthesizeDemoAudio(sampleRate: number, durationSec: number, phr
   for (let i = 0; i < total; i++) {
     const t = i / sampleRate;
     const charIndex = Math.min(chars.length - 1, Math.floor(t / charDur));
-    const ch = chars[charIndex].toLowerCase();
+    const ch = (chars[charIndex] ?? ' ').toLowerCase(); // charIndex clamped to [0, chars.length - 1]
     const tin = t - charIndex * charDur;
     // Syllable envelope (15% fade) — consistent with the frames, but stronger at the centre.
     const within = tin / charDur;

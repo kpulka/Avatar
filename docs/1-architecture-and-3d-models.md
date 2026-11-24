@@ -18,6 +18,8 @@ Requirement: **realistic appearance** + technological flexibility. Options we co
 
 ## 🧩 Abstraction layers (technological flexibility)
 
+Current layering, event catalog and extension recipes, verified against the code: [ARCHITECTURE.md](../ARCHITECTURE.md).
+
 The core of the project (conversation, lip-sync, interruptions) must not depend on Three.js or ElevenAgents. We define three interfaces:
 
 ```typescript

@@ -1,6 +1,25 @@
 // @vitest-environment jsdom
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { defined } from './helpers/defined';
 
+// Instances the container creates, captured so the lifecycle regression can inspect them (14-03).
+const created = vi.hoisted(() => ({
+  buses: [] as Array<{ handlerCount(): number }>,
+  renderers: [] as Array<{ dispose: ReturnType<typeof vi.fn> }>,
+  audioEngines: [] as Array<{ ctx: { close: ReturnType<typeof vi.fn> } }>,
+  speechBackends: [] as Array<{ stop: ReturnType<typeof vi.fn> }>,
+}));
+
+vi.mock('../src/app/events', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../src/app/events')>();
+  class TrackedBus<E extends Record<string, unknown>> extends actual.TypedEventBus<E> {
+    constructor() {
+      super();
+      created.buses.push(this);
+    }
+  }
+  return { ...actual, TypedEventBus: TrackedBus };
+});
 vi.mock('../src/core/renderer', () => ({
   AppRenderer: class {
     instance = { render: vi.fn(), toneMappingExposure: 1 };
@@ -8,6 +27,9 @@ vi.mock('../src/core/renderer', () => ({
     setPixelRatio = vi.fn();
     setSize = vi.fn();
     dispose = vi.fn();
+    constructor() {
+      created.renderers.push(this);
+    }
   },
 }));
 vi.mock('../src/core/camera', () => ({
@@ -44,7 +66,6 @@ vi.mock('../src/scene/lighting', async () => {
 });
 vi.mock('../src/scene/environment', () => ({
   EnvironmentManager: class {
-    setupRoomEnvironment = vi.fn();
     setupSoftboxEnvironment = vi.fn();
     dispose = vi.fn();
   },
@@ -80,8 +101,11 @@ vi.mock('../src/avatar/test-avatar-generator', async () => {
 });
 vi.mock('../src/audio/audio-engine', () => ({
   AudioEngine: class {
-    ctx = { currentTime: 0, resume: vi.fn() };
+    ctx = { currentTime: 0, resume: vi.fn(), close: vi.fn(async () => undefined) };
     masterGain = { gain: { setValueAtTime: vi.fn() } };
+    constructor() {
+      created.audioEngines.push(this);
+    }
     playChunk = vi.fn(() => 0);
     hardStop = vi.fn();
     getEpoch = vi.fn(() => 0);
@@ -92,6 +116,9 @@ vi.mock('../src/audio/audio-engine', () => ({
 }));
 vi.mock('../src/audio/speech-backend', () => ({
   ElevenAgentsSpeechBackend: class {
+    constructor() {
+      created.speechBackends.push(this);
+    }
     onAudioChunk = vi.fn();
     onInterruption = vi.fn();
     onUserTranscript = vi.fn();
@@ -160,6 +187,10 @@ describe('createApp (container smoke, jsdom)', () => {
     vi.stubGlobal('requestAnimationFrame', vi.fn(() => 1));
     vi.stubGlobal('cancelAnimationFrame', vi.fn());
     vi.stubGlobal('localStorage', createMemoryStorage());
+    created.buses.length = 0;
+    created.renderers.length = 0;
+    created.audioEngines.length = 0;
+    created.speechBackends.length = 0;
   });
 
   it('assembles the app and registers 6 panels in the shell', () => {
@@ -252,6 +283,44 @@ describe('createApp (container smoke, jsdom)', () => {
     expect(document.body.getAttribute('data-mode')).toBe('user');
     expect(app.shell.isOpen()).toBe(false);
     app.dispose();
+  });
+
+  it('dispose() leaves zero bus handlers and releases session, renderer and audio context exactly once (14-03)', async () => {
+    const app = createApp(setupDom());
+    app.start();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    const bus = defined(created.buses[0], 'the container bus');
+    const renderer = defined(created.renderers[0], 'the renderer');
+    const audio = defined(created.audioEngines[0], 'the audio engine');
+    const speech = defined(created.speechBackends[0], 'the speech backend');
+
+    // Precondition: the app really subscribed (the assertion below cannot pass on an empty bus).
+    expect(bus.handlerCount()).toBeGreaterThan(0);
+
+    app.dispose();
+    expect(bus.handlerCount()).toBe(0);
+    expect(speech.stop).toHaveBeenCalledTimes(1);
+    expect(renderer.dispose).toHaveBeenCalledTimes(1);
+    expect(audio.ctx.close).toHaveBeenCalledTimes(1);
+
+    // Idempotent: a second dispose neither throws nor releases anything again.
+    expect(() => app.dispose()).not.toThrow();
+    expect(bus.handlerCount()).toBe(0);
+    expect(speech.stop).toHaveBeenCalledTimes(1);
+    expect(renderer.dispose).toHaveBeenCalledTimes(1);
+    expect(audio.ctx.close).toHaveBeenCalledTimes(1);
+  });
+
+  it('a subscription added without an Unsub would be caught: handlerCount sees it after dispose', () => {
+    const app = createApp(setupDom());
+    const bus = defined(created.buses[0], 'the container bus') as unknown as {
+      on(type: string, handler: () => void): () => void;
+      handlerCount(): number;
+    };
+    bus.on('toast', () => undefined); // the bug this regression guards against: no Unsub collected
+    app.dispose();
+    expect(bus.handlerCount()).toBe(1);
   });
 
   it('dispose() removes the shell and does not throw', () => {

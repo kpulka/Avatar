@@ -1,8 +1,9 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { FaceController } from '../src/lipsync/face-controller';
-import { allocProbe } from '../src/lipsync/alloc-probe';
+import { allocProbe } from '../src/realism/alloc-probe';
 import { FaceDriver, FramesClip } from '../src/types/avatar';
 import { AudioEngine } from '../src/audio/audio-engine';
+import { defined } from './helpers/defined';
 
 const SHAPES = [
   'jawOpen', 'mouthClose', 'mouthFunnel', 'mouthPucker', 'mouthSmileLeft', 'mouthSmileRight',
@@ -247,8 +248,8 @@ describe('golden weights: refactor changed no output (16-05)', () => {
       mouthPressLeft: 0,
       cheekSquintLeft: 0.22571370584253123,
     };
-    for (const [shape, value] of Object.entries(golden24)) expect(snapshots[24][shape], shape).toBeCloseTo(value, 9);
-    for (const [shape, value] of Object.entries(golden33)) expect(snapshots[33][shape], shape).toBeCloseTo(value, 9);
+    for (const [shape, value] of Object.entries(golden24)) expect(defined(snapshots[24])[shape], shape).toBeCloseTo(value, 9);
+    for (const [shape, value] of Object.entries(golden33)) expect(defined(snapshots[33])[shape], shape).toBeCloseTo(value, 9);
   });
 
   it('frames track at frame 25 and 60', () => {

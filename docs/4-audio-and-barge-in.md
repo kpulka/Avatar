@@ -215,7 +215,7 @@ One clock per concern, **no arithmetic across clocks**:
 | Wall clock (`nowMs`, default `performance.now`, injectable) | `RELAXING`, turn-boundary re-anchoring | the 150 ms ease-out is a UI-time ramp, not an audio event; injectable so tests drive it by hand |
 | rAF timestamp / `dt` (capped at 0.1 s by the render loop) | damping `1 − exp(−λ·dt)`, emotion cross-fade, gaze/saccade scheduling | FPS-independent by construction; the cap makes integrators run in deliberate slow motion under very long frames |
 
-Blink deliberately uses the raw `ctx.currentTime` (monotonic, not lip-synced). All tuning constants live in `src/lipsync/anim-config.ts` ([docs/3](3-lip-sync-and-coarticulation.md)).
+Blink deliberately uses the raw `ctx.currentTime` (monotonic, not lip-synced). All tuning constants live in `src/realism/anim-config.ts` ([docs/3](3-lip-sync-and-coarticulation.md)).
 
 **Why this is sensitive to races, and why the epoch solves it:** the `audio` event may already be "in flight" when the `interruption` arrives (WS ordering does not guarantee that the browser processed them in the same microtask order). With the epoch: a chunk delayed past the interruption arrives at `onAudioChunk` with the old epoch → ignored. A new agent utterance → a new epoch → everything is clean. No timers.
 

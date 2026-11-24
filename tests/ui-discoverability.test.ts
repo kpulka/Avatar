@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { createUserSettings } from '../src/ui/user/user-settings';
 import { createUiFixture, FixtureOptions } from './helpers/ui-fixtures';
 import type { AppServices, UiModeService } from '../src/app/app-types';
+import { defined } from './helpers/defined';
 
 async function openSettings(options: FixtureOptions = {}) {
   const fixture = createUiFixture(options);
@@ -10,7 +11,7 @@ async function openSettings(options: FixtureOptions = {}) {
   (fixture.host.querySelector('.user-settings-btn') as HTMLButtonElement).click();
   await new Promise((resolve) => setTimeout(resolve, 0));
   expect(fixture.modalCalls).toHaveLength(1);
-  const form = fixture.modalCalls[0].content;
+  const form = defined(fixture.modalCalls[0]).content;
   document.body.append(form);
   return { fixture, form };
 }

@@ -7,8 +7,6 @@
  */
 export type LipSyncEngine = 'phoneme-en' | 'phoneme-pl' | 'char';
 
-export const LIP_SYNC_ENGINES: readonly LipSyncEngine[] = ['phoneme-en', 'phoneme-pl', 'char'];
-
 export const DEFAULT_LIP_SYNC_ENGINE: LipSyncEngine = 'phoneme-en';
 
 /**

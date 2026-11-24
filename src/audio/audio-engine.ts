@@ -49,7 +49,7 @@ export class AudioEngine {
     if (floatData.length === 0) return this.tailTime;
 
     const buffer = this.ctx.createBuffer(1, floatData.length, sampleRate);
-    buffer.copyToChannel(floatData as any, 0);
+    buffer.copyToChannel(floatData, 0);
 
     const now = this.ctx.currentTime;
     // Gapless: start at max(now + prebuffer, end of the existing queue)

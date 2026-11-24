@@ -1,9 +1,8 @@
 import * as THREE from 'three';
-import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
 
 /**
  * Image-Based Lighting (IBL) environment generator
- * Uses a light PMREM from RoomEnvironment, eliminating the flat look of PBR materials (docs/5)
+ * Bakes a light PMREM from a studio softbox scene, eliminating the flat look of PBR materials (docs/5)
  */
 export class EnvironmentManager {
   private readonly pmremGenerator: THREE.PMREMGenerator;
@@ -12,20 +11,6 @@ export class EnvironmentManager {
   constructor(renderer: THREE.WebGLRenderer) {
     this.pmremGenerator = new THREE.PMREMGenerator(renderer);
     this.pmremGenerator.compileEquirectangularShader();
-  }
-
-  public setupRoomEnvironment(scene: THREE.Scene): THREE.Texture {
-    if (this.currentEnvTexture) {
-      this.currentEnvTexture.dispose();
-    }
-
-    const roomEnv = new RoomEnvironment();
-    // 0.04 sigma gives soft, realistic studio reflections
-    const envRenderTarget = this.pmremGenerator.fromScene(roomEnv, 0.04);
-    this.currentEnvTexture = envRenderTarget.texture;
-
-    scene.environment = this.currentEnvTexture;
-    return this.currentEnvTexture;
   }
 
   /**

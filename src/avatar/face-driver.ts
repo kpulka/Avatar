@@ -56,7 +56,9 @@ export class ArKitBlendshapeDriver implements FaceDriver {
     const clampedWeight = Math.max(0, Math.min(1, weight));
 
     for (let i = 0; i < targets.length; i++) {
-      const { mesh, morphIndex } = targets[i];
+      const target = targets[i];
+      if (!target) continue; // i < targets.length
+      const { mesh, morphIndex } = target;
       if (mesh.morphTargetInfluences) {
         mesh.morphTargetInfluences[morphIndex] = clampedWeight;
       }

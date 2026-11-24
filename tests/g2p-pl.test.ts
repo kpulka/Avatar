@@ -9,6 +9,7 @@ import { detectWordLanguage, charsLookPolish } from '../src/lipsync/g2p/language
 import { ensureG2pLoaded } from '../src/lipsync/g2p/g2p-en';
 import { mergeCharAlignmentToPhonemes } from '../src/lipsync/g2p/phoneme-merge';
 import { PHONEME_POSES, PL_PHONEME_POSES, mapPhonemeToShapes, lipPoseToShapes } from '../src/lipsync/g2p/phoneme-visemes';
+import { defined } from './helpers/defined';
 
 describe('g2pPl control words (17-CONTEXT A.7)', () => {
   it('szczypczyzna: sz and cz are single classes', () => {
@@ -118,15 +119,15 @@ describe('g2pPl rules', () => {
 
 describe('Polish pose table', () => {
   it('PL_H (the [x] of ch / h) is a different pose from the English CH funnel', () => {
-    const h = lipPoseToShapes(PL_PHONEME_POSES.PL_H);
-    const ch = lipPoseToShapes(PHONEME_POSES.CH);
+    const h = lipPoseToShapes(defined(PL_PHONEME_POSES.PL_H));
+    const ch = lipPoseToShapes(defined(PHONEME_POSES.CH));
     expect(h.get('mouthFunnel') ?? 0).toBe(0);
     expect(ch.get('mouthFunnel') ?? 0).toBeGreaterThan(0.3);
   });
 
   it('the nasal vowels are open with a slight funnel', () => {
     for (const key of ['PL_AN', 'PL_EN']) {
-      const shapes = lipPoseToShapes(PL_PHONEME_POSES[key]);
+      const shapes = lipPoseToShapes(defined(PL_PHONEME_POSES[key]));
       expect(shapes.get('jawOpen') ?? 0).toBeGreaterThan(0.3);
       expect(shapes.get('mouthFunnel') ?? 0).toBeGreaterThan(0);
     }
@@ -199,7 +200,7 @@ describe('merge integration (PL words)', () => {
       const inWord = spans.filter((s) => s.startMs >= startMs - 1e-6 && s.startMs < endMs - 1e-6);
       const sum = inWord.reduce((acc, s) => acc + s.durationMs, 0);
       expect(Math.abs(sum - (endMs - startMs)), m[0]).toBeLessThanOrEqual(1);
-      const last = inWord[inWord.length - 1];
+      const last = defined(inWord[inWord.length - 1]);
       expect(last.startMs + last.durationMs - endMs, m[0]).toBeLessThanOrEqual(1);
       words++;
     }
@@ -208,7 +209,9 @@ describe('merge integration (PL words)', () => {
 
   it('PL vowels get the vowel weight: a vowel span is longer than a consonant span of the same word', () => {
     const spans = mergeCharAlignmentToPhonemes(alignmentFor('k\u0105t', 100));
-    const [k, an, t] = spans;
+    const k = defined(spans[0]);
+    const an = defined(spans[1]);
+    const t = defined(spans[2]);
     expect(an.durationMs).toBeGreaterThan(k.durationMs);
     expect(an.durationMs).toBeGreaterThan(t.durationMs);
   });

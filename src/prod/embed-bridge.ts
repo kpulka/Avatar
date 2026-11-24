@@ -18,7 +18,7 @@ export interface EmbedBridgeOptions {
 }
 
 /** Accepts messages only from the direct parent of a framed widget and a trusted origin. */
-export const MAX_SAY_CHARS = 500;
+const MAX_SAY_CHARS = 500;
 
 export class EmbedBridge {
   private callbacks: EmbedBridgeCallbacks = {};

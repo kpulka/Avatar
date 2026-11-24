@@ -1,8 +1,8 @@
 /**
- * Small DOM helpers (Phase 11, 11-03) — dependency-free, text always via textContent.
+ * Small DOM helpers (Phase 11, 11-03) — no dependencies beyond the `Unsub` type, text always via textContent.
  */
 
-export type Unsub = () => void;
+import { Unsub } from '../../app/events';
 
 export interface ElOptions {
   className?: string;

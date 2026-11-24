@@ -42,7 +42,7 @@ describe('Scene Lighting & Materials', () => {
 
     skinLightUniforms.uKeyLightDirView.value.set(0, 0, 1);
     skinLightUniforms.uKeyLightColor.value.set(0, 0, 0);
-    scene.onBeforeRender({} as THREE.WebGLRenderer, scene, camera, null as unknown as THREE.WebGLRenderTarget);
+    scene.onBeforeRender({} as THREE.WebGLRenderer, scene, camera, new THREE.BufferGeometry(), new THREE.Material(), new THREE.Group());
 
     const dir = skinLightUniforms.uKeyLightDirView.value;
     expect(dir.length()).toBeCloseTo(1, 5);

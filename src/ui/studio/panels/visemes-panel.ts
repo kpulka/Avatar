@@ -14,7 +14,7 @@ import { t } from '../../../app/copy';
 
 interface ShapeControl {
   id: string;
-  shapes: readonly string[];
+  shapes: readonly [string, ...string[]]; // non-empty: the slider is driven by the first shape
   label: string;
 }
 

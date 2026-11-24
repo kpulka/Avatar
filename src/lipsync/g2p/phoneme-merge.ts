@@ -38,7 +38,7 @@ const VOWEL_PHONEMES = new Set([
 ]);
 
 /** Soft minimum span (ms). */
-export const MIN_SPAN_MS = 35;
+const MIN_SPAN_MS = 35;
 /** Hard floor (ms) used when the soft minimum cannot fit inside the word window. */
 export const HARD_MIN_SPAN_MS = MIN_SPAN_MS / 2;
 /** Share of a diphthong's time spent on its own pose before the glide end pose. */
@@ -77,15 +77,16 @@ export function distributeDurations(weights: readonly number[], spanMs: number):
     const pinnedCount = pinned.filter(Boolean).length;
     const remaining = spanMs - pinnedCount * HARD_MIN_SPAN_MS;
     let freeSum = 0;
-    for (let k = 0; k < n; k++) if (!pinned[k]) freeSum += clamped[k];
+    for (let k = 0; k < n; k++) if (!pinned[k]) freeSum += clamped[k] ?? 0; // k < n = clamped.length
     const scale = remaining / freeSum;
     let changed = false;
     for (let k = 0; k < n; k++) {
       if (pinned[k]) {
         result[k] = HARD_MIN_SPAN_MS;
       } else {
-        result[k] = clamped[k] * scale;
-        if (result[k] < HARD_MIN_SPAN_MS) {
+        const scaled = (clamped[k] ?? 0) * scale; // k < n = clamped.length
+        result[k] = scaled;
+        if (scaled < HARD_MIN_SPAN_MS) {
           pinned[k] = true;
           changed = true;
         }
@@ -140,7 +141,7 @@ export function mergeCharAlignmentToPhonemes(
 
   while (i < n) {
     // Boundary: look for the start of a run of letters
-    if (!WORD_CHAR.test(chars[i])) {
+    if (!WORD_CHAR.test(chars[i] ?? '')) { // i < n
       i += 1;
       continue;
     }
@@ -148,8 +149,8 @@ export function mergeCharAlignmentToPhonemes(
     // Collect the run of letters (the word)
     let j = i;
     let wordText = '';
-    while (j < n && WORD_CHAR.test(chars[j])) {
-      wordText += chars[j];
+    while (j < n && WORD_CHAR.test(chars[j] ?? '')) {
+      wordText += chars[j] ?? ''; // j < n
       j += 1;
     }
 
@@ -173,11 +174,13 @@ export function mergeCharAlignmentToPhonemes(
 
     let cursorMs = wordStartMs;
     for (let k = 0; k < units.length; k++) {
+      const unit = units[k];
+      if (!unit) continue; // k < units.length
       const isLast = k === units.length - 1;
       // The last span is pinned to the window end so rounding can never leak into the next word.
-      const durationMs = isLast ? wordStartMs + wordSpanMs - cursorMs : lengths[k];
-      const span: PhonemeSpan = { phoneme: units[k].phoneme, startMs: cursorMs, durationMs };
-      if (units[k].glideOf) span.glideOf = units[k].glideOf;
+      const durationMs = isLast ? wordStartMs + wordSpanMs - cursorMs : (lengths[k] ?? 0); // lengths has one entry per unit
+      const span: PhonemeSpan = { phoneme: unit.phoneme, startMs: cursorMs, durationMs };
+      if (unit.glideOf) span.glideOf = unit.glideOf;
       spans.push(span);
       cursorMs += durationMs;
     }

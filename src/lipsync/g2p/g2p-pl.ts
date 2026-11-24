@@ -116,9 +116,10 @@ export function g2pPl(word: string): string[] {
 
   let i = 0;
   while (i < n) {
-    const c = letters[i];
-    const next = letters[i + 1];
-    const afterNext = letters[i + 2];
+    // '' = past the end (no undefined under noUncheckedIndexedAccess); c is always defined since i < n
+    const c = letters[i] ?? '';
+    const next = letters[i + 1] ?? '';
+    const afterNext = letters[i + 2] ?? '';
 
     if (c === 'd') {
       // d + z-acute -> one soft affricate; d + z-dot -> JH (both are two letters);
@@ -133,7 +134,7 @@ export function g2pPl(word: string): string[] {
         i += 2;
         continue;
       }
-      if (next === 'z' && afterNext === 'i' && SOFTNESS_VOWELS.has(letters[i + 3])) {
+      if (next === 'z' && afterNext === 'i' && SOFTNESS_VOWELS.has(letters[i + 3] ?? '')) {
         out.push('PL_DZI');
         i += 3;
         continue;
@@ -190,7 +191,7 @@ export function g2pPl(word: string): string[] {
 
   // Final devoicing: only the last token of the word.
   if (out.length > 0) {
-    const last = out[out.length - 1];
+    const last = out[out.length - 1] ?? '';
     const devoiced = FINAL_DEVOICING[last];
     if (devoiced !== undefined) out[out.length - 1] = devoiced;
   }

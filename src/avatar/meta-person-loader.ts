@@ -56,7 +56,7 @@ export class MetaPersonLoader implements AvatarLoader {
           const keys = Object.keys(dict).map(normalizeShapeName);
           const hasFacialKeys = keys.some(
             (k) =>
-              REQUIRED_SHAPES.includes(k as any) ||
+              (REQUIRED_SHAPES as readonly string[]).includes(k) ||
               k.startsWith('eye') ||
               k.startsWith('brow') ||
               k.startsWith('mouth') ||
@@ -149,7 +149,7 @@ export class MetaPersonLoader implements AvatarLoader {
 /**
  * Moves the arm bones from the raw T-Pose into a natural resting pose along the body
  */
-export function relaxArmsToNaturalPose(root: THREE.Object3D): void {
+function relaxArmsToNaturalPose(root: THREE.Object3D): void {
   const leftArm = root.getObjectByName('LeftArm');
   const rightArm = root.getObjectByName('RightArm');
   const leftForeArm = root.getObjectByName('LeftForeArm');

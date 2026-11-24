@@ -8,6 +8,7 @@ import {
   setSkinSSSEnabled,
 } from '../src/scene/skin-shader';
 import { enhanceAvatarMaterials } from '../src/scene/materials';
+import { defined } from './helpers/defined';
 
 describe('Skin Shader & Eye Wetness (REAL-04)', () => {
   it('injects Wrap Diffuse SSS shader chunks via onBeforeCompile', () => {
@@ -27,7 +28,7 @@ describe('Skin Shader & Eye Wetness (REAL-04)', () => {
 
     mat.onBeforeCompile(mockShader as unknown as THREE.WebGLProgramParametersWithUniforms, {} as THREE.WebGLRenderer);
 
-    expect(mockShader.uniforms.uSkinWrap.value).toBe(0.45);
+    expect(defined(mockShader.uniforms.uSkinWrap).value).toBe(0.45);
     expect(mockShader.fragmentShader).toContain('uSkinSSSColor');
     expect(mockShader.fragmentShader).toContain('wrapDiffuse');
     expect(mockShader.fragmentShader).toContain('scatterEdge');

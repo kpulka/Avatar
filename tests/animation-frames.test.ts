@@ -1,8 +1,9 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import { FaceController } from '../src/lipsync/face-controller';
 import { FaceDriver, FramesClip, PoseFrame } from '../src/types/avatar';
 import { AudioEngine } from '../src/audio/audio-engine';
 import { buildDemoFrames } from '../src/lipsync/demo-frames';
+import { defined } from './helpers/defined';
 
 class MockFaceDriver implements FaceDriver {
   public appliedWeights: Record<string, number> = {};
@@ -281,7 +282,7 @@ describe('FaceController tryb frames (kontrakt v2)', () => {
     engine.hasPending = false;
     controller.render(1 / 60);
 
-    const last = clip.frames[clip.frames.length - 1];
+    const last = defined(clip.frames[clip.frames.length - 1]);
     expect(controller.getState()).toBe('RELAXING');
     for (const [k, v] of Object.entries(last.weights)) {
       expect(Math.abs((driver.appliedWeights[k] ?? 0) - v)).toBeLessThan(1e-6);
@@ -296,7 +297,7 @@ describe('demo-frames (buildDemoFrames — kontrakt v2)', () => {
     const clip = buildDemoFrames(44100, dur, 'Hello and welcome');
     expect(clip.fps).toBe(60);
     expect(clip.frames.length).toBe(Math.round(dur * 60));
-    const last = clip.frames[clip.frames.length - 1];
+    const last = defined(clip.frames[clip.frames.length - 1]);
     expect(last.timeSec + 1 / 60).toBeCloseTo(dur, 5);
   });
 
@@ -314,7 +315,7 @@ describe('demo-frames (buildDemoFrames — kontrakt v2)', () => {
         expect(clip.shapes).toContain(k);
       }
     }
-    expect(clip.frames[0].timeSec).toBe(0);
+    expect(defined(clip.frames[0]).timeSec).toBe(0);
   });
 
   it('M/B/P closes the lips in the clip (mouthClose appears in shapes)', () => {

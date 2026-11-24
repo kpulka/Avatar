@@ -121,7 +121,5 @@ export const ANIM_DEFAULTS = deepFreeze({
   },
 });
 
-export type AnimConfig = typeof ANIM_DEFAULTS;
-
 /** The one clamp to [0, 1] for the whole animation runtime. */
 export const clamp01 = (v: number): number => (v < 0 ? 0 : v > 1 ? 1 : v);

@@ -7,7 +7,7 @@ import {
 } from '../types/audio';
 import { DEFAULT_AGENT_CONFIG } from './agent-config';
 
-export const MAX_RECONNECT_ATTEMPTS = 5;
+const MAX_RECONNECT_ATTEMPTS = 5;
 
 export type ConnectionState = 'disconnected' | 'connecting' | 'connected' | 'reconnecting';
 

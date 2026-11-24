@@ -2,11 +2,6 @@
  * Mapping table from characters and digraphs to ARKit blendshapes per docs/3.
  */
 
-export interface MappedShapeResult {
-  shapes: Map<string, number>;
-  consumedChars: number; // 2 for digraphs, 1 for single characters
-}
-
 /**
  * Language context of the character path (17-04). Only the Polish flag exists today: in Polish "ch" is
  * the velar fricative [x], not the English affricate. Shared frozen objects, so passing a context in the
@@ -360,7 +355,7 @@ export function charPathSpan(chars: string[], index: number): 1 | 2 {
 export function charDefaultShapesForToken(token: string): Map<string, number> | null {
   if (!token) return null;
   if (token.length >= 2) {
-    const digraph = tryMapDigraph(token[0], token[1]);
+    const digraph = tryMapDigraph(token.charAt(0), token.charAt(1));
     if (digraph && digraph.size > 0) return digraph;
   }
   if (token.length === 1) {

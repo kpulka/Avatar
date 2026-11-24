@@ -5,7 +5,7 @@ import { AudioEngine } from '../src/audio/audio-engine';
 import { CALIBRATION_PRESETS } from '../src/lipsync/calibration';
 import { defaultVisemeShapes } from '../src/lipsync/viseme-overrides';
 import { mapPhonemeToShapes } from '../src/lipsync/g2p/phoneme-visemes';
-import { ANIM_DEFAULTS } from '../src/lipsync/anim-config';
+import { ANIM_DEFAULTS } from '../src/realism/anim-config';
 
 class RecordingDriver implements FaceDriver {
   public applied: Record<string, number> = {};

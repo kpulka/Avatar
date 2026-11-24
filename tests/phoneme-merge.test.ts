@@ -8,6 +8,7 @@ import { CharAlignment } from '../src/types/avatar';
 import { wordToPhonemesSync } from '../src/lipsync/g2p/g2p-en';
 import { beforeAll } from 'vitest';
 import { ensureG2pLoaded } from '../src/lipsync/g2p/g2p-en';
+import { defined } from './helpers/defined';
 
 function alignmentFor(text: string, msPerChar = 100, source: CharAlignment['source'] = 'elevenlabs'): CharAlignment {
   const chars = text.split('');
@@ -31,11 +32,11 @@ describe('mergeCharAlignmentToPhonemes (ElevenLabs timing anchors)', () => {
 
     // know -> N, OW (silent K disappears); what -> W, AH, T
     expect(spans).toHaveLength(5);
-    expect(spans[0].phoneme).toBe('N');
-    expect(spans[1].phoneme).toBe('OW');
-    expect(spans[2].phoneme).toBe('W');
-    expect(spans[3].phoneme).toBe('AH');
-    expect(spans[4].phoneme).toBe('T');
+    expect(defined(spans[0]).phoneme).toBe('N');
+    expect(defined(spans[1]).phoneme).toBe('OW');
+    expect(defined(spans[2]).phoneme).toBe('W');
+    expect(defined(spans[3]).phoneme).toBe('AH');
+    expect(defined(spans[4]).phoneme).toBe('T');
   });
 
   it('preserves the word time boundaries (first start, sum of durations = word length)', () => {
@@ -43,14 +44,14 @@ describe('mergeCharAlignmentToPhonemes (ElevenLabs timing anchors)', () => {
     const spans = mergeCharAlignmentToPhonemes(alignment);
 
     // know: word from 0 to 400 ms
-    expect(spans[0].startMs).toBeCloseTo(0, 0);
-    const knowEnd = spans[0].startMs + spans[0].durationMs + spans[1].durationMs;
+    expect(defined(spans[0]).startMs).toBeCloseTo(0, 0);
+    const knowEnd = defined(spans[0]).startMs + defined(spans[0]).durationMs + defined(spans[1]).durationMs;
     expect(knowEnd).toBeCloseTo(400, 0);
 
     // what: word from 500 to 900 ms
-    expect(spans[2].startMs).toBeCloseTo(500, 0);
-    const whatEnd = spans[2].durationMs + spans[3].durationMs + spans[4].durationMs;
-    expect(spans[2].startMs + whatEnd).toBeCloseTo(900, 0);
+    expect(defined(spans[2]).startMs).toBeCloseTo(500, 0);
+    const whatEnd = defined(spans[2]).durationMs + defined(spans[3]).durationMs + defined(spans[4]).durationMs;
+    expect(defined(spans[2]).startMs + whatEnd).toBeCloseTo(900, 0);
   });
 
   it('returns [] for the acoustic fallback (source energy-fallback)', () => {
@@ -119,12 +120,12 @@ describe('merge window invariant (LIP-03)', () => {
           if (inWord.length === 0) continue; // a word the G2P layer yields nothing for
           const sum = inWord.reduce((acc, s) => acc + s.durationMs, 0);
           expect(sum, `${word.text} @${msPerChar}`).toBeCloseTo(word.endMs - word.startMs, 0);
-          const last = inWord[inWord.length - 1];
+          const last = defined(inWord[inWord.length - 1]);
           expect(last.startMs + last.durationMs, `${word.text} end`).toBeLessThanOrEqual(word.endMs + 1);
-          expect(inWord[0].startMs).toBeCloseTo(word.startMs, 3);
+          expect(defined(inWord[0]).startMs).toBeCloseTo(word.startMs, 3);
           // contiguous, ordered, no overlap
           for (let k = 1; k < inWord.length; k++) {
-            expect(inWord[k].startMs).toBeCloseTo(inWord[k - 1].startMs + inWord[k - 1].durationMs, 3);
+            expect(defined(inWord[k]).startMs).toBeCloseTo(defined(inWord[k - 1]).startMs + defined(inWord[k - 1]).durationMs, 3);
           }
         }
       }
@@ -140,7 +141,7 @@ describe('merge window invariant (LIP-03)', () => {
     const spans = mergeCharAlignmentToPhonemes({ chars, char_start_times_ms: starts, char_durations_ms: durs });
     const the = spans.filter((s) => s.startMs < 50);
     expect(the.map((s) => s.phoneme)).toEqual(['DH', 'AH']);
-    const theEnd = the[the.length - 1].startMs + the[the.length - 1].durationMs;
+    const theEnd = defined(the[the.length - 1]).startMs + defined(the[the.length - 1]).durationMs;
     expect(theEnd).toBeLessThanOrEqual(50.0001);
 
     // "cat" is unaffected by the pathological word before it: same spans as when it is alone.
@@ -201,7 +202,7 @@ describe('degenerate alignments (pinned behavior)', () => {
     expect(phonemes).not.toContain('D');
     expect(phonemes.slice(0, 3)).toEqual(wordToPhonemesSync('cat'));
     expect(phonemes.slice(3)).toEqual(wordToPhonemesSync('hat'));
-    expect(spans[spans.length - 1].startMs + spans[spans.length - 1].durationMs).toBeCloseTo(1100, 3);
+    expect(defined(spans[spans.length - 1]).startMs + defined(spans[spans.length - 1]).durationMs).toBeCloseTo(1100, 3);
   });
 
   it('missing start times anchor the word at 0 (not silently shifted)', () => {
@@ -211,16 +212,16 @@ describe('degenerate alignments (pinned behavior)', () => {
       char_durations_ms: [100, 100],
     });
     expect(spans.length).toBeGreaterThan(0);
-    expect(spans[0].startMs).toBe(0);
-    const end = spans[spans.length - 1].startMs + spans[spans.length - 1].durationMs;
+    expect(defined(spans[0]).startMs).toBe(0);
+    const end = defined(spans[spans.length - 1]).startMs + defined(spans[spans.length - 1]).durationMs;
     expect(end).toBeCloseTo(100, 3); // window = [0, 0 + duration of the last char]
   });
 
   it('a single-phoneme word spans exactly its window', () => {
     const spans = mergeCharAlignmentToPhonemes(alignmentFor('a', 80));
     expect(spans).toHaveLength(1);
-    expect(spans[0].startMs).toBe(0);
-    expect(spans[0].durationMs).toBeCloseTo(80, 6);
+    expect(defined(spans[0]).startMs).toBe(0);
+    expect(defined(spans[0]).durationMs).toBeCloseTo(80, 6);
   });
 
   it('a lone hyphen or apostrophe produces no empty-phoneme span', () => {
@@ -244,19 +245,19 @@ describe('diphthong motion: AY and AW emit a start + glide span (LIP-04)', () =>
   it('"my" -> M, AY, IH (glide of AY) inside the word window', () => {
     const spans = mergeCharAlignmentToPhonemes(alignmentFor('my', 150));
     expect(spans.map((s) => s.phoneme)).toEqual(['M', 'AY', 'IH']);
-    expect(spans[2].glideOf).toBe('AY');
-    expect(spans[1].glideOf).toBeUndefined();
-    const end = spans[2].startMs + spans[2].durationMs;
+    expect(defined(spans[2]).glideOf).toBe('AY');
+    expect(defined(spans[1]).glideOf).toBeUndefined();
+    const end = defined(spans[2]).startMs + defined(spans[2]).durationMs;
     expect(end).toBeCloseTo(300, 6);
     // the own pose gets the larger share (60/40 of the diphthong's time)
-    expect(spans[1].durationMs / (spans[1].durationMs + spans[2].durationMs)).toBeCloseTo(0.6, 2);
+    expect(defined(spans[1]).durationMs / (defined(spans[1]).durationMs + defined(spans[2]).durationMs)).toBeCloseTo(0.6, 2);
   });
 
   it('"how" -> HH, AW, UH (glide of AW)', () => {
     const spans = mergeCharAlignmentToPhonemes(alignmentFor('how', 120));
     expect(spans.map((s) => s.phoneme)).toEqual(['HH', 'AW', 'UH']);
-    expect(spans[2].glideOf).toBe('AW');
-    expect(spans[2].startMs + spans[2].durationMs).toBeCloseTo(360, 6);
+    expect(defined(spans[2]).glideOf).toBe('AW');
+    expect(defined(spans[2]).startMs + defined(spans[2]).durationMs).toBeCloseTo(360, 6);
   });
 
   it('EY / OW / OY stay single static poses: "day", "go", "boy"', () => {
@@ -275,6 +276,6 @@ describe('diphthong motion: AY and AW emit a start + glide span (LIP-04)', () =>
     const spans = mergeCharAlignmentToPhonemes(alignmentFor('my', 20));
     const total = spans.reduce((acc, s) => acc + s.durationMs, 0);
     expect(total).toBeCloseTo(40, 6);
-    expect(spans[spans.length - 1].startMs + spans[spans.length - 1].durationMs).toBeCloseTo(40, 6);
+    expect(defined(spans[spans.length - 1]).startMs + defined(spans[spans.length - 1]).durationMs).toBeCloseTo(40, 6);
   });
 });

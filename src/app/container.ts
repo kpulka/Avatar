@@ -14,7 +14,7 @@ import { ElevenAgentsSpeechBackend } from '../audio/speech-backend';
 import { resolveAgentId } from '../audio/agent-config';
 import { HeadMicroMovements } from '../realism/head-micro-movements';
 import { GazeSaccades } from '../realism/gaze-saccades';
-import { ANIM_DEFAULTS } from '../lipsync/anim-config';
+import { ANIM_DEFAULTS } from '../realism/anim-config';
 import { EmbedBridge } from '../prod/embed-bridge';
 import { TelemetryManager } from '../prod/telemetry';
 import { TypedEventBus } from './events';
@@ -22,7 +22,7 @@ import { t } from './copy';
 import { AppEvents, AppServices } from './app-types';
 import { SettingsStore } from './store/settings-store';
 import { attachLegacyBridge } from './store/legacy-bridge';
-import { createUiMode } from './ui-mode';
+import { createUiMode, isEditableTarget } from './ui-mode';
 import { ConversationController } from '../features/conversation-controller';
 import { AnimationController } from '../features/animation-controller';
 import { TelemetryController } from '../features/telemetry-controller';
@@ -311,9 +311,7 @@ export function createApp(canvas: HTMLCanvasElement): AppHandle {
 
   const onKeydown = (event: KeyboardEvent): void => {
     if (event.ctrlKey || event.metaKey || event.altKey) return;
-    const target = event.target as HTMLElement | null;
-    const tag = target?.tagName?.toLowerCase();
-    if (tag === 'input' || tag === 'textarea' || tag === 'select' || target?.isContentEditable) return;
+    if (isEditableTarget(event.target)) return;
     // A11: Esc belongs to an open dialog (native close) — it must not also flip presentation mode.
     if (document.querySelector('dialog[open]')) return;
     if (event.key === 'Escape' || event.key === 'h' || event.key === 'H') {
@@ -325,6 +323,7 @@ export function createApp(canvas: HTMLCanvasElement): AppHandle {
   // ---- Render loop
   let lastTimestamp = performance.now();
   let rafId = 0;
+  let disposed = false;
   let frameCount = 0;
   let fpsWindowStart = performance.now();
   const adaptiveRes = AdaptiveResolution.create(renderer.maxPixelRatio);
@@ -369,6 +368,10 @@ export function createApp(canvas: HTMLCanvasElement): AppHandle {
       console.log('Avatar application initialized successfully.');
     },
     dispose(): void {
+      if (disposed) return; // idempotent: a second call must not release anything twice
+      disposed = true;
+      // End the session first (WSS closed, mic stopped) while the bus still has its listeners.
+      conversationController.dispose();
       cancelAnimationFrame(rafId);
       window.removeEventListener('pointermove', onPointerMove);
       window.removeEventListener('resize', onResize);
@@ -396,6 +399,10 @@ export function createApp(canvas: HTMLCanvasElement): AppHandle {
       modal.destroy();
       environment.dispose();
       loader.dispose();
+      renderer.dispose();
+      // The context is created by AudioEngine in this function, so this function owns closing it.
+      // close() rejects when the context is already closed; nothing to do then.
+      void audioEngine.ctx.close().catch(() => undefined);
     },
   };
 }

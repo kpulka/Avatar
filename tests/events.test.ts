@@ -60,6 +60,41 @@ describe('TypedEventBus', () => {
   });
 });
 
+describe('TypedEventBus.handlerCount (test/debug surface for the lifecycle regression)', () => {
+  it('counts handlers across events and follows on / off / Unsub', () => {
+    const bus = new TypedEventBus<TestEvents>();
+    expect(bus.handlerCount()).toBe(0);
+    const h1 = vi.fn();
+    const unsubPing = bus.on('ping', h1);
+    bus.on('ping', vi.fn());
+    bus.on('pong', h1);
+    expect(bus.handlerCount()).toBe(3);
+
+    bus.off('pong', h1);
+    expect(bus.handlerCount()).toBe(2);
+    unsubPing();
+    expect(bus.handlerCount()).toBe(1);
+  });
+
+  it('an idempotent Unsub never decrements twice (a second call must not eat another handler)', () => {
+    const bus = new TypedEventBus<TestEvents>();
+    const unsubA = bus.on('ping', vi.fn());
+    bus.on('ping', vi.fn());
+    unsubA();
+    unsubA();
+    unsubA();
+    expect(bus.handlerCount()).toBe(1);
+  });
+
+  it('is 0 again after clear()', () => {
+    const bus = new TypedEventBus<TestEvents>();
+    bus.on('ping', vi.fn());
+    bus.on('pong', vi.fn());
+    bus.clear();
+    expect(bus.handlerCount()).toBe(0);
+  });
+});
+
 describe('disposables', () => {
   it('dispose calls all collected Unsub functions once', () => {
     const a = vi.fn();

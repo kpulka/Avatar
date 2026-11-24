@@ -225,12 +225,12 @@ export class AnimationController implements AnimationService {
     const mono = new Float32Array(length);
     for (let channel = 0; channel < buffer.numberOfChannels; channel += 1) {
       const data = buffer.getChannelData(channel);
-      for (let i = 0; i < length; i += 1) mono[i] += data[i];
+      for (let i = 0; i < length; i += 1) mono[i] = (mono[i] ?? 0) + (data[i] ?? 0); // i < length
     }
     const norm = buffer.numberOfChannels || 1;
     const int16 = new Int16Array(length);
     for (let i = 0; i < length; i += 1) {
-      const value = Math.max(-1, Math.min(1, mono[i] / norm));
+      const value = Math.max(-1, Math.min(1, (mono[i] ?? 0) / norm));
       int16[i] = Math.floor(value * 0x7fff);
     }
     const sampleRate = buffer.sampleRate || 44100;
@@ -241,7 +241,7 @@ export class AnimationController implements AnimationService {
     const samples = synthesizeDemoAudio(sampleRate, durationSec, phrase);
     const int16 = new Int16Array(samples.length);
     for (let i = 0; i < samples.length; i += 1) {
-      const value = Math.max(-1, Math.min(1, samples[i]));
+      const value = Math.max(-1, Math.min(1, samples[i] ?? 0));
       int16[i] = Math.floor(value * 0x7fff);
     }
     return this.audioEngine.playChunk(new Uint8Array(int16.buffer), sampleRate);

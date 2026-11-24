@@ -6,9 +6,10 @@ import {
   PHONEME_POSES,
   DIPHTHONG_END_POSES,
 } from '../src/lipsync/g2p/phoneme-visemes';
-import { ANIM_DEFAULTS } from '../src/lipsync/anim-config';
+import { ANIM_DEFAULTS } from '../src/realism/anim-config';
 import { VisemeScheduler } from '../src/lipsync/viseme-scheduler';
 import { CALIBRATION_PRESETS } from '../src/lipsync/calibration';
+import { defined } from './helpers/defined';
 
 const SPEECH_SHAPES = [
   'jawOpen',
@@ -156,7 +157,7 @@ describe('perceived bilabial closure, computed from the table (LIP-04 / T-10)', 
 
   /** effective = table value x profile scale; close/press scale is min(closeScale, cap). */
   function computedEffective(phoneme: string, closeScale: number) {
-    const pose = PHONEME_POSES[phoneme];
+    const pose = defined(PHONEME_POSES[phoneme]);
     const closeFactor = Math.min(closeScale, cap);
     return {
       jaw: (pose.jaw ?? 0) * 1.0,
@@ -176,7 +177,7 @@ describe('perceived bilabial closure, computed from the table (LIP-04 / T-10)', 
   });
 
   it('the roll-in lips complete the closure (rollLower and rollUpper present and unscaled by closeScale)', () => {
-    const pose = PHONEME_POSES.M;
+    const pose = defined(PHONEME_POSES.M);
     expect(pose.rollLower ?? 0).toBeGreaterThanOrEqual(0.2);
     expect(pose.rollUpper ?? 0).toBeGreaterThanOrEqual(0.1);
   });
@@ -192,7 +193,7 @@ describe('perceived bilabial closure, computed from the table (LIP-04 / T-10)', 
 
   it('the cap limits the scale: a 1.2 slider never exceeds the 0.85 ceiling on mouthClose', () => {
     const e = computedEffective('M', 1.2);
-    expect(e.close).toBeCloseTo(PHONEME_POSES.M.close! * cap, 6);
-    expect(e.close).toBeLessThanOrEqual(PHONEME_POSES.M.close! * cap + 1e-9);
+    expect(e.close).toBeCloseTo(defined(PHONEME_POSES.M).close! * cap, 6);
+    expect(e.close).toBeLessThanOrEqual(defined(PHONEME_POSES.M).close! * cap + 1e-9);
   });
 });

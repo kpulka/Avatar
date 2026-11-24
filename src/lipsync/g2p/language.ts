@@ -19,10 +19,6 @@ const PL_DIACRITIC = /[\u0104\u0105\u0106\u0107\u0118\u0119\u0141\u0142\u0143\u0
 /** Digraphs that exist in Polish but not in ordinary English words. */
 const PL_ONLY_DIGRAPH = /sz|cz|rz|dz/i;
 
-export function hasPolishDiacritic(text: string): boolean {
-  return PL_DIACRITIC.test(text);
-}
-
 /** Language of one word; `fallback` decides when the word carries no Polish evidence. */
 export function detectWordLanguage(word: string, fallback: G2pLanguage): G2pLanguage {
   if (PL_DIACRITIC.test(word)) return 'pl';
@@ -37,7 +33,7 @@ export function detectWordLanguage(word: string, fallback: G2pLanguage): G2pLang
 export function charsLookPolish(chars: readonly string[]): boolean {
   let word = '';
   for (let i = 0; i <= chars.length; i++) {
-    const ch = i < chars.length ? chars[i] : '';
+    const ch = chars[i] ?? ''; // '' past the end flushes the last word
     if (ch !== '' && WORD_CHAR.test(ch)) {
       word += ch;
       continue;

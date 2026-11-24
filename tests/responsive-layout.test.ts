@@ -4,6 +4,7 @@ import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { createConversationDock } from '../src/ui/user/conversation-dock';
 import { createUiFixture } from './helpers/ui-fixtures';
+import { defined } from './helpers/defined';
 
 const ROOT = process.cwd();
 const CSS = readFileSync(join(ROOT, 'src', 'style.css'), 'utf8');
@@ -60,7 +61,7 @@ describe('responsive layout (15-07, static CSS)', () => {
   it('the only !important rules are the known display/presentation ones', () => {
     const offenders = CSS_NO_COMMENTS.split('}')
       .filter((rule) => rule.includes('!important'))
-      .map((rule) => rule.split('{')[0].trim().replace(/\s+/g, ' '))
+      .map((rule) => defined(rule.split('{')[0]).trim().replace(/\s+/g, ' '))
       // reduced-motion block is a deliberate global override
       .filter((selector) => !/prefers-reduced-motion/.test(selector));
     const allowed = [

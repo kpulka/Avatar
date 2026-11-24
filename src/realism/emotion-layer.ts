@@ -1,14 +1,9 @@
-import { ANIM_DEFAULTS } from '../lipsync/anim-config';
-import { allocProbe } from '../lipsync/alloc-probe';
+import { ANIM_DEFAULTS } from './anim-config';
+import { allocProbe } from './alloc-probe';
 
 const { emotion: emotionConfig } = ANIM_DEFAULTS;
 
 export type EmotionType = 'neutral' | 'happy' | 'surprised' | 'focused';
-
-export interface EmotionProfile {
-  type: EmotionType;
-  weights: Map<string, number>;
-}
 
 const EMOTION_PROFILES: Record<EmotionType, Map<string, number>> = {
   neutral: new Map(),

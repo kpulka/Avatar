@@ -5,6 +5,7 @@ import {
   decapitalizeArKit,
   ARKIT_52,
 } from '../src/lipsync/a2f-parser';
+import { defined } from './helpers/defined';
 
 /** Expected PascalCase → camelCase pairs for all 52 ARKit shapes. */
 const PASCAL_52: Array<[string, string]> = [
@@ -58,7 +59,7 @@ describe('a2f-parser (kontrakt v2)', () => {
     for (const [pascal] of PASCAL_52) blends[pascal] = 0.01;
 
     const { clip } = parseA2fPayload({ fps: 60, frames: [{ frame_time: 0.0, blendshapes: blends }] });
-    const keys = Object.keys(clip.frames[0].weights).sort();
+    const keys = Object.keys(defined(clip.frames[0]).weights).sort();
     const expected = PASCAL_52.map(([, c]) => c).sort();
 
     expect(keys).toEqual(expected);
@@ -73,8 +74,8 @@ describe('a2f-parser (kontrakt v2)', () => {
         { frame_time: 0.5, blendshapes: { JawOpen: 0.2 } },
       ],
     });
-    expect(clip.frames[0].timeSec).toBe(0.0);
-    expect(clip.frames[1].timeSec).toBe(0.5);
+    expect(defined(clip.frames[0]).timeSec).toBe(0.0);
+    expect(defined(clip.frames[1]).timeSec).toBe(0.5);
     expect(clip.fps).toBe(30);
   });
 
@@ -93,9 +94,9 @@ describe('a2f-parser (kontrakt v2)', () => {
     const { clip } = parseA2fPayload({
       frames: [{ frame_time: 0.0, blendshapes: { JawOpen: 1.5, MouthClose: -0.2, MouthPucker: 0.4 } }],
     });
-    expect(clip.frames[0].weights['jawOpen']).toBe(1);
-    expect(clip.frames[0].weights['mouthClose']).toBe(0);
-    expect(clip.frames[0].weights['mouthPucker']).toBe(0.4);
+    expect(defined(clip.frames[0]).weights['jawOpen']).toBe(1);
+    expect(defined(clip.frames[0]).weights['mouthClose']).toBe(0);
+    expect(defined(clip.frames[0]).weights['mouthPucker']).toBe(0.4);
   });
 
   it('skips unknown shapes and reports them in unknownShapes (deduplicated)', () => {
@@ -105,7 +106,7 @@ describe('a2f-parser (kontrakt v2)', () => {
         { frame_time: 0.1, blendshapes: { JawOpen: 0.5, FooBar: 0.1 } },
       ],
     });
-    expect('foobar' in clip.frames[0].weights).toBe(false);
+    expect('foobar' in defined(clip.frames[0]).weights).toBe(false);
     expect(unknownShapes).toEqual(['FooBar']);
     expect(clip.shapes).toEqual(['jawOpen']);
   });

@@ -13,7 +13,12 @@
     "strict": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true,
-    "noFallthroughCasesInSwitch": true
+    "noFallthroughCasesInSwitch": true,
+    "noUncheckedIndexedAccess": true,
+    // exactOptionalPropertyTypes is deliberately OFF for v1.1: it churns optional-prop assignment
+    // patterns across the whole UI layer for marginal gain. Decision D6, revisit post-v1.1
+    // (.planning/phases/14-architecture-guards/14-CONTEXT.md).
+    "types": []
   },
   "include": ["src"]
 }

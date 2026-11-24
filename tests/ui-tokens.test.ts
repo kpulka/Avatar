@@ -28,7 +28,7 @@ function blockBody(source: string, selector: string): string {
 }
 
 function customProps(body: string): string[] {
-  return [...body.matchAll(/(--[a-z0-9-]+)\s*:/g)].map((m) => m[1]);
+  return [...body.matchAll(/(--[a-z0-9-]+)\s*:/g)].map((m) => m[1] ?? '');
 }
 
 const ROOT_BODY = blockBody(CSS, ':root');
@@ -86,7 +86,7 @@ describe('design tokens (src/style.css)', () => {
 
   it('every var(--x) reference resolves to a defined token', () => {
     const defined = new Set([...customProps(ROOT_BODY), ...customProps(LIGHT_BODY)]);
-    const used = [...CSS.matchAll(/var\((--[a-z0-9-]+)/g)].map((m) => m[1]);
+    const used = [...CSS.matchAll(/var\((--[a-z0-9-]+)/g)].map((m) => m[1] ?? '');
     expect([...new Set(used)].filter((name) => !defined.has(name))).toEqual([]);
   });
 

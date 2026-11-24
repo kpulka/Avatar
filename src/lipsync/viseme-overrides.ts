@@ -36,7 +36,7 @@ export interface VisemeRef {
   label: string;
 }
 
-export const EN_VISEMES: VisemeRef[] = [
+const EN_VISEMES: VisemeRef[] = [
   // Vowels
   { key: 'AA', label: 'AA — "father" (wide)' },
   { key: 'AE', label: 'AE — "cat"' },
@@ -81,7 +81,7 @@ export const EN_VISEMES: VisemeRef[] = [
 ];
 
 /** Character-path visemes (PL / fallback char) — keys = tokens from viseme-mappings. */
-export const CHAR_VISEMES: VisemeRef[] = [
+const CHAR_VISEMES: VisemeRef[] = [
   { key: 'A', label: 'A / Ą — wide opening' },
   { key: 'E', label: 'E / Ę — mid-open' },
   { key: 'I', label: 'I / Y — narrow' },

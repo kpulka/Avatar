@@ -10,15 +10,16 @@ import { createCaptions } from '../src/ui/user/captions';
 import { createSessionPanel } from '../src/ui/studio/panels/session-panel';
 import { createVisemesPanel } from '../src/ui/studio/panels/visemes-panel';
 import { createUiFixture } from './helpers/ui-fixtures';
+import { defined } from './helpers/defined';
 
 function makeController(overrides: Partial<Record<string, unknown>> = {}) {
   const events = new TypedEventBus<AppEvents>();
   const backend = {
-    onError: () => undefined,
+    onError: (_err: Error) => undefined,
     onStateChange: () => undefined,
     onUserTranscript: () => undefined,
     onAgentResponse: () => undefined,
-    onAgentCorrection: () => undefined,
+    onAgentCorrection: (_text: string) => undefined,
     onAudioChunk: () => undefined,
     onInterruption: () => undefined,
     getIsRunning: () => false,
@@ -104,7 +105,9 @@ describe('conversation feedback hygiene and recovery (15-05)', () => {
   it('dock: interrupt and mute are disabled at idle, enabled while a session runs; mute exposes aria-pressed', () => {
     const fixture = createUiFixture();
     createConversationDock().mount(fixture.ctx);
-    const [, mute, interrupt] = [...fixture.host.querySelectorAll<HTMLButtonElement>('.dock-btn')];
+    const dockButtons = [...fixture.host.querySelectorAll<HTMLButtonElement>('.dock-btn')];
+    const mute = defined(dockButtons[1]);
+    const interrupt = defined(dockButtons[2]);
     expect(mute.disabled).toBe(true);
     expect(interrupt.disabled).toBe(true);
     fixture.events.emit('voice:state', 'speaking');
@@ -141,8 +144,10 @@ describe('conversation feedback hygiene and recovery (15-05)', () => {
     const resetAll = fixture.host.querySelector('.btn-danger') as HTMLButtonElement;
     resetAll.click();
     expect(fixture.modalCalls).toHaveLength(1);
-    expect(fixture.modalCalls[0].title).toContain('Reset all');
-    const [accept, cancel] = [...fixture.modalCalls[0].content.querySelectorAll<HTMLButtonElement>('button')];
+    expect(defined(fixture.modalCalls[0]).title).toContain('Reset all');
+    const modalButtons = [...defined(fixture.modalCalls[0]).content.querySelectorAll<HTMLButtonElement>('button')];
+    const accept = defined(modalButtons[0]);
+    const cancel = defined(modalButtons[1]);
 
     cancel.click();
     expect(fixture.spies.modalClose).toHaveBeenCalledTimes(1);

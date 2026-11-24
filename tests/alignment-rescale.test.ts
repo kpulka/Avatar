@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { rescaleAlignmentToAudio } from '../src/audio/alignment-rescale';
+import { defined } from './helpers/defined';
 
 describe('rescaleAlignmentToAudio (chunk-local alignment drift)', () => {
   const base = {
@@ -13,7 +14,7 @@ describe('rescaleAlignmentToAudio (chunk-local alignment drift)', () => {
     const out = rescaleAlignmentToAudio(base, 569);
     const factor = 569 / 480;
     expect(out.char_start_times_ms[1]).toBeCloseTo(60 * factor, 3);
-    const lastEnd = out.char_start_times_ms[7] + out.char_durations_ms[7];
+    const lastEnd = defined(out.char_start_times_ms[7]) + defined(out.char_durations_ms[7]);
     expect(lastEnd).toBeCloseTo(569, 3);
     // proportions inside are preserved
     expect(out.char_durations_ms[0]).toBeCloseTo(60 * factor, 3);
@@ -34,7 +35,7 @@ describe('rescaleAlignmentToAudio (chunk-local alignment drift)', () => {
       source: 'elevenlabs' as const,
     };
     const out = rescaleAlignmentToAudio(short, 95);
-    const lastEnd = out.char_start_times_ms[1] + out.char_durations_ms[1];
+    const lastEnd = defined(out.char_start_times_ms[1]) + defined(out.char_durations_ms[1]);
     expect(lastEnd).toBeCloseTo(240 * 0.5, 3);
   });
 
@@ -100,7 +101,7 @@ describe('rescaleAlignmentToAudio (chunk-local alignment drift)', () => {
     it('trailing silence: the last character ends at the speech offset, not at the chunk end', () => {
       // 1500 ms chunk, speech 0..1000 ms, 500 ms of trailing silence
       const out = rescaleAlignmentToAudio(SPOKEN, 1500, { onsetSec: 0, offsetSec: 1.0 });
-      const lastEnd = out.char_start_times_ms[3] + out.char_durations_ms[3];
+      const lastEnd = defined(out.char_start_times_ms[3]) + defined(out.char_durations_ms[3]);
       expect(lastEnd).toBeLessThanOrEqual(1000 + 30);
       expect(lastEnd).toBeCloseTo(1000, 6);
     });

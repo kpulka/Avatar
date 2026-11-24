@@ -5,6 +5,7 @@ import { CharAlignment, FramesClip } from '../src/types/avatar';
 import { LastTurnBuffer } from '../src/features/last-turn-buffer';
 import { CompareController, rmsDiff } from '../src/features/compare-controller';
 import { createDefaultAnimationSources } from '../src/lipsync/animation-sources';
+import { defined } from './helpers/defined';
 
 const ALIGNMENT: CharAlignment = {
   chars: ['a', 'b'],
@@ -182,32 +183,32 @@ describe('CompareController', () => {
     // 2 chunki × 2 tory
     expect(harness.engine.playChunk).toHaveBeenCalledTimes(4);
     const calls = harness.engine.playChunk.mock.calls;
-    expect(Array.from(calls[0][0] as Uint8Array)).toEqual([1, 2, 3, 4]);
-    expect(Array.from(calls[2][0] as Uint8Array)).toEqual([1, 2, 3, 4]);
-    expect(Array.from(calls[1][0] as Uint8Array)).toEqual([5, 6, 7, 8]);
-    expect(Array.from(calls[3][0] as Uint8Array)).toEqual([5, 6, 7, 8]);
-    expect(calls[0][1]).toBe(calls[2][1]);
+    expect(Array.from(defined(calls[0])[0] as Uint8Array)).toEqual([1, 2, 3, 4]);
+    expect(Array.from(defined(calls[2])[0] as Uint8Array)).toEqual([1, 2, 3, 4]);
+    expect(Array.from(defined(calls[1])[0] as Uint8Array)).toEqual([5, 6, 7, 8]);
+    expect(Array.from(defined(calls[3])[0] as Uint8Array)).toEqual([5, 6, 7, 8]);
+    expect(defined(calls[0])[1]).toBe(defined(calls[2])[1]);
 
     expect(harness.faceController.onAudioChunk).toHaveBeenCalledTimes(2);
     expect(harness.faceController.feedFrames).toHaveBeenCalledTimes(1);
     expect(harness.sequence).toEqual(['live', 'live', 'a2f']);
     expect(harness.results).toHaveLength(1);
-    expect(harness.results[0].order).toEqual(['live', 'a2f']);
-    expect(harness.results[0].a2f.predictMs).toBe(120);
-    expect(harness.results[0].a2f.frames).toBe(2);
+    expect(defined(harness.results[0]).order).toEqual(['live', 'a2f']);
+    expect(defined(harness.results[0]).a2f.predictMs).toBe(120);
+    expect(defined(harness.results[0]).a2f.frames).toBe(2);
   });
 
   it('blind randomizes the presentation, but the report keeps the lane mapping', async () => {
     const harness = makeHarness({ random: () => 0.9 });
     await harness.controller.run({ blind: true });
 
-    expect(harness.results[0].order).toEqual(['a2f', 'live']);
+    expect(defined(harness.results[0]).order).toEqual(['a2f', 'live']);
     expect(harness.sequence[0]).toBe('a2f');
     expect(harness.faceController.feedFrames).toHaveBeenCalledTimes(1);
   });
 
   it('an interruption cancels the replay before predict starts', async () => {
-    let release: (() => void) | null = null;
+    let release = null as (() => void) | null;
     const harness = makeHarness({
       sleep: () =>
         new Promise<void>((resolve) => {
@@ -232,7 +233,7 @@ describe('CompareController', () => {
   });
 
   it('a new audio:chunk (LIVE turn) cancels the replay — hardStop is the safety net', async () => {
-    let release: (() => void) | null = null;
+    let release = null as (() => void) | null;
     const harness = makeHarness({
       sleep: () =>
         new Promise<void>((resolve) => {
@@ -314,21 +315,21 @@ describe('CompareController', () => {
   });
 
   it.each([
-    { initialMode: 'viseme' as const, random: () => 0.1, finalMode: 'frames', finalState: 'playing-b' },
-    { initialMode: 'frames' as const, random: () => 0.9, finalMode: 'viseme', finalState: 'playing-a' },
+    { initialMode: 'viseme' as const, random: (): number => 0.1, finalMode: 'frames', finalState: 'playing-b' },
+    { initialMode: 'frames' as const, random: (): number => 0.9, finalMode: 'viseme', finalState: 'playing-a' },
   ])('keeps the final lane active until its audio finishes ($finalMode)', async ({ initialMode, random, finalMode, finalState }) => {
     const releases: Array<() => void> = [];
     const harness = makeHarness({ initialMode, random, sleep: () => new Promise<void>(resolve => releases.push(resolve)) });
     const running = harness.controller.run({ blind: true });
     for (let i = 0; i < 10 && releases.length < 1; i++) await Promise.resolve();
     expect(releases).toHaveLength(1);
-    releases[0]();
+    defined(releases[0])();
     for (let i = 0; i < 10 && releases.length < 2; i++) await Promise.resolve();
     expect(releases).toHaveLength(2);
     expect(harness.faceController.mode).toBe(finalMode);
     expect(harness.controller.getState()).toBe(finalState);
     expect(harness.results).toHaveLength(0);
-    releases[1]();
+    defined(releases[1])();
     expect(await running).toBe(true);
     expect(harness.faceController.mode).toBe(initialMode);
     expect(harness.results).toHaveLength(1);
@@ -339,16 +340,16 @@ describe('CompareController', () => {
     const harness = makeHarness({ sleep: () => new Promise<void>(resolve => releases.push(resolve)) });
     const running = harness.controller.run();
     for (let i = 0; i < 10 && releases.length < 1; i++) await Promise.resolve();
-    releases[0]();
+    defined(releases[0])();
     for (let i = 0; i < 10 && releases.length < 2; i++) await Promise.resolve();
     harness.engine.hasPendingAudio.mockReturnValue(true);
-    releases[1]();
+    defined(releases[1])();
     for (let i = 0; i < 10 && releases.length < 3; i++) await Promise.resolve();
     expect(releases).toHaveLength(3);
     expect(harness.faceController.mode).toBe('frames');
     expect(harness.results).toHaveLength(0);
     harness.engine.hasPendingAudio.mockReturnValue(false);
-    releases[2]();
+    defined(releases[2])();
     expect(await running).toBe(true);
     expect(harness.faceController.mode).toBe('viseme');
   });
@@ -364,11 +365,11 @@ describe('CompareController', () => {
     const newRun = harness.controller.run();
     for (let i = 0; i < 10 && releases.length < 2; i++) await Promise.resolve();
     expect(harness.faceController.mode).toBe('viseme');
-    releases[0]();
+    defined(releases[0])();
     expect(await oldRun).toBe(true);
     expect(harness.faceController.mode).toBe('viseme');
     harness.controller.cancel('test');
-    releases[1]();
+    defined(releases[1])();
     expect(await newRun).toBe(true);
     expect(harness.faceController.mode).toBe('frames');
   });

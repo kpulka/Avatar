@@ -97,10 +97,11 @@ export function createAlgorithmSwitcher(): PanelDefinition {
 
       // Track chips: rendered per registry source (two today), labelled A / B; read-only indicators
       const chipSlots = [t('compare.trackA'), t('compare.trackB')];
+      const chipSlot = (index: number): string => chipSlots[index] ?? '';
       const chips: HTMLElement[] = services.animationSources
         .list()
         .slice(0, 2)
-        .map((_, index) => el('span', { className: 'compare-chip', text: chipSlots[index] }));
+        .map((_, index) => el('span', { className: 'compare-chip', text: chipSlot(index) }));
       const tracks = el('div', { className: 'compare-tracks hidden', attrs: { role: 'group', 'aria-label': t('compare.trackAria') } }, chips);
       const cancelButton = el('button', {
         className: 'btn btn-small btn-secondary compare-cancel hidden',
@@ -135,13 +136,13 @@ export function createAlgorithmSwitcher(): PanelDefinition {
       const labelChips = (result: CompareResultEvent): void => {
         result.order.forEach((kind, index) => {
           const chip = chips[index];
-          if (chip) chip.textContent = t('compare.chipRevealed', { track: chipSlots[index], source: sourceName(kind) });
+          if (chip) chip.textContent = t('compare.chipRevealed', { track: chipSlot(index), source: sourceName(kind) });
         });
       };
 
       const resetChips = (): void => {
         chips.forEach((chip, index) => {
-          chip.textContent = chipSlots[index];
+          chip.textContent = chipSlot(index);
           chip.classList.remove('active');
           chip.removeAttribute('aria-current');
         });

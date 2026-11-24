@@ -13,8 +13,9 @@ import { mergeCharAlignmentToPhonemes, PhonemeSpan } from '../src/lipsync/g2p/ph
 import { PHONEME_POSES, lipPoseToShapes } from '../src/lipsync/g2p/phoneme-visemes';
 import { charTokenFor, charPathSpan } from '../src/lipsync/viseme-mappings';
 import { CALIBRATION_PRESETS } from '../src/lipsync/calibration';
-import { ANIM_DEFAULTS } from '../src/lipsync/anim-config';
+import { ANIM_DEFAULTS } from '../src/realism/anim-config';
 import { CONTROL_SENTENCES, CONVERSATIONAL_PARAGRAPHS } from '../scripts/lipsync-corpus.mjs';
+import { defined } from './helpers/defined';
 
 interface CorpusCase {
   id: string;
@@ -96,9 +97,9 @@ describe('golden spans: phoneme path', () => {
           if (inWord.length === 0) continue;
           const sum = inWord.reduce((acc, s) => acc + s.durationMs, 0);
           expect(Math.abs(sum - (word.endMs - word.startMs)), `${word.text} sum`).toBeLessThanOrEqual(spanSumToleranceMs);
-          const last = inWord[inWord.length - 1];
+          const last = defined(inWord[inWord.length - 1]);
           expect(last.startMs + last.durationMs - word.endMs, `${word.text} overflow`).toBeLessThanOrEqual(maxWordOverflowMs);
-          expect(inWord[0].startMs).toBeGreaterThanOrEqual(word.startMs - 1e-6);
+          expect(defined(inWord[0]).startMs).toBeGreaterThanOrEqual(word.startMs - 1e-6);
         }
       });
 
@@ -152,7 +153,7 @@ describe('closure presence (M/B/P), computed', () => {
 
   it('every bilabial pose is a PERCEIVED closure under balanced: close <= 0.35, press >= 0.3, jaw <= 0.05', () => {
     for (const phoneme of new Set(spans.map((s) => s.phoneme).filter((p) => ['M', 'B', 'P'].includes(p)))) {
-      const pose = PHONEME_POSES[phoneme];
+      const pose = defined(PHONEME_POSES[phoneme]);
       expect((pose.close ?? 0) * balancedClose, `${phoneme} close`).toBeLessThanOrEqual(0.35);
       expect((pose.press ?? 0) * balancedClose, `${phoneme} press`).toBeGreaterThanOrEqual(0.3);
       expect(pose.jaw ?? 0, `${phoneme} jaw`).toBeLessThanOrEqual(0.05);
@@ -180,7 +181,7 @@ describe('viseme distinctness proxy (min pairwise L1 distance between pose vecto
   const shapeNames = new Set<string>();
   const vectors = new Map<string, Map<string, number>>();
   for (const key of keys) {
-    const shapes = lipPoseToShapes(PHONEME_POSES[key]);
+    const shapes = lipPoseToShapes(defined(PHONEME_POSES[key]));
     vectors.set(key, shapes);
     for (const shape of shapes.keys()) shapeNames.add(shape);
   }
@@ -193,7 +194,7 @@ describe('viseme distinctness proxy (min pairwise L1 distance between pose vecto
   // Group identical poses.
   const groups: string[][] = [];
   for (const key of keys) {
-    const group = groups.find((g) => l1(vectors.get(g[0])!, vectors.get(key)!) < 1e-9);
+    const group = groups.find((g) => l1(vectors.get(defined(g[0]))!, vectors.get(key)!) < 1e-9);
     if (group) group.push(key);
     else groups.push([key]);
   }
@@ -207,15 +208,15 @@ describe('viseme distinctness proxy (min pairwise L1 distance between pose vecto
     const pairs: { name: string; distance: number }[] = [];
     for (let i = 0; i < groups.length; i++) {
       for (let j = i + 1; j < groups.length; j++) {
-        const name = [label(groups[i]), label(groups[j])].sort().join('|');
-        pairs.push({ name, distance: l1(vectors.get(groups[i][0])!, vectors.get(groups[j][0])!) });
+        const name = [label(defined(groups[i])), label(defined(groups[j]))].sort().join('|');
+        pairs.push({ name, distance: l1(vectors.get(defined(defined(groups[i])[0]))!, vectors.get(defined(defined(groups[j])[0]))!) });
       }
     }
     const tooClose = pairs.filter((p) => p.distance < THRESHOLD);
     // every pair under the threshold must be a documented twin ...
     expect(tooClose.map((p) => p.name).sort()).toEqual(Object.keys(KNOWN_TWINS).sort());
     // ... and must not have moved closer than its pinned floor
-    for (const p of tooClose) expect(p.distance, p.name).toBeGreaterThanOrEqual(KNOWN_TWINS[p.name] - 0.005);
+    for (const p of tooClose) expect(p.distance, p.name).toBeGreaterThanOrEqual(defined(KNOWN_TWINS[p.name]) - 0.005);
     // the closest NON-twin pair, recorded in the 17-03 summary
     const nonTwinMin = Math.min(...pairs.filter((p) => !(p.name in KNOWN_TWINS)).map((p) => p.distance));
     expect(nonTwinMin).toBeGreaterThanOrEqual(THRESHOLD);
