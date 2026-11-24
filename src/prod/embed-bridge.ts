@@ -27,6 +27,7 @@ export class EmbedBridge {
   private readonly allowAnyOrigin: boolean;
   private readonly sameOrigin: string;
   private lastTrustedOrigin: string | null = null;
+  private messageListener: ((event: MessageEvent) => void) | null = null;
 
   constructor(callbacks: EmbedBridgeCallbacks = {}, options: EmbedBridgeOptions = {}) {
     this.callbacks = callbacks;
@@ -112,7 +113,7 @@ export class EmbedBridge {
   private setupMessageListener(): void {
     if (typeof window === 'undefined') return;
 
-    window.addEventListener('message', (event: MessageEvent) => {
+    this.messageListener = (event: MessageEvent) => {
       if (!this.isSourceTrusted(event.source)) return;
       // event.data is untrusted input from another window: treat it as unknown and narrow it.
       const raw: unknown = event.data;
@@ -149,7 +150,16 @@ export class EmbedBridge {
           }
           break;
       }
-    });
+    };
+    window.addEventListener('message', this.messageListener);
+  }
+
+  /** Removes the window message listener. Idempotent. */
+  public dispose(): void {
+    if (this.messageListener && typeof window !== 'undefined') {
+      window.removeEventListener('message', this.messageListener);
+    }
+    this.messageListener = null;
   }
 
   /**

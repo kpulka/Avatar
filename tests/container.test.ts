@@ -143,6 +143,7 @@ vi.mock('../src/prod/embed-bridge', () => ({
     notifyStateChange = vi.fn();
     notifyTranscript = vi.fn();
     notifyReady = vi.fn();
+    dispose = vi.fn();
   },
 }));
 vi.mock('../src/prod/telemetry', () => ({

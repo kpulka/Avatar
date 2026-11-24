@@ -379,6 +379,7 @@ export function createApp(canvas: HTMLCanvasElement): AppHandle {
       unsubSceneTheme();
       unsubSceneAttr();
       unsubSceneReload();
+      embedBridge.dispose();
       shell.destroy();
       compareController.dispose();
       lastTurnBuffer.dispose();
