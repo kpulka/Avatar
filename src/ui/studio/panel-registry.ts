@@ -1,10 +1,10 @@
 /**
- * PanelRegistry (Faza 11, 11-03, Pattern 4).
+ * PanelRegistry (Phase 11, 11-03, Pattern 4).
  *
- * Kontrakt: panel deklaruje, w której warstwie żyje (`visibleIn`) i jak się montuje
- * (`mount(ctx) → PanelHandle`). Przeniesienie funkcji między personami = zmiana `visibleIn`.
- * Mount jest idempotentny (poprzedni handle dostaje `destroy()`), a błąd montowania jednego
- * panelu nie wywala całości (per-panel error boundary).
+ * Contract: a panel declares which layer it lives in (`visibleIn`) and how it mounts
+ * (`mount(ctx) → PanelHandle`). Moving a feature between personas = changing `visibleIn`.
+ * Mount is idempotent (the previous handle gets `destroy()`), and a mount failure in one
+ * panel does not take everything down (per-panel error boundary).
  */
 import { SettingsStore } from '../../app/store/settings-store';
 import { TypedEventBus } from '../../app/events';
@@ -13,10 +13,11 @@ import { el } from '../shared/dom';
 import { ToastHandle } from '../shared/toast';
 import { LoaderHandle } from '../shared/loader';
 import { ModalHandle } from '../shared/modal';
+import { t } from '../../app/copy';
 
 export type PanelLayer = 'user' | 'studio';
 
-/** Porty UI współdzielone przez panele (toast/loader/modal). */
+/** UI ports shared by panels (toast/loader/modal). */
 export interface PanelUi {
   toast: ToastHandle;
   loader: LoaderHandle;
@@ -40,33 +41,26 @@ export interface PanelDefinition {
   title: string;
   icon: string;
   visibleIn: PanelLayer;
-  /** Region w warstwie studio: prawy drawer z tabami ('right') albo lewy drawer ('left'). */
+  /** Region in the studio layer: right drawer with tabs ('right') or left drawer ('left'). */
   region?: 'right' | 'left';
   lazy?: boolean;
   mount(ctx: PanelContext): PanelHandle;
 }
 
 export interface PanelRegistryOptions {
-  /** Port renderowania błędu panelu (wstrzykiwany w testach). */
+  /** Panel error rendering port (injected in tests). */
   renderError?: (container: HTMLElement, definition: PanelDefinition, retry: () => void) => void;
 }
 
-export function renderPanelError(
-  container: HTMLElement,
-  definition: PanelDefinition,
-  retry: () => void
-): void {
+export function renderPanelError(container: HTMLElement, definition: PanelDefinition, retry: () => void): void {
   const button = el('button', {
     className: 'btn btn-tiny btn-secondary',
-    text: 'Spróbuj ponownie',
+    text: t('panel.retry'),
     type: 'button',
   });
   button.addEventListener('click', () => retry());
   container.replaceChildren(
-    el('div', { className: 'panel-error' }, [
-      el('p', { text: `Panel „${definition.title}” nie mógł się załadować.` }),
-      button,
-    ])
+    el('div', { className: 'panel-error' }, [el('p', { text: t('panel.errorTitle', { title: definition.title }) }), button])
   );
 }
 
@@ -81,7 +75,7 @@ export class PanelRegistry {
 
   public register(definition: PanelDefinition): void {
     if (this.definitions.has(definition.id)) {
-      console.warn(`[PanelRegistry] Panel '${definition.id}' już zarejestrowany — nadpisuję definicję.`);
+      console.warn(`[PanelRegistry] Panel '${definition.id}' already registered — overwriting the definition.`);
       this.destroy(definition.id);
     }
     this.definitions.set(definition.id, definition);
@@ -102,7 +96,7 @@ export class PanelRegistry {
   public mount(id: string, ctx: PanelContext): PanelHandle | null {
     const definition = this.definitions.get(id);
     if (!definition) {
-      console.warn(`[PanelRegistry] Nieznany panel '${id}' — mount pominięty.`);
+      console.warn(`[PanelRegistry] Unknown panel '${id}' — mount skipped.`);
       return null;
     }
     this.destroy(id);
@@ -111,7 +105,7 @@ export class PanelRegistry {
       this.handles.set(id, handle);
       return handle;
     } catch (error) {
-      console.warn(`[PanelRegistry] Błąd montowania panelu '${id}':`, error);
+      console.warn(`[PanelRegistry] Error mounting panel '${id}':`, error);
       this.renderError(ctx.container, definition, () => {
         this.mount(id, ctx);
       });
@@ -126,7 +120,7 @@ export class PanelRegistry {
     try {
       handle.destroy();
     } catch (error) {
-      console.warn(`[PanelRegistry] Błąd niszczenia panelu '${id}':`, error);
+      console.warn(`[PanelRegistry] Error destroying panel '${id}':`, error);
     }
   }
 

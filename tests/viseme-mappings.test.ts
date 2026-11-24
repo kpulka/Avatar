@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { mapCharToShapes } from '../src/lipsync/viseme-mappings';
+import { mapCharToShapes, charPathSpan, charTokenFor, POLISH_CHAR_CONTEXT } from '../src/lipsync/viseme-mappings';
 
 describe('Viseme Mappings (EN & ARKit)', () => {
   it('detects and maps digraphs with lookahead', () => {
@@ -31,15 +31,62 @@ describe('Viseme Mappings (EN & ARKit)', () => {
   });
 
   it('correctly applies contextual heuristic for letter C', () => {
-    // Miękkie C przed 'i' ("city") -> jak S (mouthSmile, mały jawOpen)
+    // Soft C before 'i' ("city") -> like S (mouthSmile, small jawOpen)
     const softC = mapCharToShapes(['c', 'i', 't', 'y'], 0);
     expect(softC.get('jawOpen')).toBeCloseTo(0.15);
     expect(softC.get('mouthSmileLeft')).toBeCloseTo(0.15);
 
-    // Twarde C przed 'a' ("cat") -> jak K (większy jawOpen 0.35)
+    // Hard C before 'a' ("cat") -> like K (larger jawOpen 0.35)
     const hardC = mapCharToShapes(['c', 'a', 't'], 0);
     expect(hardC.get('jawOpen')).toBeCloseTo(0.35);
     expect(hardC.has('mouthSmileLeft')).toBe(false);
+  });
+
+  it('charPathSpan: a consonant digraph consumes two letters, everything else one (17-01)', () => {
+    expect(charPathSpan(['t', 'h', 'e'], 0)).toBe(2);
+    expect(charPathSpan(['t', 'h', 'e'], 1)).toBe(1); // the H itself is not a digraph start
+    expect(charPathSpan(['s', 'h', 'i', 'p'], 0)).toBe(2);
+    expect(charPathSpan(['s', 'i', 'n', 'g'], 2)).toBe(2); // ng
+    expect(charPathSpan(['c', 'a', 't'], 0)).toBe(1);
+    expect(charPathSpan([' ', 't'], 0)).toBe(1);
+  });
+
+  it('charPathSpan keeps the vowel of the soft-i digraphs (si/zi/ni/ci) as its own viseme', () => {
+    expect(charPathSpan(['s', 'i', 't'], 0)).toBe(1);
+    expect(charPathSpan(['n', 'i', 'c', 'e'], 0)).toBe(1);
+  });
+
+  describe('Polish digraph window (T-6, pinned before the 17-04 PL G2P)', () => {
+    it('ch: English context keeps the affricate funnel, Polish context is the velar fricative [x]', () => {
+      const chata = ['c', 'h', 'a', 't', 'a'];
+      const en = mapCharToShapes(chata, 0);
+      const pl = mapCharToShapes(chata, 0, POLISH_CHAR_CONTEXT);
+      expect(en.get('mouthFunnel')).toBeCloseTo(0.45); // unchanged (English "church")
+      expect(pl.has('mouthFunnel')).toBe(false); // 17-04 fix: no church-funnel for Polish ch
+      expect(pl.get('jawOpen')).toBeCloseTo(0.3);
+    });
+
+    it('the Polish ch context affects ONLY the ch digraph', () => {
+      const same = (chars: string[], index: number) =>
+        expect([...mapCharToShapes(chars, index, POLISH_CHAR_CONTEXT).entries()]).toEqual([...mapCharToShapes(chars, index).entries()]);
+      same(['s', 'z', 'y'], 0); // sz
+      same(['c', 'z', 'y'], 0); // cz
+      same(['t', 'h', 'e'], 0); // th
+      same(['a'], 0);
+    });
+
+    it('known limitation of the FALLBACK path (fixed by the phoneme-pl engine): dzi is a dz digraph + a separate i', () => {
+      // dziekuje: the char path sees DZ then I; the phoneme path consumes the softness-i (g2p-pl.test.ts).
+      const chars = ['d', 'z', 'i', 'e', 'k', 'u', 'j', 'e'];
+      expect(charTokenFor(chars, 0)).toBe('DZ');
+      expect(charPathSpan(chars, 0)).toBe(2);
+      expect(charTokenFor(chars, 2)).toBe('I'); // the i is enqueued on its own
+    });
+
+    it('known limitation of the FALLBACK path: zi in "zima" still gets the soft-digraph shape', () => {
+      expect(charTokenFor(['z', 'i', 'm', 'a'], 0)).toBe('ZI');
+      expect(charPathSpan(['z', 'i', 'm', 'a'], 0)).toBe(1);
+    });
   });
 
   it('maps vowels with proper jaw and mouth pucker', () => {

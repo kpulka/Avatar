@@ -34,18 +34,17 @@ function makeKeyTarget() {
 }
 
 describe('UiMode', () => {
-  it('?studio=1 ustawia tryb studio, data-mode i persystuje wybór', () => {
+  it('?studio=1 applies only to this visit', () => {
     const storage = createMemoryStorage();
     const store = new SettingsStore(storage);
-    const env = makeEnv('studio=1');
-    const uiMode = createUiMode(store, env);
-
-    expect(uiMode.getMode()).toBe('studio');
+    const env = makeEnv('?studio=1');
+    expect(createUiMode(store, env).getMode()).toBe('studio');
     expect(env.attrs['data-mode']).toBe('studio');
-    expect(store.getState().user.uiMode).toBe('studio');
+    expect(store.getEffective('uiMode')).toBe('user');
+    expect(createUiMode(new SettingsStore(storage), makeEnv('')).getMode()).toBe('user');
   });
 
-  it('bez query startuje z persisted uiMode, a toggle zapisuje wybór', () => {
+  it('without a query it starts from the persisted uiMode, and the toggle saves the choice', () => {
     const storage = createMemoryStorage();
     const store = new SettingsStore(storage);
     const env = makeEnv('');
@@ -64,7 +63,7 @@ describe('UiMode', () => {
     expect(restored.getMode()).toBe('studio');
   });
 
-  it('skrót Ctrl+Shift+D przełącza, ignoruje pola edycyjne', () => {
+  it('the Ctrl+Shift+D shortcut toggles it and ignores edit fields', () => {
     const storage = createMemoryStorage();
     const store = new SettingsStore(storage);
     const uiMode = createUiMode(store, makeEnv(''));
@@ -102,7 +101,7 @@ describe('UiMode', () => {
     expect(key.remove).toHaveBeenCalledTimes(1);
   });
 
-  it('zablokowany uiMode nie przełącza trybu', () => {
+  it('a locked uiMode does not switch the mode', () => {
     const storage = createMemoryStorage();
     const store = new SettingsStore(storage);
     store.setLock('uiMode', true);

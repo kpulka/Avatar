@@ -1,7 +1,10 @@
 import { pcmBytesToFloat32 } from './pcm-resampler';
 
+/** ~80 ms prebuffer to absorb network jitter before the first scheduled chunk. */
+const PREBUFFER_SEC = 0.08;
+
 /**
- * Web Audio Engine dla bezszwowego (gapless) odtwarzania surowego PCM (docs/4)
+ * Web Audio Engine for seamless (gapless) playback of raw PCM (docs/4)
  */
 export class AudioEngine {
   public readonly ctx: AudioContext;
@@ -10,15 +13,15 @@ export class AudioEngine {
   private activeNodes: AudioBufferSourceNode[] = [];
   private tailTime = 0;
   private epoch = 0;
-  private prebufferSeconds = 0.08; // ~80ms prebuffer na absorpcję jittera sieci
+  private readonly ownsCtx: boolean;
+  private disposed = false;
 
   constructor(existingCtx?: AudioContext) {
+    this.ownsCtx = !existingCtx;
     if (existingCtx) {
       this.ctx = existingCtx;
     } else {
-      const AudioCtxClass =
-        window.AudioContext ||
-        (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+      const AudioCtxClass = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
       this.ctx = new AudioCtxClass();
     }
 
@@ -34,12 +37,12 @@ export class AudioEngine {
   }
 
   /**
-   * Planuje odtworzenie chunka PCM gapless na osi ctx.currentTime.
-   * Zwraca zaplanowany czas rozpoczęcia dźwięku w sekundach (dla synchronizacji lip-syncu).
+   * Schedules gapless playback of a PCM chunk on the ctx.currentTime axis.
+   * Returns the scheduled sound start time in seconds (for lip-sync synchronization).
    */
   public playChunk(pcmBytes: Uint8Array, sampleRate = 44100, chunkEpoch = this.epoch): number {
-    // Jeśli przyszedł opóźniony chunk z poprzedniej wypowiedzi (race condition), ignoruj go
-    if (chunkEpoch !== this.epoch) {
+    // If a delayed chunk from the previous utterance arrived (race condition), ignore it
+    if (chunkEpoch !== this.epoch || this.disposed) {
       return 0;
     }
 
@@ -47,11 +50,11 @@ export class AudioEngine {
     if (floatData.length === 0) return this.tailTime;
 
     const buffer = this.ctx.createBuffer(1, floatData.length, sampleRate);
-    buffer.copyToChannel(floatData as any, 0);
+    buffer.copyToChannel(floatData, 0);
 
     const now = this.ctx.currentTime;
-    // Gapless: start to max(teraz + prebuffer, koniec dotychczasowej kolejki)
-    const startTime = Math.max(now + this.prebufferSeconds, this.tailTime);
+    // Gapless: start at max(now + prebuffer, end of the existing queue)
+    const startTime = Math.max(now + PREBUFFER_SEC, this.tailTime);
     this.tailTime = startTime + buffer.duration;
 
     const source = this.ctx.createBufferSource();
@@ -69,7 +72,7 @@ export class AudioEngine {
       try {
         source.disconnect();
       } catch {
-        // Ignoruj błąd jeśli już odpięty
+        // Ignore the error if already disconnected
       }
     };
 
@@ -77,8 +80,8 @@ export class AudioEngine {
   }
 
   /**
-   * Natychmiastowe zatrzymanie dźwięku (barge-in):
-   * inkrementuje epoch, unieważnia zaplanowane węzły i czyści ogon czasowy
+   * Immediate sound stop (barge-in):
+   * increments the epoch, invalidates scheduled nodes and clears the time tail
    */
   public hardStop(): void {
     this.epoch++;
@@ -89,13 +92,34 @@ export class AudioEngine {
         node.stop();
         node.disconnect();
       } catch {
-        // Ignoruj błąd jeśli węzeł już wygasł
+        // Ignore the error if the node has already expired
       }
     }
 
     this.activeNodes = [];
     this.tailTime = 0;
+    // eslint-disable-next-line no-console -- trace log, not a diagnostic: kept as console.log on purpose (warn/error are the diagnostic channels)
     console.log(`[AudioEngine] hardStop() — epoch: ${this.epoch}`);
+  }
+
+  /**
+   * Releases audio resources: stops scheduled nodes, disconnects the master gain and
+   * closes the AudioContext (only when this engine created it). Idempotent.
+   */
+  public dispose(): void {
+    if (this.disposed) return;
+    this.disposed = true;
+
+    this.hardStop();
+    try {
+      this.masterGain.disconnect();
+    } catch {
+      // Already disconnected
+    }
+    if (this.ownsCtx && this.ctx.state !== 'closed') {
+      // close() rejects when the context is already closing; nothing left to release then.
+      void this.ctx.close().catch(() => undefined);
+    }
   }
 
   public hasPendingAudio(): boolean {
@@ -116,21 +140,5 @@ export class AudioEngine {
 
   public setVolume(volume: number): void {
     this.masterGain.gain.setValueAtTime(Math.max(0, Math.min(1, volume)), this.ctx.currentTime);
-  }
-
-  public setAdaptivePrebuffer(enabled: boolean, targetSec = 0.08): void {
-    this.prebufferSeconds = targetSec;
-    if (!enabled) {
-      this.prebufferSeconds = 0.08;
-    }
-  }
-
-  public bumpPrebufferForJitter(): void {
-    this.prebufferSeconds = Math.min(0.2, this.prebufferSeconds + 0.04);
-    console.log(`[AudioEngine] Adaptacyjny prebuffer podbity do: ${this.prebufferSeconds.toFixed(3)}s`);
-  }
-
-  public getPrebufferSeconds(): number {
-    return this.prebufferSeconds;
   }
 }

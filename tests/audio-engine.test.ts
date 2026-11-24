@@ -7,14 +7,14 @@ class MockAudioBuffer {
   public duration: number;
   private channelData: Float32Array;
 
-  constructor(channels: number, length: number, sampleRate: number) {
+  constructor(_channels: number, length: number, sampleRate: number) {
     this.length = length;
     this.sampleRate = sampleRate;
     this.duration = length / sampleRate;
     this.channelData = new Float32Array(length);
   }
 
-  public copyToChannel(source: Float32Array, channel: number): void {
+  public copyToChannel(source: Float32Array, _channel: number): void {
     this.channelData.set(source);
   }
 }
@@ -43,7 +43,11 @@ class MockGainNode {
     value: 1,
     setValueAtTime: vi.fn(),
   };
+  public disconnected = false;
   public connect(): void {}
+  public disconnect(): void {
+    this.disconnected = true;
+  }
 }
 
 class MockAudioContext {
@@ -67,6 +71,10 @@ class MockAudioContext {
   public async resume(): Promise<void> {
     this.state = 'running';
   }
+
+  public close = vi.fn(async (): Promise<void> => {
+    this.state = 'closed';
+  });
 }
 
 describe('AudioEngine', () => {
@@ -79,7 +87,7 @@ describe('AudioEngine', () => {
   });
 
   it('schedules audio chunk gapless with prebuffer', () => {
-    // 4410 próbek = 0.1s przy 44.1kHz (Int16 to 8820 bajtów)
+    // 4410 samples = 0.1 s at 44.1 kHz (Int16 = 8820 bytes)
     const pcmBytes = new Uint8Array(8820);
     const scheduledStart = engine.playChunk(pcmBytes, 44100);
 
@@ -97,7 +105,7 @@ describe('AudioEngine', () => {
     const start2 = engine.playChunk(chunk2, 44100);
 
     expect(start1).toBeCloseTo(1.08);
-    // start drugiego chunka powinien zaczynać się DOKŁADNIE tam gdzie kończy pierwszy
+    // the second chunk should start EXACTLY where the first one ends
     expect(start2).toBeCloseTo(1.18);
     expect(engine.getTailTime()).toBeCloseTo(1.28);
     expect(engine.getActiveNodesCount()).toBe(2);
@@ -123,8 +131,49 @@ describe('AudioEngine', () => {
     const chunk = new Uint8Array(8820);
     const scheduled = engine.playChunk(chunk, 44100, staleEpoch);
 
-    // Powinno zostać zignorowane
+    // Should be ignored
     expect(scheduled).toBe(0);
     expect(engine.getActiveNodesCount()).toBe(0);
+  });
+
+  describe('dispose()', () => {
+    it('stops pending nodes, disconnects the master gain and ignores later chunks', () => {
+      engine.playChunk(new Uint8Array(8820), 44100);
+      expect(engine.getActiveNodesCount()).toBe(1);
+
+      engine.dispose();
+
+      expect(engine.getActiveNodesCount()).toBe(0);
+      expect((engine.masterGain as unknown as MockGainNode).disconnected).toBe(true);
+      expect(engine.playChunk(new Uint8Array(8820), 44100)).toBe(0);
+    });
+
+    it('does not close an injected AudioContext it does not own', () => {
+      engine.dispose();
+      expect(mockCtx.close).not.toHaveBeenCalled();
+    });
+
+    it('closes an AudioContext it created itself, exactly once', () => {
+      const created = new MockAudioContext();
+      class OwnedContext {
+        constructor() {
+          return created;
+        }
+      }
+      vi.stubGlobal('window', { AudioContext: OwnedContext });
+      try {
+        const owning = new AudioEngine();
+        owning.dispose();
+        owning.dispose();
+        expect(created.close).toHaveBeenCalledTimes(1);
+      } finally {
+        vi.unstubAllGlobals();
+      }
+    });
+
+    it('is idempotent', () => {
+      engine.dispose();
+      expect(() => engine.dispose()).not.toThrow();
+    });
   });
 });

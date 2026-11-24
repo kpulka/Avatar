@@ -1,25 +1,20 @@
 /**
- * Migracja legacy localStorage → blob `avatar_settings_v1` (Faza 11).
+ * Migration of legacy localStorage → the `avatar_settings_v1` blob (Phase 11).
  *
- * Kontrakt (11-01):
- * - czyta legacy TYLKO gdy blob nie istnieje (idempotencja),
- * - przed pierwszym zapisem tworzy backup `avatar_settings_backup_<ts>` z surowych kluczy,
- * - uszkodzony JSON jednego pola nie przerywa migracji (default dla tego pola, reszta zachowana),
- * - `avatar_settings_mic_sensitivity` jest ignorowany (martwe pole, UI-05),
- * - klucze legacy NIE są usuwane (write-through mirror do czasu 11-04).
+ * Contract (11-01):
+ * - reads legacy ONLY when the blob does not exist (idempotence),
+ * - before the first write creates a backup `avatar_settings_backup_<ts>` of the raw keys,
+ * - a corrupted JSON in one field does not abort the migration (default for that field, the rest kept),
+ * - `avatar_settings_mic_sensitivity` is ignored (dead field, UI-05),
+ * - legacy keys are NOT removed (write-through mirror until 11-04).
  */
-import {
-  SettingsStateV1,
-  StorageLike,
-  validateSettings,
-} from './settings-schema';
-import {
-  DEFAULT_CALIBRATION_PROFILE,
-} from '../../lipsync/calibration';
+import { SettingsStateV1, StorageLike, validateSettings } from './settings-schema';
+import { DEFAULT_CALIBRATION_PROFILE } from '../../lipsync/calibration';
+import { DEFAULT_LIP_SYNC_ENGINE, parseLipSyncEngine } from '../../lipsync/lipsync-engine';
 
 export const BLOB_KEY = 'avatar_settings_v1';
 
-/** Mapa: pole logiczne → klucz legacy (mirror w legacy-bridge). */
+/** Map: logical field → legacy key (mirrored in legacy-bridge). */
 export const LEGACY_KEYS = {
   calibration: 'avatar_lip_calibration_profile_v3',
   visemeOverrides: 'avatar_viseme_overrides_v1',
@@ -30,8 +25,6 @@ export const LEGACY_KEYS = {
   volume: 'avatar_settings_volume',
   a2fUrl: 'avatar_a2f_url',
 } as const;
-
-export type LegacyKeyName = keyof typeof LEGACY_KEYS;
 
 function readRaw(storage: StorageLike, key: string): string | null {
   try {
@@ -46,14 +39,14 @@ function parseJson(raw: string | null): unknown {
   try {
     return JSON.parse(raw) as unknown;
   } catch (error) {
-    console.warn('[Migrate] Uszkodzony JSON w kluczu legacy — używam domyślnej wartości pola:', error);
+    console.warn('[Migrate] Corrupted JSON in a legacy key — using the default field value:', error);
     return undefined;
   }
 }
 
 /**
- * Buduje blob v1 z kluczy legacy. Zwraca `null`, gdy blob już istnieje.
- * Po sukcesie zapisuje backup i blob do storage.
+ * Builds the v1 blob from legacy keys. Returns `null` when the blob already exists.
+ * On success it saves the backup and the blob to storage.
  */
 export function migrateLegacy(storage: StorageLike, now: () => number = Date.now): SettingsStateV1 | null {
   if (readRaw(storage, BLOB_KEY) !== null) return null;
@@ -78,7 +71,7 @@ export function migrateLegacy(storage: StorageLike, now: () => number = Date.now
     studio: {
       agentId: typeof rawAgentId === 'string' ? rawAgentId : undefined,
       a2fUrl: typeof rawA2fUrl === 'string' ? rawA2fUrl : undefined,
-      lipSyncEngine: rawEngine === 'phoneme' || rawEngine === 'char' ? rawEngine : undefined,
+      lipSyncEngine: parseLipSyncEngine(rawEngine),
       calibration: parsedCalibration,
       visemeOverrides: parseJson(rawOverrides),
     },
@@ -87,7 +80,7 @@ export function migrateLegacy(storage: StorageLike, now: () => number = Date.now
   const result = validateSettings(candidate);
   const state: SettingsStateV1 = result.ok ? result.value : { ...validateDefaults() };
   if (!result.ok) {
-    console.warn('[Migrate] Walidacja po migracji nie powiodła się — używam defaultów:', result.error);
+    console.warn('[Migrate] Post-migration validation failed — using defaults:', result.error);
   }
 
   try {
@@ -101,7 +94,7 @@ export function migrateLegacy(storage: StorageLike, now: () => number = Date.now
     }
     storage.setItem(BLOB_KEY, JSON.stringify(state));
   } catch (error) {
-    console.warn('[Migrate] Nie udało się zapisać backupu/blobu ustawień:', error);
+    console.warn('[Migrate] Could not save the settings backup/blob:', error);
   }
 
   return state;
@@ -110,7 +103,7 @@ export function migrateLegacy(storage: StorageLike, now: () => number = Date.now
 function validateDefaults(): SettingsStateV1 {
   const fallback = validateSettings({ schemaVersion: 1 });
   if (fallback.ok) return fallback.value;
-  // validateSettings na poprawnym obiekcie nie może zawieść — zabezpieczenie typów.
+  // validateSettings cannot fail on a valid object — a type safeguard.
   return {
     schemaVersion: 1,
     user: {
@@ -125,7 +118,7 @@ function validateDefaults(): SettingsStateV1 {
     studio: {
       agentId: '',
       a2fUrl: 'http://127.0.0.1:8000',
-      lipSyncEngine: 'phoneme',
+      lipSyncEngine: DEFAULT_LIP_SYNC_ENGINE,
       calibration: { ...DEFAULT_CALIBRATION_PROFILE },
       visemeOverrides: {},
       locks: {},

@@ -1,17 +1,21 @@
+import { ANIM_DEFAULTS } from '../realism/anim-config';
+
+const { blink: blinkConfig } = ANIM_DEFAULTS;
+
 export interface BlinkWeights {
   left: number;
   right: number;
 }
 
 export interface BlinkOptions {
-  minIntervalSec?: number; // Minimalny odstęp między mrugnięciami (domyślnie 2.5s)
-  maxIntervalSec?: number; // Maksymalny odstęp (domyślnie 6.0s)
-  closeDurationSec?: number; // Czas zamykania powiek (domyślnie 80ms)
-  openDurationSec?: number; // Czas otwierania powiek (domyślnie 200ms)
+  minIntervalSec?: number; // Minimum interval between blinks (default blink.intervalMinSec)
+  maxIntervalSec?: number; // Maximum interval (default blink.intervalMaxSec)
+  closeDurationSec?: number; // Eyelid closing time (default blink.closeSec)
+  openDurationSec?: number; // Eyelid opening time (default blink.openSec)
 }
 
 /**
- * Proceduralny generator naturalnego mrugania powiekami (docs/3, docs/6)
+ * Procedural generator of natural eyelid blinking (docs/3, docs/6)
  */
 export class ProceduralBlink {
   private readonly minIntervalSec: number;
@@ -20,17 +24,20 @@ export class ProceduralBlink {
   private readonly openDurationSec: number;
   private readonly totalBlinkDurationSec: number;
 
+  // Reused result (BORROWED until the next update(); single consumer: FaceController.render).
+  private readonly result: BlinkWeights = { left: 0, right: 0 };
+
   private nextBlinkTimeSec = 0;
   private isBlinking = false;
   private blinkStartTimeSec = 0;
   private isDoubleBlink = false;
 
   constructor(options: BlinkOptions = {}) {
-    this.minIntervalSec = options.minIntervalSec ?? 2.5;
-    this.maxIntervalSec = options.maxIntervalSec ?? 6.0;
-    this.closeDurationSec = options.closeDurationSec ?? 0.08; // 80ms
-    this.openDurationSec = options.openDurationSec ?? 0.2; // 200ms
-    this.totalBlinkDurationSec = this.closeDurationSec + this.openDurationSec; // 280ms
+    this.minIntervalSec = options.minIntervalSec ?? blinkConfig.intervalMinSec;
+    this.maxIntervalSec = options.maxIntervalSec ?? blinkConfig.intervalMaxSec;
+    this.closeDurationSec = options.closeDurationSec ?? blinkConfig.closeSec;
+    this.openDurationSec = options.openDurationSec ?? blinkConfig.openSec;
+    this.totalBlinkDurationSec = this.closeDurationSec + this.openDurationSec;
 
     this.scheduleNextBlink(0);
   }
@@ -39,12 +46,13 @@ export class ProceduralBlink {
     const range = this.maxIntervalSec - this.minIntervalSec;
     const interval = this.minIntervalSec + Math.random() * range + delayBonus;
     this.nextBlinkTimeSec = currentTimeSec + interval;
-    // 15% szansy na podwójne mrugnięcie (naturalny biologiczny odruch)
-    this.isDoubleBlink = Math.random() < 0.15;
+    // A chance of a double blink (a natural biological reflex)
+    this.isDoubleBlink = Math.random() < blinkConfig.doubleBlinkChance;
   }
 
   /**
-   * Zwraca wagi mrugania [0.0, 1.0] dla bieżącej chwili czasowej
+   * Returns the blink weights [0.0, 1.0] for the current point in time.
+   * BORROWED: the returned object is reused on the next call — read it immediately.
    */
   public update(currentTimeSec: number): BlinkWeights {
     if (!this.isBlinking) {
@@ -52,7 +60,7 @@ export class ProceduralBlink {
         this.isBlinking = true;
         this.blinkStartTimeSec = currentTimeSec;
       } else {
-        return { left: 0, right: 0 };
+        return this.setResult(0, 0);
       }
     }
 
@@ -62,33 +70,36 @@ export class ProceduralBlink {
       this.isBlinking = false;
       if (this.isDoubleBlink) {
         this.isDoubleBlink = false;
-        // Drugie mrugnięcie po krótkiej pauzie ~100ms
-        this.nextBlinkTimeSec = currentTimeSec + 0.1;
+        // Second blink after a short pause
+        this.nextBlinkTimeSec = currentTimeSec + blinkConfig.doubleBlinkPauseSec;
       } else {
         this.scheduleNextBlink(currentTimeSec);
       }
-      return { left: 0, right: 0 };
+      return this.setResult(0, 0);
     }
 
-    // Obliczenie wagi mrugnięcia
-    let weight = 0;
+    // Compute the blink weight
+    let weight: number;
     if (elapsed < this.closeDurationSec) {
-      // Faza 1: Szybkie zamykanie (80ms)
+      // Phase 1: fast closing (80ms)
       const t = elapsed / this.closeDurationSec;
       weight = Math.sin((t * Math.PI) / 2); // 0 -> 1
     } else {
-      // Faza 2: Płynne otwieranie (200ms)
+      // Phase 2: smooth opening (200ms)
       const t = (elapsed - this.closeDurationSec) / this.openDurationSec;
       weight = Math.cos((t * Math.PI) / 2); // 1 -> 0
     }
 
     const clamped = Math.max(0, Math.min(1, weight));
 
-    // Subtelna asymetria powiek (~2%) dla wyższego realizmu
-    return {
-      left: clamped,
-      right: Math.max(0, Math.min(1, clamped * 0.98)),
-    };
+    // Subtle eyelid asymmetry for extra realism
+    return this.setResult(clamped, Math.max(0, Math.min(1, clamped * blinkConfig.rightScale)));
+  }
+
+  private setResult(left: number, right: number): BlinkWeights {
+    this.result.left = left;
+    this.result.right = right;
+    return this.result;
   }
 
   public forceBlink(currentTimeSec: number): void {

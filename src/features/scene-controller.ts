@@ -1,7 +1,7 @@
 /**
- * SceneController (Faza 11, 11-02) — scena, ładowanie awatara, kadr i pętla render (część 3D).
+ * SceneController (Phase 11, 11-02) — scene, avatar loading, framing and render loop (the 3D part).
  *
- * Nie dotyka DOM: emituje `avatar:loaded` z kompletnymi danymi dla UI (model info, shapes).
+ * Does not touch the DOM: emits `avatar:loaded` with complete data for the UI (model info, shapes).
  */
 import * as THREE from 'three';
 import { AppRenderer } from '../core/renderer';
@@ -14,7 +14,7 @@ import { MetaPersonLoader } from '../avatar/meta-person-loader';
 import { createTestAvatar } from '../avatar/test-avatar-generator';
 import { HeadMicroMovements } from '../realism/head-micro-movements';
 import { GazeSaccades } from '../realism/gaze-saccades';
-import { FaceDriver, LoadedAvatar } from '../types/avatar';
+import { EyeLookWeights, FaceDriver, LoadedAvatar } from '../types/avatar';
 import { TypedEventBus } from '../app/events';
 import { AppEvents, SceneService } from '../app/app-types';
 
@@ -35,6 +35,10 @@ export class SceneController implements SceneService {
   private faceDriver: FaceDriver | null = null;
   private avatarInfo: { name: string; shapesCount: number; speechMeshes: number } | null = null;
   private faceY = 0;
+  /** Last gaze morph weights (computed here, APPLIED by FaceController — single writer). */
+  private gazeWeights: EyeLookWeights | null = null;
+  /** Gate for the procedural eyeball bones; false when an A2F clip carries its own eyes. */
+  private proceduralEyesGate: () => boolean = () => true;
 
   constructor(private readonly deps: SceneControllerDeps) {}
 
@@ -54,19 +58,35 @@ export class SceneController implements SceneService {
     return this.faceDriver;
   }
 
+  /** Latest gaze weights for the FaceController gaze provider (null before the first frame). */
+  public getGazeWeights(): Readonly<EyeLookWeights> | null {
+    return this.gazeWeights;
+  }
+
+  /** Sets the carriesEyes gate for the eyeball bones (same gate FaceController uses for blink/gaze). */
+  public setProceduralEyesGate(gate: () => boolean): void {
+    this.proceduralEyesGate = gate;
+  }
+
   public loadDefaultAvatar(): void {
     this.deps.loader
-      .load('/models/avatar.glb')
+      .load('/models/avatar.glb', undefined, (fraction) => {
+        this.deps.events.emit('avatar:progress', { fraction });
+      })
       .then((avatar) => {
         this.onLoaded(avatar, 'MetaPerson Rigged Avatar (avatar.glb)');
-        console.log('[Avatar] Pomyślnie załadowano zrigowany model MetaPerson avatar.glb');
+        // eslint-disable-next-line no-console -- trace log, not a diagnostic: kept as console.log on purpose (warn/error are the diagnostic channels)
+        console.log('[Avatar] Successfully loaded the rigged MetaPerson avatar.glb model');
       })
       .catch((error) => {
-        console.warn('[Avatar] Brak /models/avatar.glb lub błąd ładowania, używam awatara demo:', error);
+        console.warn('[Avatar] /models/avatar.glb is missing or failed to load, using the demo avatar:', error);
         try {
           this.onLoaded(createTestAvatar(), 'Demo ARKit Avatar (52 shapes)');
         } catch (fallbackError) {
-          console.error('Błąd awatara demo:', fallbackError);
+          console.error('Demo avatar error:', fallbackError);
+          this.deps.events.emit('avatar:error', {
+            message: 'The 3D avatar could not be loaded. Please reload the page.',
+          });
         }
       });
   }
@@ -87,26 +107,28 @@ export class SceneController implements SceneService {
     enhanceAvatarMaterials(avatar.root, this.deps.renderer.instance);
     this.deps.scene.setAvatar(avatar.root);
 
-    // Automatyczne wykadrowanie kamery portretowej na twarzy modelu.
+    // Automatic framing of the portrait camera on the model's face.
     const box = new THREE.Box3().setFromObject(avatar.root);
     const faceY = box.min.y + (box.max.y - box.min.y) * 0.88;
     this.faceY = faceY;
     this.deps.camera.instance.position.set(0, faceY + 0.03, 1.22);
     this.deps.camera.controls.target.set(0, faceY, 0);
     this.deps.camera.controls.update();
+    this.deps.lighting?.focusOn(new THREE.Vector3(0, faceY, 0));
 
+    const shapesCount = avatar.faceDriver.listAvailableShapes().length;
+    this.avatarInfo = {
+      name,
+      shapesCount,
+      speechMeshes: avatar.speechMeshes.length,
+    };
     this.deps.events.emit('avatar:loaded', {
       root: avatar.root,
       faceDriver: avatar.faceDriver,
       speechMeshes: avatar.speechMeshes.length,
-      shapesCount: avatar.faceDriver.listAvailableShapes().length,
+      shapesCount,
       name,
     });
-    this.avatarInfo = {
-      name,
-      shapesCount: avatar.faceDriver.listAvailableShapes().length,
-      speechMeshes: avatar.speechMeshes.length,
-    };
   }
 
   public pointerMove(normX: number, normY: number): void {
@@ -124,18 +146,22 @@ export class SceneController implements SceneService {
 
     this.deps.camera.update();
 
+    // Gaze weights are computed here but written to the morphs by FaceController (single writer).
     if (this.faceDriver) {
-      this.deps.gaze.applyToDriver(this.faceDriver, timestampMs / 1000, dt);
+      this.gazeWeights = this.deps.gaze.compute(timestampMs / 1000, dt);
     }
 
-    if (root) {
+    // Eyeball bones: skipped when the active A2F clip carries its own eyes.
+    if (root && this.proceduralEyesGate()) {
+      // userData is an untyped bag (any): the eye objects, when a loader sets them, are Object3Ds.
+      const eyeData = root.userData as { leftEye?: THREE.Object3D; rightEye?: THREE.Object3D };
       const leftEye =
-        root.userData?.leftEye ||
+        eyeData.leftEye ||
         root.getObjectByName('LeftEye') ||
         root.getObjectByName('AvatarLeftEyeball') ||
         root.getObjectByName('Avatar_LeftEye');
       const rightEye =
-        root.userData?.rightEye ||
+        eyeData.rightEye ||
         root.getObjectByName('RightEye') ||
         root.getObjectByName('AvatarRightEyeball') ||
         root.getObjectByName('Avatar_RightEye');

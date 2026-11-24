@@ -24,6 +24,15 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [ ] **Phase 9: Lokalny PoC NVIDIA Audio2Face (RTX 3090)** - Audio2Face-3D SDK (MIT, TensorRT) + rig z avatar.glb + REST wrapper + E2E offline + przełącznik A/B + go/no-go
 - [ ] **Phase 10: A2F w chmurze — Cloud Run MVP (L4)** - po lokalnym go/no-go: deploy serverless GPU scale-to-zero (płacimy tylko za przetwarzanie), cold start, koszty, UAT
 - [ ] **Phase 11: UI dual-persona i modularny frontend** - user/studio, porównywarka algorytmów, scene presets, refaktor modułowy (równolegle z Fazą 9)
+- [ ] **Phase 11.1: Hardening & bugfix pack (INSERTED)** - embed-bridge security (public repo), agentId single source, chunk sampleRate, avatar GPU dispose, A/B compare lanes (v1.1)
+- [ ] **Phase 11.2: Showcase wow pack (INSERTED)** - demo "Listen" without agent, visible error states, skin SSS + shadows + eyes, latency-aware lip clock, bilabial closure, committed avatar, hero capture (v1.1) — PARTIAL: 7/9 executed; 11.2-03 and 11.2-09 blocked (owner)
+- [ ] **Phase 12: English language (i18n)** - docs, UI strings, comments, tests, runtime messages → English; language gate (v1.1)
+- [ ] **Phase 13: README — recruiter showcase** - English, truthful, verified quickstart, visual assets, badge slots (v1.1) — PARTIAL: 3/4 executed; 13-03 blocked (owner), 13-04 partial; manual UAT pending
+- [ ] **Phase 14: Architecture — documentation, strictness, guards** - ARCHITECTURE.md, full typecheck, layering gate, lifecycle test, dead code (v1.1) — executed 6/6; automated PASS; manual UAT pending
+- [ ] **Phase 15: Web UI refactor** - design tokens, light theme, states matrix, a11y, microcopy (v1.1) — executed 7/7; automated PASS; manual UAT pending
+- [ ] **Phase 16: Animation mechanics refactor** - state machine, single writer, timebase, config extraction, hot path, extensibility (v1.1) — PARTIAL: executed 7/7; automated PASS; manual UAT and behavior sign-off DEFERRED-HUMAN
+- [ ] **Phase 17: Lip-sync phonemes refactor** - pruned CMU lexicon, PL G2P, table-doc reconciliation, quality harness (v1.1) — PARTIAL: executed 6/6 (17-05 partial); live UAT DEFERRED-HUMAN
+- [ ] **Phase 18: CI, security, license, deploy, hygiene** - secrets scan, CI+badge, project rights notice, offline Pages demo, ESLint/Prettier, `npm run verify` (v1.1) — PARTIAL: 5/7 executed; 18-05 and 18-06 blocked (owner); 18-03 and 18-07 partial
 
 ## Phase Details
 
@@ -32,7 +41,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 **Goal**: Statyczny, realistyczny awatar renderuje się w przeglądarce z walidowanym rigiem ARKit — baza pod wszystko.
 **Depends on**: Nothing (first phase)
 **Requirements**: AVAT-01, AVAT-03, AVAT-04
-**Docs refs**: `docs/1-architektura-i-modele-3d.md` (loader, REQUIRED_SHAPES, sub-meshy, zasady), `docs/5-shadery-i-realizm.md` (etap 1: stock PBR, oświetlenie 3-point + environment + ACES, anizotropia, budżet FPS)
+**Docs refs**: `docs/1-architecture-and-3d-models.md` (loader, REQUIRED_SHAPES, sub-meshy, zasady), `docs/5-shaders-and-realism.md` (etap 1: stock PBR, oświetlenie 3-point + environment + ACES, anizotropia, budżet FPS)
 **Success Criteria** (what must be TRUE):
 
   1. Awatar MetaPerson `.glb` (bust/head) renderuje się po kliknięciu "Load" w aplikacji Vite+TS+Three.js
@@ -54,7 +63,7 @@ Plans:
 **Goal**: Awatar "umie mówić i słuchać": pełna pętla głosowa z agentem ElevenAgents bez animacji ust — audio gapless po naszej kontroli.
 **Depends on**: Phase 1
 **Requirements**: CONV-01, ROB-01
-**Docs refs**: `docs/2-integracja-elevenlabs-wss.md` (Tryb A: endpoint, protokół C2S/S2C, signed URL/public agent, PCM 44.1 kHz, ping-pong), `docs/4-audio-i-obsluga-przerwan.md` (AudioEngine: createBuffer/copyToChannel, prebuffer, unlock AudioContext, `onended` cleanup), `docs/6-analiza-opensource-i-rozwoj.md` (SDK do testów agenta)
+**Docs refs**: `docs/2-elevenlabs-wss-integration.md` (Tryb A: endpoint, protokół C2S/S2C, signed URL/public agent, PCM 44.1 kHz, ping-pong), `docs/4-audio-and-barge-in.md` (AudioEngine: createBuffer/copyToChannel, prebuffer, unlock AudioContext, `onended` cleanup), `docs/6-opensource-analysis-and-future.md` (SDK do testów agenta)
 **Success Criteria** (what must be TRUE):
 
   1. Agent skonfigurowany w dashboardzie (prompt, głos EN, client_events) i zwalidowany przez `@elevenlabs/client` przed własnym WSS
@@ -77,7 +86,7 @@ Plans:
 **Goal**: Usta awatara mówią w synchronizacji z głosem — rdzeń produktu.
 **Depends on**: Phase 2
 **Requirements**: LIPS-01, LIPS-02, LIPS-03
-**Docs refs**: `docs/3-lip-sync-i-koartykulacja.md` (tabela mapowań EN z dwuznakami i lookahead, koartykulacja, easing, damping, reguła fundamentu), `docs/4-audio-i-obsluga-przerwan.md` (FaceController state machine, epoch, jedyny właściciel morphów), `docs/1` (interfejs FaceDriver, synchronizacja sub-meshy)
+**Docs refs**: `docs/3-lip-sync-and-coarticulation.md` (tabela mapowań EN z dwuznakami i lookahead, koartykulacja, easing, damping, reguła fundamentu), `docs/4-audio-and-barge-in.md` (FaceController state machine, epoch, jedyny właściciel morphów), `docs/1` (interfejs FaceDriver, synchronizacja sub-meshy)
 **Success Criteria** (what must be TRUE):
 
   1. `FaceController` (state machine IDLE→SPEAKING→RELAXING) jest jedynym modułem piszącym do `morphTargetInfluences`
@@ -101,7 +110,7 @@ Plans:
 **Goal**: PoC kompletny: naturalne przerwania, twardość, metryki — spełnione wszystkie kryteria akceptacji PoC z docs/0.
 **Depends on**: Phase 3
 **Requirements**: CONV-02, CONV-03, CONV-04, CONV-05, AVAT-02, ROB-02
-**Docs refs**: `docs/4-audio-i-obsluga-przerwan.md` (sekwencja przerwania, epoch++, hardStop, RELAXING 150-300 ms, race conditions), `docs/0-roadmap-poc-mvp.md` (kryteria akceptacji PoC + rejestr ryzyk), `docs/2` (`agent_response_correction`, vad_score w UI)
+**Docs refs**: `docs/4-audio-and-barge-in.md` (sekwencja przerwania, epoch++, hardStop, RELAXING 150-300 ms, race conditions), `docs/0-roadmap-poc-mvp.md` (kryteria akceptacji PoC + rejestr ryzyk), `docs/2` (`agent_response_correction`, vad_score w UI)
 **Success Criteria** (what must be TRUE):
 
   1. Przerwanie użytkownika w dowolnym momencie wypowiedzi: audio stop < 50 ms, twarz neutral < 300 ms, zero zamrożeń miny — 10/10 losowych przerwań (CONV-03, CONV-04)
@@ -124,7 +133,7 @@ Plans:
 **Goal**: Awatar MVP cz. 1: skóra "prześwituje" (SSS), mówi po polsku, żyje między zdaniami.
 **Depends on**: Phase 4
 **Requirements**: AVAT-05, AVAT-06, LIPS-04
-**Docs refs**: `docs/5-shadery-i-realizm.md` (etap 2: pre-integrated SSS przez `onBeforeCompile` — wrap diffuse, translucency term, maska grubości, `customProgramCacheKey`; presety jakości GPU; realizm detali: oczy/włosy/zęby), `docs/3` (moduł PL: dwuznaki sz/cz/rz/ch, dź/dż, nosówki ą/ę), `docs/6` (sakkady, mikroruchy głowy szumem Perlina, idle sway, kolejność ROI ożywienia)
+**Docs refs**: `docs/5-shaders-and-realism.md` (etap 2: pre-integrated SSS przez `onBeforeCompile` — wrap diffuse, translucency term, maska grubości, `customProgramCacheKey`; presety jakości GPU; realizm detali: oczy/włosy/zęby), `docs/3` (moduł PL: dwuznaki sz/cz/rz/ch, dź/dż, nosówki ą/ę), `docs/6` (sakkady, mikroruchy głowy szumem Perlina, idle sway, kolejność ROI ożywienia)
 **Success Criteria** (what must be TRUE):
 
   1. SSS widoczny na uszach/nosie/wargach pod kontr-światłem (A/B zrzuty przed/po — LIPS… AVAT-05) z presetem wyłączanym na słabych GPU (60 FPS utrzymane)
@@ -147,7 +156,7 @@ Plans:
 **Goal**: MVP kompletny: emocje sterowane agentem, bezpieczeństwo (signed URL), agent as code, UI produktowe, kryteria akceptacji MVP z docs/0.
 **Depends on**: Phase 5
 **Requirements**: ROB-03, ROB-04, ROB-05, ROB-06
-**Docs refs**: `docs/6-analiza-opensource-i-rozwoj.md` (wariant 1 emocji: client tool `set_emotion` + prompt instrukcje; baza emocjonalna pod wizemy, wolniejszy damping), `docs/2` (signed URL z backendu, konfiguracja CLI as code, client_events), `docs/0` (kryteria akceptacji MVP)
+**Docs refs**: `docs/6-opensource-analysis-and-future.md` (wariant 1 emocji: client tool `set_emotion` + prompt instrukcje; baza emocjonalna pod wizemy, wolniejszy damping), `docs/2` (signed URL z backendu, konfiguracja CLI as code, client_events), `docs/0` (kryteria akceptacji MVP)
 **Success Criteria** (what must be TRUE):
 
   1. Awatar wyraża emocje: agent wywołuje `set_emotion` → mimika bazowa pod wizemami mowy (bez przeskoków), test na scenariuszu emocjonalnym (ROB-05)
@@ -175,7 +184,7 @@ Plans:
 **Goal**: Mowa EN ma widoczną charakterystykę fonemów — domknięcia M/B/P, odróżnialne F/V, S/Z, O/U, A — bez fantomowych ruchów na literach niemych, z timingiem nadal zakotwiczonym w alignmentcie ElevenLabs.
 **Depends on**: Phase 6
 **Requirements**: LIPS-05, LIPS-06, LIPS-07 (+ re-walidacja LIPS-01, LIPS-02)
-**Docs refs**: `docs/3-lip-sync-i-koartykulacja.md` (tabela mapowań, koartykulacja — zaktualizowana w 07-04), `.planning/phases/07-fonemowy-lip-sync-en/07-CONTEXT.md` (diagnoza: podwójna attenuacja amplitud + za wolna lambda + char→viseme bez G2P)
+**Docs refs**: `docs/3-lip-sync-and-coarticulation.md` (tabela mapowań, koartykulacja — zaktualizowana w 07-04), `.planning/phases/07-fonemowy-lip-sync-en/07-CONTEXT.md` (diagnoza: podwójna attenuacja amplitud + za wolna lambda + char→viseme bez G2P)
 **Success Criteria** (what must be TRUE):
 
   1. Badge HUD dev pokazuje źródło alignmentu per sesję; ALIGN: EL potwierdzone (fallback wykrywalny, nie cichy) (LIPS-07)
@@ -200,7 +209,7 @@ Plans:
 **Goal**: Jeden mechanizm napędzania twarzy dla dwóch źródeł animacji — (a) LIVE wizemy (obecne) i (b) absolutny strumień ramek (A2F/neuronowe) — ze wspólnym barge-in (epoka), jednym właścicielem morphów i state machine. Całość czysto kliencka, testowalna bez GPU (ramki syntetyczne).
 **Depends on**: Phase 6 (Faza 7 wstrzymana) — **start po review-unifikacji A2F↔wizemy** (wynik przeglądu może zmienić zakres)
 **Requirements**: UNA-01, A2F-01
-**Docs refs**: `docs/7-audio2face-cloudrun.md` (architektura docelowa), `docs/4-audio-i-obsluga-przerwan.md` (epoka/barge-in), `.planning/phases/08-unified-animation-core/08-CONTEXT.md`
+**Docs refs**: `docs/7-audio2face-cloudrun.md` (architektura docelowa), `docs/4-audio-and-barge-in.md` (epoka/barge-in), `.planning/phases/08-unified-animation-core/08-CONTEXT.md`
 **Success Criteria** (what must be TRUE):
 
   1. FaceController ma dwa tryby animacji: `viseme` (scheduler + koartykulacja) i `frames` (wartości bezwzględne z ramek, bez wygładzania) — przełączalne w runtime
@@ -224,7 +233,7 @@ Plans:
 **Goal**: Działający lokalnie, bezgłowy Audio2Face (kontener NVIDIA/Docker) wystawiony przez REST wrapper — E2E offline: wav → ramki → playback w aplikacji, przełącznik A/B (LIVE wizemy vs A2F), porównanie jakości i barge-in. Zero kosztów chmury.
 **Depends on**: Phase 8
 **Requirements**: A2F-02, A2F-03, A2F-04
-**Docs refs**: `docs/7-audio2face-cloudrun.md` (§4C lokalnie, §5 format), `docs/EN-visemes.md` (§6 zdania kontrolne)
+**Docs refs**: `docs/7-audio2face-cloudrun.md` (§4C lokalnie, §5 format), `docs/en-visemes.md` (§6 zdania kontrolne)
 **User setup**: RTX 3090 (24 GB) + CUDA 12.8+/TensorRT 10.13+ (Windows, bez kontenerow lokalnie; obraz produkcyjny Fazy 10 buduje Podman Desktop), konto Hugging Face (click-through licencji A2E; wagi NVIDIA Open Model License — darmowe), narzędzia `gcloud` niepotrzebne (później w Fazie 10)
 **Success Criteria** (what must be TRUE):
 
@@ -232,14 +241,14 @@ Plans:
   2. Wrapper REST (FastAPI) `/predict`: wejście `.wav` (mono 16–44.1 kHz) → wyjście JSON ramek (52 ARKit wg solvera na naszym rigu, PascalCase, gzip, bez capu długości) wg formatu z docs/7 §5; RTF < 1× długość audio na RTX 3090
   3. Aplikacja odtwarza offline: audio + ramki zsynchronizowane (playback gapless); przełącznik HUD `LIVE visemes` / `A2F (lokalny)` działa bez przeładowania
   4. Barge-in w trybie A2F: stop audio <50 ms, twarz neutral <300 ms (drop reszty ramek przez epokę)
-  5. Porównanie jakości na zdaniach kontrolnych (docs/EN-visemes.md §6) — raport 09-VERIFICATION.md + go/no-go do chmury
+  5. Porównanie jakości na zdaniach kontrolnych (docs/en-visemes.md §6) — raport 09-VERIFICATION.md + go/no-go do chmury
   6. Testy: pytest (wrapper: walidacja wejścia/wyjścia na syntetycznym audio), regresja `npm test` (klient)
 
 **Plans**: 5 plans
 
 Plans:
 
-- [ ] 09-01: Środowisko lokalne A2F — klon SDK (MIT) + modele HF (v3.0 primary) + TRT engines prebuild, rig ARKit-52 z avatar.glb (extract_rig.py), dump realnego wyjścia do fixture; notatka setupu w docs (A2F-LOCAL.md)
+- [ ] 09-01: Środowisko lokalne A2F — klon SDK (MIT) + modele HF (v3.0 primary) + TRT engines prebuild, rig ARKit-52 z avatar.glb (extract_rig.py), dump realnego wyjścia do fixture; notatka setupu w docs (a2f-local-setup.md)
 - [ ] 09-02: Wrapper REST `/predict` (FastAPI) — akceptacja wav (resample mono 16 kHz), A2F v3.0 + IBlendshapeSolver na naszym rigu, konwersja na JSON ramek (gzip, carriesEyes, emotions[]); pytest na fixture z 09-01
 - [ ] 09-03: Integracja offline w aplikacji — konfiguracja URL lokalnego serwisu, generowanie demo wav (ElevenLabs lub gotowy plik), POST → zapis ramek, playback trybem `frames` z Fazy 8
 - [ ] 09-04: Przełącznik A/B + UX — HUD `LIVE / A2F`, te same zdania kontrolne, metryki czasu przetwarzania; barge-in w trybie A2F (test 10×)
@@ -275,6 +284,11 @@ Plans:
 Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6, następnie **8 → 9 → 10** (A2F), a **Faza 7 ⏸ (UAT) wznawia się po Fazie 10**.
 **Phase 11 (UI) startuje po UAT 08-04 i biegnie równolegle z Fazą 9** (która czeka na instalacje sprzętowe po stronie człowieka); Faza 10 dokłada źródło „A2F (cloud)" do rejestru źródeł animacji z F11.
 
+**v1.1 (Fazy 11.1–18)**: kolejność rekomendowana — **18-01 (secrets scan) najpierw** (repo publiczne), potem **11.1 → 11.2 → 12 → 13 → 15 → 16 → 17 → 14 → 18 (reszta)**.
+- [ ] 18-01 — security scan, policy and production CSP reviewed. Embed verified after 11.1-01; headless browser loaded the showcase GLB after the CSP fix. Listen and compressed GLBs still require production verification.
+Fazy wstawione 2026-11-19 (refactoring.md, Rewizja/Rewizja 2): 11.1 (bezpieczeństwo embed + bugi spoza planów 12–18) przed 11.2 (efekt „wow” dla widza); obie przed 12, bo 12 tłumaczy kod, a nowy kod z 11.x pisany jest od razu po angielsku. Kolejność 12–18 bez zmian (12-CONTEXT §6.2).
+Uzasadnienie: 12 przed 13/14/15/16/17 (tłumaczenie komentarzy przed refaktorami — 12-CONTEXT §6.2); 15 przed 13-03 (screenshoty czekają na naprawiony light theme); 16/17 przed 14-05 (ARCHITECTURE.md pisany po ich zmianach) i przed promocją deep-dive'ów (16-07/17-06); 14-01/14-02 przed 18-03/18-04 (CI i ESLint konsumują typecheck + layering-rules); 13-03 i 18-05/18-06/18-07 zamykają milestone.
+
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Fundament 3D | 4/4 | Complete    | 2026-09-01 |
@@ -288,6 +302,15 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6, następnie **8
 | 9. Lokalny PoC Audio2Face | 0/5 | Not Started (czeka na środowisko) | - |
 | 10. A2F Cloud Run MVP | 0/4 | Not Started (po go/no-go z Fazy 9) | - |
 | 11. UI dual-persona | 6/7 | Executed — kod 7/7, automated PASS; UAT manualny pending (11-VERIFICATION §3) | - |
+| 11.1. Hardening & bugfix pack (INSERTED) | 5/5 | 11.1 automated gates passed. Manual UAT pending. Next: 11.2 wave 1. | - |
+| 11.2. Showcase wow pack (INSERTED) | 7/9 | PARTIAL — executed 01, 02, 04-08; 03 (Listen recording) and 09 (hero capture) blocked on owner | - |
+| 12. English language (i18n) | 7/7 | Executed; automated PASS; manual UAT pending (12-VERIFICATION §3) | - |
+| 13. README recruiter showcase | 3/4 | PARTIAL — 13-01/02 complete, 13-04 partial, 13-03 blocked (visual capture, owner); READ-02 stale count FAIL; manual UAT pending | - |
+| 14. Architecture guards | 6/6 | Executed; automated PASS; manual UAT pending (14-VERIFICATION §4) | - |
+| 15. Web UI refactor | 7/7 | Executed; automated PASS; manual UAT pending (15-VERIFICATION §2-5) | - |
+| 16. Animation mechanics refactor | 7/7 | PARTIAL — automated PASS; manual UAT and 5 behavior-change sign-offs DEFERRED-HUMAN | - |
+| 17. Lip-sync phonemes refactor | 6/6 | PARTIAL — 17-05 live UAT DEFERRED-HUMAN; T-8 a2f-parser gap unowned | - |
+| 18. CI/security/license/deploy | 5/7 | PARTIAL — 18-05 (demo) and 18-06 (hygiene) blocked (owner); 18-03 first CI run DEFERRED-HUMAN; 18-07 partial | - |
 
 ### Phase 11: UI dual-persona i modularny frontend — user/studio, scene presets, porównywarka algorytmów
 
@@ -331,6 +354,154 @@ Plans:
 **Wave 6** *(blocked on Wave 5 completion)*
 
 - [ ] 11-07: Scene presets + szlif + UAT (kod gotowy; ⏳ UAT manualny pending — 11-VERIFICATION.md §3) — `SCENE_PRESETS` (studio-dark/soft/cinema/light) z tweenem 280 ms, tło/gradient z dispose, reduced-motion, picker usera, winieta CSS; docs + 11-VERIFICATION.md (60 FPS backstop, RMS < 1%) + retro F9/F10 (UI-03 + weryfikacja UI-01..UI-05)
+
+### Phase 11.1: Hardening & bugfix pack (INSERTED) — v1.1
+
+**Goal**: The public repo's embed widget cannot be driven by foreign pages (no opener attack, no remote agent change, no production wildcard), the agent id has one source of truth, every audio chunk carries its real sample rate, replaced avatars free their GPU memory, and the A/B comparison animates both lanes and reports failures honestly.
+**Depends on**: 18-01 recommended first (secrets scan); no code dependency
+**Requirements**: HARD-01..07
+**Docs refs**: `11.1-CONTEXT.md` (threat model + locked decisions D-1..D-12); `refactoring.md` (Rewizja R2/R3/R9)
+**Success Criteria** (what must be TRUE):
+
+  1. Inbound postMessage accepted only from `window.parent` of a framed widget with an allowlisted/same origin; `document.referrer` unused; `avatar:set_agent` gone; `?allow_any_origin` dev-only
+  2. Agent id = URL `?agent_id=` > Settings > default; nothing writes `elevenlabs_agent_id`
+  3. `audio:chunk.sampleRate` equals the rate the PCM was generated at (demo 44100, live negotiated)
+  4. `clearAvatar` disposes geometry/materials/textures/skeletons (never envMap); `avatarInfo` set before `avatar:loaded`
+  5. A/B: LIVE lane in viseme mode, A2F lane in frames mode, mode restored; `run()` false on failure; empty turn → error toast
+
+**Plans**: 5 plans
+
+- [x] 11.1-01: Embed bridge hardening — framed-parent source check, no referrer, empty-origin reject, `set_agent` removed, dev-only wildcard, reply-to-origin, say cap (HARD-01..03) — wave 1
+- [x] 11.1-02: agentId single source — pure `resolveAgentId`, injected getter, store-only writes, container reorder (HARD-04) — wave 2
+- [x] 11.1-03: sampleRate threaded through `onAudioChunk` + first speech-backend tests (HARD-05) — wave 3
+- [x] 11.1-04: `disposeObject3D` + `clearAvatar` wiring + `avatarInfo` ordering (HARD-06) — wave 1
+- [x] 11.1-05: Compare lanes mode handling + honest results (HARD-07) — wave 1
+
+### Phase 11.2: Showcase wow pack (INSERTED) — v1.1
+
+**Goal**: A first-time viewer is impressed within 30 seconds without any setup: the real avatar loads with progress, can speak a recorded line with captions at the press of "Listen", looks better lit (working SSS, head-centred shadow, proper eyes/lashes/hair, softbox reflections), its lips close on P/B/M and stay in sync with the audible sound on any output device, and every failure is visible and recoverable.
+**Depends on**: Phase 11.1 (sampleRate path, agentId source); owner accepted the MetaPerson license responsibility (2026-11-19)
+**Requirements**: SHOW-01..10
+**Docs refs**: `11.2-CONTEXT.md`; `refactoring.md` (Rewizja 2: R9/R10)
+**Success Criteria** (what must be TRUE):
+
+  1. User mode has a "Listen" action that plays a recorded TTS clip with real alignment and captions, through the same lip-sync path as live speech
+  2. Mic denial, WSS failure, avatar load failure and missing WebGL each produce a visible, honest message; `?studio=1` does not persist
+  3. Before/after screenshots show SSS on the face, head-centred shadows, eye/lash/hair fixes and softbox catchlights at ≥ 60 FPS on the reference machine (adaptive pixel ratio below)
+  4. Lip clock uses audible time; P/B/M read as closed lips in Studio checks ("mama", "baby", "pop")
+  5. `public/models/avatar.glb` committed; cold clone renders the real avatar; hero clip recorded for README
+
+**Plans**: 9 plans
+
+- [x] 11.2-01: Real avatar committed (`!public/models/avatar.glb`) + load progress + honest load error (SHOW-09) — wave 1
+- [x] 11.2-02: Visible failure states — mic denied, WSS onError + max retries, loader on fallback failure, WebGL fallback copy, `?studio=1` session-only (SHOW-02) — wave 1
+- [ ] 11.2-03: "Listen" demo — recorded TTS clip + real alignment JSON (`scripts/make-demo-clip.mjs`), same lip-sync path, captions (SHOW-01) — wave 2
+  - Generator reviewed; original WAV and ElevenLabs alignment JSON pending at the blocking checkpoint.
+- [ ] 11.2-04: Skin SSS from key light (view-space uniforms) + head-centred key shadow (SHOW-03, SHOW-04) — wave 3
+- [ ] 11.2-07: Audible-time lip clock `src/audio/audible-clock.ts` + reduced `syncOffsetMs` (SHOW-05) — wave 3
+- [ ] 11.2-05: Eyes keep GLB maps, cornea override removed, lashes/hair alphaToCoverage (SHOW-07) — wave 4
+- [ ] 11.2-08: Bilabial closure via jaw≈0 + press + roll, low mouthClose (SHOW-06) — wave 4
+- [ ] 11.2-06: Softbox PMREM environment + adaptive pixel ratio (SHOW-08) — wave 5
+- [ ] 11.2-09: Hero capture for README (SHOW-10) — wave 6
+
+### Phase 12: English language (i18n) — v1.1
+
+**Goal**: The repository reads as English — docs, UI strings, comments, test titles, runtime messages, TODO — everything except README content (13) and repo plumbing (18), with functional Polish data (PL phoneme tokens, sentiment keywords, PL test phrase) explicitly protected by a gate.
+**Depends on**: Nothing (first v1.1 phase; recommended before 13–17)
+**Requirements**: I18N-01..08
+**Docs refs**: `.planning/phases/12-english-language/12-CONTEXT.md` (inventory with grep evidence; decisions D1–D6), `12-DRAFT-glossary.md` (normative EN↔PL)
+**Success Criteria** (what must be TRUE):
+
+  1. 8 canonical doc renames via `git mv` (history preserved, rename-only commit); 10/10 docs translated; link integrity green
+  2. All ~120 user-visible UI strings + ~40 dev strings English per the 12-05 map; `lang="en"`; functional PL data untouched (suite green proves it)
+  3. `tests/language.test.ts` gate (diacritics + links) enforced in `npm test`; English `.planning/README.md` with rename map; archives 01–11 stay Polish by policy
+
+**Plans**: 7 — 12-01 renames+gate · 12-02..04 docs waves + living-doc path repair · 12-05 UI strings · 12-06 comments · 12-07 tests + TODO + .planning index
+
+### Phase 13: README — recruiter showcase — v1.1
+
+**Goal**: An English README a reviewer can scan in 30 seconds and trust on every line — verified quickstart, honest status table, decision matrix, docs index on canonical names, with visual assets gated on 15 and badge/demo slots wired for 18.
+**Depends on**: Phase 12 (canonical doc names; gate scope); 13-03 gated on Phase 15
+**Requirements**: READ-01..06
+**Docs refs**: `13-CONTEXT.md` (truthfulness audit — the current README claims "documentation stage, no code"; reality: 78 modules/204 tests), `13-DRAFT-README.md` (full draft)
+**Success Criteria** (what must be TRUE):
+
+  1. README rewritten from the draft; every factual claim verified at writing (truthfulness checklist in SUMMARY); zero stale claims
+  2. Quickstart proven by a cold clone (13-02): install → dev → avatar renders (GLB in repo) with no setup; conversation = agent_id + mic; troubleshooting matches real error wording
+  3. Visual assets (after 15): hero ≤ 300 kB, barge-in GIF ≤ 3 MB, light-theme shot, social card 1200×630 — slots swapped, alt text present
+  4. Badge/demo/license slots documented with exact URLs for 18 to fill
+
+**Plans**: 4 — 13-01 rewrite · 13-02 cold-clone quickstart · 13-03 assets (gated on 15) · 13-04 docs truthfulness sweep + retro
+
+### Phase 14: Architecture — documentation, strictness, guards — v1.1
+
+**Goal**: The architecture becomes visible (ARCHITECTURE.md at root), strict (full-project typecheck, `noUncheckedIndexedAccess`, zero `any`), and guarded (layering gate, lifecycle regression test) — plus dead modules removed. Document-and-guard, not restructure (16/17 own the surgery).
+**Depends on**: Phase 12 recommended first (comment translation); 14-05 after 14-01..04; feeds 18-03/18-04
+**Requirements**: ARCH-01..08
+**Docs refs**: `14-CONTEXT.md` (measured import graph — zero module cycles; the app-contracts vs app-root split; 3 `any` casts; dead-code census), `14-DRAFT-ARCHITECTURE.md`
+**Success Criteria** (what must be TRUE):
+
+  1. `tests/layering.test.ts` enforces the measured layer stack as data (`layering-rules.ts` — single source, ESLint-ready for 18-04); baseline passes unchanged; negative self-test bites
+  2. `npm run typecheck` covers src+tests (tsconfig.test.json); zero `any`; container dispose leaves zero bus handlers (regression test)
+  3. `eleven-client-smoke.ts` + `model-cache.ts` deleted; legacy-bridge carries removal criteria; ARCHITECTURE.md published with event catalog, lifecycle table, 5 extension recipes — every claim file:line-verified
+
+**Plans**: 6 — 14-01 strictness · 14-02 layering gate · 14-03 lifecycle · 14-04 dead code · 14-05 ARCHITECTURE.md · 14-06 retro
+
+### Phase 15: Web UI refactor — v1.1
+
+**Goal**: Design-token system (dark + working light theme), states matrix for every interactive surface, a11y (aria-live, targets), microcopy via `copy.ts`, icons, CSS hygiene — the user layer looks designed, not engineered.
+**Depends on**: Phase 12 recommended first (UI strings EN before rewrite)
+**Requirements**: UIX-01..11
+**Docs refs**: `15-CONTEXT.md` (audit: 150 raw hex colors, 0 aria-live, broken light theme, ~120 PL strings), `15-DRAFT-ui-spec.md` (tokens, themes, states matrix)
+**Success Criteria** (what must be TRUE):
+
+  1. `style.css` driven by custom properties; light theme correct end-to-end; dead rules removed; ≥ 44 px targets; no text < 12 px
+  2. aria-live on captions/status/algo status; inline error banners with retry; routine changes stop toast-spamming
+  3. All user-visible strings flow through `src/app/copy.ts`; gates (ui-tokens + aria) enforce the contracts in `npm test`
+
+**Plans**: 7 — 15-01 tokens · 15-02..0x per 15-CONTEXT waves · 15-VERIFICATION (visual UAT po fazie = wejście dla 13-03)
+
+### Phase 16: Animation mechanics refactor — v1.1
+
+**Goal**: The animation runtime deserves its showpiece status: exhaustive race-proof state machine (23-cell matrix), single-writer restored (gaze via provider), documented timebase, all 28 magic-number groups → named config, allocation-free hot path, third-source extensibility seam, dead code removed.
+**Depends on**: Phase 12 recommended first; conscious sequencing with 14 (container.ts:285-287)
+**Requirements**: ANIM-01..10
+**Docs refs**: `16-CONTEXT.md` (transition matrix with coverage, G-1/G-2 gaze, census §6, allocations §7, dead code §9), `16-DRAFT-animation-runtime.md` → `docs/animation-runtime.md`
+**Success Criteria** (what must be TRUE):
+
+  1. All 23 state×event cells defined + tested incl. every race; interruption idempotent; dev tools can't cut a live turn
+  2. FaceController the only morph writer again (gaze provider seam, carriesEyes gating, dead rAF relax loop removed); emotion-mix 0.3 in both tracks (intentional frames-mode change, parity-tested)
+  3. Zero per-frame allocations in SPEAKING (both tracks) by construction; constants in one typed defaults module; `docs/3`/`docs/4` synced; runtime deep-dive promoted
+
+**Plans**: 7 — 16-01 state machine · 16-02 single writer + render order · 16-03 timebase · 16-04 config+dead code · 16-05 hot path · 16-06 extensibility · 16-07 docs sync + deep-dive
+
+### Phase 17: Lip-sync phonemes refactor — v1.1
+
+**Goal**: The phoneme pipeline gets honest and lean: build-time-pruned CMU lexicon (~10k words, ≥ 95% hit-rate gate) instead of the 961 kB-gzip full dictionary, rule-based PL G2P (digraphs, softness-i, final devoicing, nasals), table-doc reconciliation, and a repeatable quality harness with UAT protocol.
+**Depends on**: Phase 12 (functional PL data protection; file relocations update the 12-01 gate allowlist); table lane distinct from 16
+**Requirements**: LIP-01..07
+**Docs refs**: `17-CONTEXT.md` (A.1–A.12 with CMU measurements), `17-DRAFT-lipsync-deep-dive.md` → `docs/lipsync-deep-dive.md`
+**Success Criteria** (what must be TRUE):
+
+  1. G2P lexicon ships pruned (build-time script, hit-rate gate in tests); OOV rules cover word-internal silent letters; merge timing keeps phoneme spans inside word windows
+  2. PL phoneme path rule-based (no dictionary), degrading to the char path honestly; jaw-only fallback surfaces its state to the user, never fakes vowels
+  3. `phoneme-visemes.ts` is the documented source of truth (table-doc reconciliation); quality harness committed (fixture corpus + metrics + UAT protocol)
+
+**Plans**: 6 — 17-01 lexicon · 17-02 merge+tables · 17-03 quality harness (automated) · 17-04 PL G2P · 17-05 UAT protocol · 17-06 fallback honesty + docs sync
+
+### Phase 18: CI, security, license, deploy, hygiene — v1.1
+
+**Goal**: The repo is credible at a glance and safe by construction: full-history secrets scan (public repo — priority 1), CI + badge, project rights notice + third-party notices + CONTRIBUTING + SECURITY, ESLint/Prettier (consuming 14's rule data), GitHub Pages demo (no live conversation by default — quota protection), `npm run verify` umbrella, and the hygiene/metadata close-out.
+**Depends on**: 14-01 (typecheck) + 14-02 (layering-rules) for CI/ESLint; 13-01 slots; 13-03 social card
+**Requirements**: QUAL-01..08
+**Docs refs**: `18-CONTEXT.md` (license audit — package-lock: all permissive, zero copyleft; Pages feasibility + quota decision; hygiene inventory)
+**Success Criteria** (what must be TRUE):
+
+  1. Secrets: full git-history scan clean; SECURITY.md published; `.env` ignored; public-agent-id policy stated
+  2. CI green on main (`npm ci` → typecheck → test → build), ≤ ~3 min, badge live; lint/format adopted with two labeled commits, layering rule single-sourced from 14-02
+  3. All Rights Reserved LICENSE (owner-confirmed) + THIRD-PARTY-NOTICES + CONTRIBUTING; Pages demo live in demo mode (avatar + demo speech + synthetic A2F + bring-your-own agent_id); `npm run verify` reproducible from a cold clone; hygiene dispositions executed; milestone close-out prep delivered
+
+**Plans**: 7 — 18-01 secrets (FIRST) · 18-02 license+contributing · 18-03 CI · 18-04 lint/format · 18-05 Pages demo · 18-06 hygiene+metadata · 18-07 verify umbrella + milestone close prep
 
 ---
 *Roadmap konwencja: każda faza kończy się planem "Retrospekcja i korekta następnej fazy" — implementacja zawsze zmienia rzeczywistość; ten plan przenosi learnings do ROADMAP.md i docs/ zanim startuje kolejny epik.*

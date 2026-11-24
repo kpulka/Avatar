@@ -1,97 +1,216 @@
-import { FaceDriver, CharAlignment, PoseFrame, FramesClip, AnimationMode } from '../types/avatar';
+import {
+  FaceDriver,
+  CharAlignment,
+  PoseFrame,
+  FramesClip,
+  AnimationMode,
+  EyeLookWeights,
+  GazeProvider,
+  FaceTrackContext,
+  FaceTrackSource,
+} from '../types/avatar';
 import { AudioEngine } from '../audio/audio-engine';
-import { VisemeScheduler } from './viseme-scheduler';
-import { mapCharToShapes, charTokenFor } from './viseme-mappings';
+import { VisemeScheduler, isSpeechShape } from './viseme-scheduler';
+import { mapCharToShapes, charTokenFor, charPathSpan, CharContext, POLISH_CHAR_CONTEXT } from './viseme-mappings';
+import { LipSyncEngine, DEFAULT_LIP_SYNC_ENGINE } from './lipsync-engine';
+import { charsLookPolish } from './g2p/language';
 import { ensureG2pLoaded, isG2pReady, g2pAvailable } from './g2p/g2p-en';
 import { mergeCharAlignmentToPhonemes } from './g2p/phoneme-merge';
 import { mapPhonemeToShapes } from './g2p/phoneme-visemes';
-import {
-  loadVisemeOverrides,
-  defaultVisemeShapes,
-  VisemeOverrideMap,
-} from './viseme-overrides';
+import { loadVisemeOverrides, defaultVisemeShapes, VisemeOverrideMap } from './viseme-overrides';
 import { ProceduralBlink } from './procedural-blink';
 import { EmotionLayer, EmotionType } from '../realism/emotion-layer';
 import { CalibrationProfile } from './calibration';
+import { createAudibleClock } from '../audio/audible-clock';
+import { ANIM_DEFAULTS, clamp01 } from '../realism/anim-config';
+import { allocProbe } from '../realism/alloc-probe';
 
 export type FaceState = 'IDLE' | 'SPEAKING' | 'RELAXING';
 
-/** Cap twardy mouthClose dla toru frames — lustro CLOSE_SAFETY_CAP z VisemeScheduler
- *  (ochrona MetaPerson przed "wargą na nos"). */
-const FRAME_CLOSE_CAP = 0.85;
+const { relax, fallback, viseme, emotion, manual, common, gaze: gazeConfig } = ANIM_DEFAULTS;
 
-const clamp01 = (v: number): number => (v < 0 ? 0 : v > 1 ? 1 : v);
+/** The eyeLook* morphs owned by the gaze provider (fixed key order, no per-frame Object.entries). */
+const EYE_LOOK_SHAPES: ReadonlyArray<keyof EyeLookWeights> = [
+  'eyeLookInLeft',
+  'eyeLookOutLeft',
+  'eyeLookUpLeft',
+  'eyeLookDownLeft',
+  'eyeLookInRight',
+  'eyeLookOutRight',
+  'eyeLookUpRight',
+  'eyeLookDownRight',
+];
 
-/** Meta aktywnego clipu w trybie frames (08-CONTEXT v2). */
+/** Anatomical guard on manual overrides: mouthClose may not exceed jawOpen + margin. */
+const guardClose = (close: number, jaw: number): number => Math.min(close, jaw + manual.jawGuardMargin);
+
+/** Meta of the active clip in frames mode (08-CONTEXT v2). */
 interface FrameMeta {
   shapes: readonly string[];
+  /** Same shapes as a Set — O(1) ownership lookups per frame (built once per clip). */
+  shapeSet: ReadonlySet<string>;
   carriesEyes: boolean;
-  carriesEmotion: boolean;
+}
+
+export interface FaceControllerOptions {
+  /** Time (AudioContext seconds) currently audible; defaults to the latency-compensated audio clock. */
+  audibleClock?: () => number;
+  /** Wall clock in milliseconds for RELAXING / turn boundaries; defaults to performance.now. */
+  nowMs?: () => number;
+  /** Test/debug only: enables the allocation probe (see alloc-probe.ts). */
+  debugAllocations?: boolean;
 }
 
 /**
  * FaceController — state machine (IDLE -> SPEAKING -> RELAXING -> IDLE).
- * Jedyny moduł w całym systemie posiadający uprawnienia do pisania wag do FaceDriver (docs/4).
+ * The only module in the whole system allowed to write weights to FaceDriver (docs/4).
+ *
+ * TIMEBASE CONTRACT — one clock per concern, no arithmetic across clocks:
+ *   - AUDIO clock (`audibleClock`, AudioContext seconds compensated for output latency) owns
+ *     everything that must agree with what is heard: viseme scheduling, frames playback
+ *     (baseSec + timeSec), the end-of-turn test (`hasPendingAudio`). Blink uses the raw
+ *     `ctx.currentTime` on purpose (it is not lip-synced, only needs a monotonic time).
+ *   - WALL clock (`nowMs`, default performance.now) owns RELAXING and the turn-boundary
+ *     re-anchoring: the 150 ms ease-out is a UI-time ramp, not an audio event, so it must not
+ *     stall when the audio context is suspended. Injectable so tests drive it by hand.
+ *   - rAF timestamp / `dt` (seconds, capped at 0.1 s by the render loop) owns damping
+ *     (`1 - exp(-lambda * dt)`, FPS independent), emotion cross-fade and gaze/saccade scheduling.
+ *     The dt cap makes integrators run in deliberate slow motion under very long frames.
  */
 export class FaceController {
   private readonly driver: FaceDriver;
   private readonly engine: AudioEngine;
+  private readonly audibleClock: () => number;
+  private readonly nowMs: () => number;
   private readonly scheduler: VisemeScheduler;
   private readonly blinker: ProceduralBlink;
   private readonly emotionLayer: EmotionLayer;
 
   private state: FaceState = 'IDLE';
-  private epoch = 0;
   private relaxStartedAt = 0;
-  private relaxDurationMs = 150; // 150 ms płynny powrót do neutralu (docs/4)
 
-  // --- Tryb animacji (08-CONTEXT v2): 'viseme' (domyślny) | 'frames' (absolutne ramki A2F) ---
+  // --- Animation mode (08-CONTEXT v2): 'viseme' (default) | 'frames' (absolute A2F frames) ---
   private animationMode: AnimationMode = 'viseme';
-  /** Zmiana trybu odroczona do granicy tury (router per-tura — bez cięcia twarzy mid-turn). */
+  /** Mode change deferred to the turn boundary (per-turn router — no mid-turn face cuts). */
   private pendingMode: AnimationMode | null = null;
 
-  // Stan toru frames: bufor ramek + meta aktywnego clipu.
+  // Frames track state: frame buffer + meta of the active clip.
   private frameBuffer: PoseFrame[] = [];
   private frameBaseSec = 0;
   private framesMeta: FrameMeta | null = null;
 
-  // Bieżące wygładzone wagi kluczy mowy dla fazy relaksu
+  // Current smoothed speech-key weights for the relax phase
   private readonly currentWeights: Map<string, number> = new Map();
   private readonly manualOverrides: Map<string, number> = new Map();
 
-  // Funkcja mrugania powiekami
+  // Eyelid blinking function
   private blinkProvider: (() => { left: number; right: number }) | null = null;
+  // Procedural eye-look morph weights (data only — this class stays the single morph writer)
+  private gazeProvider: GazeProvider | null = null;
+  // Track source dispatch table (16-06): id -> adapter. Built-ins: 'viseme', 'frames'.
+  private readonly trackSources: Map<string, FaceTrackSource> = new Map();
+  private readonly trackContext: FaceTrackContext;
+  // Speech-owned shapes (jaw/mouth/tongue/cheek/nose) — the only shapes the viseme scheduler may drive
+  private readonly speechShapeList: string[];
 
-  // Funkcja mapowania znaków na kształty
-  private charMapper: (chars: string[], index: number) => Map<string, number> = mapCharToShapes;
+  // Character-to-shape mapping function
+  private charMapper: (chars: string[], index: number, context?: CharContext) => Map<string, number> = mapCharToShapes;
 
-  // Silnik lip-syncu: 'phoneme' = warstwa G2P (EN), 'char' = stara tabela znaków (PL/fallback)
-  private lipSyncEngine: 'phoneme' | 'char' = 'phoneme';
+  // Lip-sync engine: 'phoneme-en' / 'phoneme-pl' = G2P layer per language, 'char' = character table (fallback)
+  private lipSyncEngine: LipSyncEngine = DEFAULT_LIP_SYNC_ENGINE;
 
-  // Nadpisania ułożenia blendshape'ów PER WIZEM (Edytor Wizemów, localStorage) —
-  // mają pierwszeństwo przed domyślnymi tabelami mapowań.
+  // Per-VISEME blendshape pose overrides (Viseme Editor, localStorage) —
+  // they take precedence over the default mapping tables.
   private readonly visemeOverrides: Map<string, Map<string, number>> = new Map();
 
-  constructor(driver: FaceDriver, engine: AudioEngine) {
+  constructor(driver: FaceDriver, engine: AudioEngine, options: FaceControllerOptions = {}) {
     this.driver = driver;
     this.engine = engine;
+    // Mouth timing follows the time actually HEARD (output latency compensated), not the render position.
+    this.audibleClock = options.audibleClock ?? createAudibleClock(engine.ctx);
+    this.nowMs = options.nowMs ?? (() => performance.now());
+    if (options.debugAllocations) {
+      allocProbe.enabled = true;
+      allocProbe.reset();
+    }
     this.scheduler = new VisemeScheduler();
+    this.speechShapeList = driver.listAvailableShapes().filter(isSpeechShape);
+    this.trackContext = {
+      feedFrames: (clip, baseSec, epoch) => this.feedFrames(clip, baseSec, epoch),
+      feedAlignment: (alignment, startTimeSec, epoch) => this.onAudioChunk(alignment, startTimeSec, epoch),
+      interrupt: () => this.onInterruption(),
+    };
+    this.registerTrackSource('viseme', {
+      kind: 'viseme',
+      start: () => {},
+      feed: (payload, epoch) => {
+        const { alignment, startTimeSec } = payload as { alignment: CharAlignment; startTimeSec: number };
+        this.trackContext.feedAlignment(alignment, startTimeSec, epoch);
+      },
+      stop: () => this.trackContext.interrupt(),
+    });
+    this.registerTrackSource('frames', {
+      kind: 'frames',
+      start: () => {},
+      feed: (payload, epoch) => {
+        const { clip, baseSec } = payload as { clip: FramesClip; baseSec: number };
+        this.trackContext.feedFrames(clip, baseSec, epoch);
+      },
+      stop: () => this.trackContext.interrupt(),
+    });
     this.blinker = new ProceduralBlink();
     this.emotionLayer = new EmotionLayer();
     this.blinkProvider = () => this.blinker.update(this.engine.ctx.currentTime);
 
-    // Warstwa fonemowa EN (docs/3 v1.1): leniwy, dynamiczny ładunek leksykonu CMUdict.
-    // Przez pierwsze ~1-2 s sesji FaceController działa na ścieżce char, po załadowaniu
-    // przełącza się sam na fonemy (isG2pReady).
-    ensureG2pLoaded().catch((err) =>
-      console.warn('[FaceController] G2P niedostępny — pozostaję na ścieżce char:', err)
-    );
+    // EN phoneme layer (docs/3 v1.1): lazy, dynamic load of the CMUdict lexicon.
+    // For the first ~1-2 s of a session FaceController runs on the char path; once loaded
+    // it switches to phonemes on its own (isG2pReady).
+    ensureG2pLoaded().catch((err) => console.warn('[FaceController] G2P unavailable — staying on the char path:', err));
 
-    // Nadpisania wizemów z Edytora (jeśli zapisane w localStorage)
+    // Viseme overrides from the Editor (if saved in localStorage)
     this.applyVisemeOverridesRecord(loadVisemeOverrides());
   }
 
-  /** Zastępuje całą mapę nadpisań wizemów (wywoływane przy zapisie z Edytora). */
+  /**
+   * Registers a track source adapter under `id` (overwrites). The adapter only routes data into
+   * the existing tracks — the state machine, epoch guard and safety clamps stay in FaceController.
+   */
+  public registerTrackSource(id: string, source: FaceTrackSource): void {
+    this.trackSources.set(id, source);
+  }
+
+  /** Activates a registered source: switches to its track at a safe boundary, then calls start(). */
+  public startTrack(id: string): boolean {
+    const source = this.trackSources.get(id);
+    if (!source) {
+      console.warn(`[FaceController] Unknown track source '${id}'`);
+      return false;
+    }
+    this.setAnimationMode(source.kind, { deferToTurnEnd: this.state === 'SPEAKING' });
+    source.start(this.trackContext);
+    return true;
+  }
+
+  /** Dispatches a payload to a registered source (table lookup — no per-source branching here). */
+  public feedTrack(id: string, payload: unknown, epoch: number): boolean {
+    const source = this.trackSources.get(id);
+    if (!source) {
+      console.warn(`[FaceController] Unknown track source '${id}'`);
+      return false;
+    }
+    source.feed(payload, epoch);
+    return true;
+  }
+
+  /** Ends a source's turn (adapter decides; built-ins interrupt the face). */
+  public stopTrack(id: string): boolean {
+    const source = this.trackSources.get(id);
+    if (!source) return false;
+    source.stop(this.engine.getEpoch());
+    return true;
+  }
+
+  /** Replaces the whole viseme override map (called when saving from the Editor). */
   public applyVisemeOverridesRecord(record: VisemeOverrideMap): void {
     this.visemeOverrides.clear();
     for (const [key, shapes] of Object.entries(record)) {
@@ -99,18 +218,18 @@ export class FaceController {
     }
   }
 
-  /** Aktualny tryb animacji: 'viseme' (LIVE) | 'frames' (absolutne ramki A2F). */
+  /** Current animation mode: 'viseme' (LIVE) | 'frames' (absolute A2F frames). */
   public getAnimationMode(): AnimationMode {
     return this.animationMode;
   }
 
   /**
-   * Przełącza tryb animacji.
-   * - Bez `deferToTurnEnd`: natychmiast (dev-switch) — czyści scheduler/bufor ramek,
-   *   zeruje stan mowy i wraca do IDLE.
-   * - Z `deferToTurnEnd: true`: jeśli trwa mowa (SPEAKING), zmiana zapisywana jest do
-   *   `pendingMode` i aplikowana na granicy tury (koniec mowy lub przerwanie) — bez
-   *   cięcia twarzy w pół zdania (router per-tura).
+   * Switches the animation mode.
+   * - Without `deferToTurnEnd`: immediately (dev-switch) — clears the scheduler/frame buffer and
+   *   eases out through RELAXING from the current pose (never a hard snap to neutral).
+   * - With `deferToTurnEnd: true`: if speech is in progress (SPEAKING), the change is stored in
+   *   `pendingMode` and applied at the turn boundary (end of speech or interruption) — without
+   *   cutting the face mid-sentence (per-turn router).
    */
   public setAnimationMode(mode: AnimationMode, opts?: { deferToTurnEnd?: boolean }): void {
     if (mode === this.animationMode) {
@@ -121,105 +240,109 @@ export class FaceController {
       this.pendingMode = mode;
       return;
     }
-    this.applyModeImmediate(mode);
+    this.switchModeAtBoundary(mode);
   }
 
-  /** Natychmiastowa zmiana trybu: czyści cały stan mowy i twarz wraca do neutralu. */
-  private applyModeImmediate(mode: AnimationMode): void {
+  /**
+   * The single mode-switch semantics (immediate and deferred requests both land here):
+   * both tracks are dropped, and unless the face is already IDLE it eases out through RELAXING
+   * from `currentWeights` — a switch can therefore never pop the face to neutral.
+   */
+  private switchModeAtBoundary(mode: AnimationMode): void {
     this.animationMode = mode;
     this.pendingMode = null;
     this.scheduler.clear();
     this.frameBuffer = [];
     this.framesMeta = null;
-    this.clearManualOverrides();
-    this.state = 'IDLE';
-    console.log(`[FaceController] Tryb animacji → ${mode} (natychmiast, IDLE)`);
+    if (this.state === 'IDLE') {
+      // Nothing to preserve; only a leftover dev pose (previewViseme / sliders) needs wiping.
+      if (this.manualOverrides.size > 0) this.resetFaceToNeutral();
+      // eslint-disable-next-line no-console -- trace log, not a diagnostic: kept as console.log on purpose (warn/error are the diagnostic channels)
+      console.log(`[FaceController] Animation mode → ${mode} (IDLE)`);
+      return;
+    }
+    this.clearManualOverrideMap();
+    this.state = 'RELAXING';
+    this.relaxStartedAt = this.nowMs();
+    // eslint-disable-next-line no-console -- trace log, not a diagnostic: kept as console.log on purpose (warn/error are the diagnostic channels)
+    console.log(`[FaceController] Animation mode → ${mode} (turn boundary, RELAXING)`);
   }
 
   /**
-   * Aplikuje odroczoną zmianę trybu (pendingMode) na granicy tury: przełącza tryb
-   * i wchodzi w RELAXING (płynny powrót z bieżącej pozy, bez zerwania).
-   * Zwraca true, gdy tryb został faktycznie przełączony.
+   * Applies the deferred mode change (pendingMode) at the turn boundary.
+   * Returns true if the mode was actually switched.
    */
   private commitPendingMode(): boolean {
     if (this.pendingMode === null || this.pendingMode === this.animationMode) {
       this.pendingMode = null;
       return false;
     }
-    const target = this.pendingMode;
-    this.pendingMode = null;
-    this.animationMode = target;
-    this.scheduler.clear();
-    this.frameBuffer = [];
-    this.framesMeta = null;
-    this.manualOverrides.clear();
-    this.state = 'RELAXING';
-    this.relaxStartedAt = performance.now();
-    console.log(`[FaceController] Tryb animacji → ${target} (granica tury, RELAXING)`);
+    this.switchModeAtBoundary(this.pendingMode);
     return true;
   }
 
   /**
-   * Wstrzykuje absolutny strumień ramek (tryb frames, kontrakt v2).
-   * `clip.frames[].timeSec` jest WZGLĘDNY — baza (baseSec, z AudioEngine.playChunk)
-   * dodawana jest TU JEDNORAZOWO: czas ramki na osi audio = baseSec + timeSec.
+   * Injects an absolute frame stream (frames mode, contract v2).
+   * `clip.frames[].timeSec` is RELATIVE — the base (baseSec, from AudioEngine.playChunk)
+   * is added HERE exactly once: frame time on the audio axis = baseSec + timeSec.
    */
   public feedFrames(clip: FramesClip, baseSec: number, epoch: number): void {
     if (epoch !== this.engine.getEpoch()) {
-      console.warn('[FaceController] feedFrames ze starej epoki — ignoruję');
+      console.warn('[FaceController] feedFrames from a stale epoch — ignoring');
       return;
     }
-    this.epoch = epoch;
 
-    // Jedno źródło w danym momencie: kasujemy ewentualne wizemy z poprzedniego toru.
+    // One source at a time: drop any visemes left over from the previous track.
     this.scheduler.clear();
     if (this.state === 'RELAXING' || this.state === 'IDLE') {
       this.state = 'SPEAKING';
-      this.clearManualOverrides();
+      this.clearManualOverrideMap();
     }
 
     this.frameBaseSec = baseSec;
     this.frameBuffer = [...clip.frames].sort((a, b) => a.timeSec - b.timeSec);
+    const ownedShapes = clip.shapes ?? [];
     this.framesMeta = {
-      shapes: clip.shapes ?? [],
+      shapes: ownedShapes,
+      shapeSet: new Set(ownedShapes),
       carriesEyes: clip.carriesEyes === true,
-      carriesEmotion: clip.carriesEmotion === true,
     };
+    // eslint-disable-next-line no-console -- trace log, not a diagnostic: kept as console.log on purpose (warn/error are the diagnostic channels)
     console.log(
-      `[FaceController] feedFrames: ${this.frameBuffer.length} ramek, base=${baseSec.toFixed(3)}s, ` +
+      `[FaceController] feedFrames: ${this.frameBuffer.length} frames, base=${baseSec.toFixed(3)}s, ` +
         `shapes=${this.framesMeta.shapes.length}, eyes=${this.framesMeta.carriesEyes}`
     );
   }
 
-  /** Liczba oczekujących ramek (tor frames) lub elementów kolejki (tor wizemowy). */
+  /** Number of pending frames (frames track). */
   public getFrameQueueLength(): number {
     return this.frameBuffer.length;
   }
 
   /**
-   * Ustawia/nadpisuje ułożenie pojedynczego wizemu (mapa kształtów jest kopiowana). */
+   * Sets/overrides the pose of a single viseme (the shape map is copied). */
   public setVisemeOverride(key: string, shapes: Map<string, number>): void {
     const clean = new Map<string, number>();
     for (const [shape, value] of shapes.entries()) {
-      if (value > 0.001) clean.set(shape, Math.max(0, Math.min(1, value)));
+      if (value > common.snapEpsilon) clean.set(shape, clamp01(value));
     }
     if (clean.size === 0) this.visemeOverrides.delete(key);
     else this.visemeOverrides.set(key, clean);
   }
 
-  /** Usuwa nadpisanie wizemu (wraca domyślna tabela). */
+  /** Removes a viseme override (the default table applies again). */
   public clearVisemeOverride(key: string): void {
     this.visemeOverrides.delete(key);
   }
 
-  /** Czyści wszystkie nadpisania wizemów. */
+  /** Clears all viseme overrides. */
   public clearAllVisemeOverrides(): void {
     this.visemeOverrides.clear();
   }
 
   /**
-   * Efektywne kształty dla wizemu: nadpisanie (jeśli jest) albo domyślna tabela.
-   * Dla ścieżki znakowej 'C' bez kontekstu brany jest wariant twardy (podgląd).
+   * Effective shapes for a viseme: the override (if any) or the default table.
+   * For the character-path 'C' with no context the hard variant is used (preview).
    */
   public resolveVisemeShapes(key: string): Map<string, number> | null {
     const override = this.visemeOverrides.get(key);
@@ -228,12 +351,12 @@ export class FaceController {
   }
 
   /**
-   * Statyczny podgląd ułożenia ust dla dowolnego wizemu (Edytor Wizemów).
-   * Aplikuje pozy na modelu gdy agent nie mówi; mowa (onAudioChunk) czyści podgląd.
+   * Static mouth-pose preview for any viseme (Viseme Editor).
+   * Applies poses on the model while the agent is not speaking; speech (onAudioChunk) clears the preview.
    */
   public previewViseme(key: string | null): void {
     if (this.state === 'SPEAKING') return;
-    this.clearManualOverrides();
+    this.resetFaceToNeutral();
     if (!key) return;
     const shapes = this.resolveVisemeShapes(key);
     if (!shapes) return;
@@ -242,18 +365,38 @@ export class FaceController {
     }
   }
 
-  public setCharMapper(mapper: (chars: string[], index: number) => Map<string, number>): void {
+  public setCharMapper(mapper: (chars: string[], index: number, context?: CharContext) => Map<string, number>): void {
     this.charMapper = mapper;
   }
 
-  /** Wybiera silnik lip-syncu: 'phoneme' (G2P, EN) lub 'char' (tabela znaków). */
-  public setLipSyncEngine(engine: 'phoneme' | 'char'): void {
+  /** Selects the lip-sync engine: 'phoneme-en' / 'phoneme-pl' (G2P per language) or 'char' (character table). */
+  public setLipSyncEngine(engine: LipSyncEngine): void {
     this.lipSyncEngine = engine;
     this.scheduler.clear();
   }
 
   public setBlinkProvider(provider: () => { left: number; right: number }): void {
     this.blinkProvider = provider;
+  }
+
+  /**
+   * Registers the procedural gaze source (eyeLook* weights, data only — mirrors the blink
+   * provider). FaceController applies them itself, so it stays the only morph writer.
+   */
+  public setGazeProvider(provider: GazeProvider | null): void {
+    this.gazeProvider = provider;
+  }
+
+  /**
+   * True while procedural eye writers (blink, gaze morphs AND the eyeball bones driven by the
+   * scene) may act — false when the active frames clip carries its own eyes (A2F).
+   */
+  public areProceduralEyesActive(): boolean {
+    return this.eyeWritersAllowed();
+  }
+
+  private eyeWritersAllowed(): boolean {
+    return !(this.animationMode === 'frames' && this.framesMeta?.carriesEyes === true);
   }
 
   public setEmotion(type: EmotionType): void {
@@ -266,88 +409,94 @@ export class FaceController {
   }
 
   /**
-   * Wywoływane przy odebraniu chunka audio z alignmentem (docs/2, docs/4)
+   * Called when an audio chunk with alignment is received (docs/2, docs/4)
    */
   public onAudioChunk(alignment: CharAlignment, chunkStartTimeSec: number, epoch: number): void {
-    // Jeśli chunk pochodzi ze starej epoki (przed przerwaniem), ignoruj
+    // If the chunk comes from a stale epoch (before the interruption), ignore it
     if (epoch !== this.engine.getEpoch()) {
       return;
     }
 
-    this.epoch = epoch;
-
     if (this.state === 'RELAXING' || this.state === 'IDLE') {
       this.state = 'SPEAKING';
-      this.clearManualOverrides();
+      this.clearManualOverrideMap();
     }
 
-    // Fallback akustyczny (LIPS-07): alignment z energii RMS porusza WYŁĄCZNIE żuchwą
-    // (jawOpen ∝ energia, bez fałszywych samogłosek). Pętla per znak pominięta.
+    // Acoustic fallback (LIPS-07): the RMS-energy alignment drives ONLY the jaw
+    // (jawOpen ∝ energy, no false vowels). The per-character loop is skipped.
     if (alignment.source === 'energy-fallback' && alignment.energies) {
       const profile = this.scheduler.getCalibrationProfile();
       const syncOffsetSec = profile.syncOffsetMs / 1000;
       for (let i = 0; i < alignment.chars.length; i++) {
         const energy = alignment.energies[i] ?? 0;
-        if (energy <= 0.02) continue; // cisza → brak wizemy (naturalny zanik)
+        if (energy <= fallback.skipEnergyBelow) continue; // silence → no viseme (natural decay)
         const startMs = alignment.char_start_times_ms[i] ?? 0;
         const durationMs = alignment.char_durations_ms[i] ?? 70;
         this.scheduler.enqueue({
           epoch,
           char: '#energy',
-          shapes: new Map([['jawOpen', Math.min(0.5, energy * 2.0)]]),
+          shapes: new Map([['jawOpen', Math.min(fallback.jawCap, energy * fallback.jawScale)]]),
           startTimeSec: chunkStartTimeSec + startMs / 1000 + syncOffsetSec,
-          durationSec: Math.max(0.035, durationMs / 1000),
+          durationSec: Math.max(fallback.minDurationSec, durationMs / 1000),
         });
       }
       this.state = 'SPEAKING';
-      this.clearManualOverrides();
-      return; // NIE wykonuj pętli per znak dla fallbacku
+      this.clearManualOverrideMap();
+      return; // do NOT run the per-character loop for the fallback
     }
 
-    // Warstwa fonemowa EN (LIPS-05): alignment znaków -> fonemy ARPAbet (G2P) -> wizemy.
-    // Litery nieme nie generują ruchów; timing słów pochodzi z alignmentu ElevenLabs.
+    // Phoneme layer (LIPS-05, 17-04): character alignment -> phonemes (EN: CMUdict G2P, PL: rules) -> visemes.
+    // Silent letters produce no movement; word timings come from the ElevenLabs alignment. The Polish engine
+    // needs no lexicon, so it does not wait for the English dictionary.
+    const polishEngine = this.lipSyncEngine === 'phoneme-pl';
     if (
-      this.lipSyncEngine === 'phoneme' &&
-      g2pAvailable() &&
-      isG2pReady() &&
+      (this.lipSyncEngine === 'phoneme-en' || polishEngine) &&
+      (polishEngine || (g2pAvailable() && isG2pReady())) &&
       (alignment.source === undefined || alignment.source === 'elevenlabs')
     ) {
-      const spans = mergeCharAlignmentToPhonemes(alignment);
+      const spans = mergeCharAlignmentToPhonemes(alignment, { defaultLanguage: polishEngine ? 'pl' : 'en' });
       if (spans.length > 0) {
         const profile = this.scheduler.getCalibrationProfile();
         const syncOffsetSec = profile.syncOffsetMs / 1000;
         for (const span of spans) {
-          // Nadpisanie z Edytora Wizemów ma pierwszeństwo przed domyślną tabelą fonemów.
+          // An override from the Viseme Editor takes precedence over the default phoneme table.
           const override = this.visemeOverrides.get(span.phoneme);
           const shapes = override ? new Map(override) : mapPhonemeToShapes(span.phoneme);
-          if (!shapes || shapes.size === 0) continue; // brak ułożenia -> bez wizemy
+          if (!shapes || shapes.size === 0) continue; // no pose -> no viseme
           this.scheduler.enqueue({
             epoch,
             char: span.phoneme,
             shapes,
             startTimeSec: chunkStartTimeSec + span.startMs / 1000 + syncOffsetSec,
-            durationSec: Math.max(0.035, span.durationMs / 1000),
+            durationSec: Math.max(viseme.minDurationSec, span.durationMs / 1000),
           });
         }
-        return; // kolejka fonemowa zastępuje pętlę per znak
+        return; // the phoneme queue replaces the per-character loop
       }
-      // Brak spanów (np. sam tekst nieliterowy) -> przejście do pętli per znak
+      // No spans (e.g. non-letter text only) -> fall through to the per-character loop
     }
 
-    // Planowanie wizemów na osi czasu audio
-    for (let i = 0; i < alignment.chars.length; i++) {
-      const char = alignment.chars[i];
-      const startMs = alignment.char_start_times_ms[i] ?? 0;
-      const durationMs = alignment.char_durations_ms[i] ?? 50;
+    // Character path language context (17-04): the Polish engine, or a chunk with Polish evidence,
+    // switches the "ch" digraph to the Polish velar fricative. One scan per chunk, no allocation.
+    const charContext = this.lipSyncEngine === 'phoneme-pl' || charsLookPolish(alignment.chars) ? POLISH_CHAR_CONTEXT : undefined;
 
-      // Nadpisanie z Edytora Wizemów (ścieżka znakowa) ma pierwszeństwo przed tabelą znaków.
+    // Schedule visemes on the audio timeline
+    for (let i = 0; i < alignment.chars.length; i++) {
+      const char = alignment.chars[i] ?? ''; // i < alignment.chars.length
+      const startMs = alignment.char_start_times_ms[i] ?? 0;
+      // A consonant digraph (th, sh, ch ...) is ONE viseme: it spans both letters and the second
+      // letter is skipped, so it never fires a phantom pulse of its own.
+      const span = charPathSpan(alignment.chars, i);
+      const durationMs = (alignment.char_durations_ms[i] ?? 50) + (span === 2 ? (alignment.char_durations_ms[i + 1] ?? 0) : 0);
+
+      // An override from the Viseme Editor (character path) takes precedence over the character table.
       let shapes: Map<string, number>;
       const token = charTokenFor(alignment.chars, i);
       const tokenOverride = token ? this.visemeOverrides.get(token) : undefined;
       if (tokenOverride) {
         shapes = new Map(tokenOverride);
       } else {
-        shapes = this.charMapper(alignment.chars, i);
+        shapes = this.charMapper(alignment.chars, i, charContext);
       }
 
       const profile = this.scheduler.getCalibrationProfile();
@@ -358,8 +507,9 @@ export class FaceController {
         char,
         shapes,
         startTimeSec: chunkStartTimeSec + startMs / 1000 + syncOffsetSec,
-        durationSec: Math.max(0.035, durationMs / 1000),
+        durationSec: Math.max(viseme.minDurationSec, durationMs / 1000),
       });
+      i += span - 1; // skip the second letter of a digraph
     }
   }
 
@@ -372,127 +522,75 @@ export class FaceController {
   }
 
   /**
-   * Statyczny podgląd ułożenia ust dla wybranej głoski (do testów w kalibratorze)
+   * Static mouth-pose preview for the chosen phoneme (for tests in the calibrator)
    */
   public testPhoneme(phonemeKey: 'A' | 'E' | 'O' | 'U' | 'M' | 'SZ' | 'F' | 'neutral'): void {
-    this.clearManualOverrides();
+    // A calibrator button must never cut a live turn (same guard as previewViseme).
+    if (this.state === 'SPEAKING') return;
+    this.resetFaceToNeutral();
 
     if (phonemeKey === 'neutral') {
       this.state = 'RELAXING';
-      this.relaxStartedAt = performance.now();
+      this.relaxStartedAt = this.nowMs();
       return;
     }
 
-    const profile = this.scheduler.getCalibrationProfile();
-
-    switch (phonemeKey) {
-      case 'A':
-        this.setManualOverride('jawOpen', 0.55 * profile.jawScale);
-        this.setManualOverride('mouthLowerDownLeft', 0.15);
-        this.setManualOverride('mouthLowerDownRight', 0.15);
-        break;
-
-      case 'E':
-        this.setManualOverride('jawOpen', 0.16 * profile.jawScale);
-        this.setManualOverride('mouthSmileLeft', 0.35 * profile.smileScale);
-        this.setManualOverride('mouthSmileRight', 0.35 * profile.smileScale);
-        this.setManualOverride('mouthUpperUpLeft', 0.15);
-        this.setManualOverride('mouthUpperUpRight', 0.15);
-        this.setManualOverride('mouthLowerDownLeft', 0.15);
-        this.setManualOverride('mouthLowerDownRight', 0.15);
-        break;
-
-      case 'O':
-        this.setManualOverride('jawOpen', 0.28 * profile.jawScale);
-        this.setManualOverride('mouthFunnel', 0.45 * profile.funnelScale);
-        this.setManualOverride('mouthPucker', 0.40 * profile.puckerScale);
-        break;
-
-      case 'U':
-        this.setManualOverride('jawOpen', 0.16 * profile.jawScale);
-        this.setManualOverride('mouthPucker', 0.65 * profile.puckerScale);
-        this.setManualOverride('mouthFunnel', 0.20 * profile.funnelScale);
-        break;
-
-      case 'M':
-        // Domykanie warg (M / B / P): wargi stykają się w naturalnej linii, bez podciągania brody pod nos
-        this.setManualOverride('mouthClose', profile.closeScale);
-        this.setManualOverride('jawOpen', 0.04);
-        this.setManualOverride('mouthPressLeft', 0.12);
-        this.setManualOverride('mouthPressRight', 0.12);
-        break;
-
-      case 'SZ':
-        // Szumiące (SZ / CZ): wargi wysunięte do przodu w zaokrąglony tunel, zęby zbliżone i widoczne
-        this.setManualOverride('jawOpen', 0.12 * profile.jawScale);
-        this.setManualOverride('mouthFunnel', 0.65 * profile.funnelScale);
-        this.setManualOverride('mouthPucker', 0.25 * profile.puckerScale);
-        this.setManualOverride('mouthUpperUpLeft', 0.25 * profile.teethExposureScale);
-        this.setManualOverride('mouthUpperUpRight', 0.25 * profile.teethExposureScale);
-        this.setManualOverride('mouthLowerDownLeft', 0.22 * profile.teethExposureScale);
-        this.setManualOverride('mouthLowerDownRight', 0.22 * profile.teethExposureScale);
-        break;
-
-      case 'F':
-        // Wargowo-zębowa (F / V): górne siekacze oparte na podwiniętej dolnej wardze!
-        this.setManualOverride('jawOpen', 0.10 * profile.jawScale);
-        this.setManualOverride('mouthRollLower', 0.70 * profile.rollScale);
-        this.setManualOverride('mouthUpperUpLeft', 0.55 * profile.teethExposureScale);
-        this.setManualOverride('mouthUpperUpRight', 0.55 * profile.teethExposureScale);
-        this.setManualOverride('mouthShrugLower', 0.20);
-        break;
+    // The calibrator vocabulary (A/E/O/U/M/SZ/F) reads the SAME tables as live speech (single source
+    // of truth, 17-02): M and F come from the phoneme table, A/E/O/U/SZ from the character table.
+    // Table values are effective targets; the profile scale is applied exactly as the scheduler does it.
+    const shapes = defaultVisemeShapes(phonemeKey);
+    if (!shapes) return;
+    for (const [shape, value] of shapes.entries()) {
+      this.setManualOverride(shape, value * this.scheduler.scaleForShape(shape));
     }
   }
 
   /**
-   * Wywoływane natychmiast przy przerwaniu (barge-in z serwera lub UI)
+   * Called immediately on interruption (barge-in from the server or the UI)
    */
   public onInterruption(): void {
     this.scheduler.clear();
     this.frameBuffer = [];
-    // Odroczona zmiana trybu aplikuje się właśnie przy przerwaniu (granica tury).
+    // A deferred mode change is applied right at the interruption (turn boundary).
     if (this.commitPendingMode()) {
-      console.log('[FaceController] Przerwanie mimiki -> RELAXING (przełączono tryb)');
+      // eslint-disable-next-line no-console -- trace log, not a diagnostic: kept as console.log on purpose (warn/error are the diagnostic channels)
+      console.log('[FaceController] Facial interruption -> mode switched');
       return;
     }
+    // IDLE stays IDLE (nothing to relax from); RELAXING re-anchors its timer; SPEAKING relaxes.
+    if (this.state === 'IDLE') return;
     this.state = 'RELAXING';
-    this.relaxStartedAt = performance.now();
-    console.log('[FaceController] Przerwanie mimiki -> stan RELAXING');
+    this.relaxStartedAt = this.nowMs();
+    // eslint-disable-next-line no-console -- trace log, not a diagnostic: kept as console.log on purpose (warn/error are the diagnostic channels)
+    console.log('[FaceController] Facial interruption -> RELAXING state');
   }
 
   /**
-   * Tor frames — aplikacja absolutnych ramek (kontrakt v2) na osi ctx.currentTime.
-   * Zero-order hold: trzymamy ostatnią ramkę o baseSec+timeSec <= now; bez wygładzania,
-   * bez addycji. Safety: clamp 0..1 + cap mouthClose (FRAME_CLOSE_CAP). Zapisuje
-   * currentWeights, by RELAXING startował z ostatniej pozy. Emocje: gdy carriesEmotion —
-   * ramki niosą ekspresję (A2E), więc NIE domieszkujemy; w przeciwnym razie dokładamy
-   * tylko kształty NIENALEŻĄCE do clipu (np. brwi).
+   * Frames track — applies absolute frames (contract v2) on the audible audio-clock axis.
+   * Zero-order hold: keep the last frame with baseSec+timeSec <= now; no smoothing,
+   * no addition. Safety: clamp 0..1 + mouthClose cap (common.mouthCloseCap). Stores
+   * currentWeights so RELAXING starts from the last pose. Emotions: only the shapes NOT
+   * owned by the clip (e.g. brows) receive the base emotion, at emotion.mixFactorSpeaking —
+   * the same policy as the viseme track.
    */
-  private updateFrames(nowSec: number, emotionWeights: Map<string, number>): void {
+  private updateFrames(nowSec: number, emotionWeights: ReadonlyMap<string, number>): void {
     const meta = this.framesMeta;
     const base = this.frameBaseSec;
 
-    const endTurn = () => {
-      if (!this.engine.hasPendingAudio()) {
-        if (this.commitPendingMode()) return;
-        this.state = 'RELAXING';
-        this.relaxStartedAt = performance.now();
-      }
-    };
-
     if (!meta || this.frameBuffer.length === 0) {
-      endTurn();
+      this.endTurnIfDrained();
       return;
     }
 
     const buf = this.frameBuffer;
-    // Ostatnia ramka, której czas już nadszedł (binarnie).
+    // Last frame whose time has come (binary search).
     let lo = 0;
     let hi = buf.length - 1;
     let idx = -1;
     while (lo <= hi) {
       const mid = (lo + hi) >> 1;
-      if (base + buf[mid].timeSec <= nowSec) {
+      if (base + (buf[mid]?.timeSec ?? Infinity) <= nowSec) {
+        // mid in [lo, hi] within buf
         idx = mid;
         lo = mid + 1;
       } else {
@@ -500,108 +598,145 @@ export class FaceController {
       }
     }
     if (idx < 0) {
-      // Przed pierwszą ramką (start tury) — czekamy.
+      // Before the first frame (turn start) — wait.
       return;
     }
 
-    // Zużyte ramki (starsze od bieżącej) wyrzucamy, bieżącą trzymamy do następnej.
-    if (idx > 0) this.frameBuffer = buf.slice(idx);
-    const frame = this.frameBuffer[0];
+    // Drop consumed frames (older than the current one), keep the current one for the next tick.
+    // In place (copyWithin + length): no slice() copy per consumed frame.
+    if (idx > 0) {
+      buf.copyWithin(0, idx);
+      buf.length -= idx;
+    }
+    const frame = buf[0];
+    if (!frame) return; // idx >= 0 means at least one frame survives the drop above
 
-    // Aplikacja kształtów należących do clipu (owned = absolute, zero-bez-bezwzględne).
+    // Apply the shapes owned by the clip (owned = absolute, zero is meaningful).
     for (const shape of meta.shapes) {
       const raw = frame.weights[shape] ?? 0;
       let w = clamp01(raw);
-      if (shape === 'mouthClose') w = Math.min(w, FRAME_CLOSE_CAP);
-      if (w < 0.001) w = 0;
+      if (shape === 'mouthClose') w = Math.min(w, common.mouthCloseCap);
+      if (w < common.snapEpsilon) w = 0;
       this.currentWeights.set(shape, w);
       this.driver.applyWeight(shape, w);
     }
 
-    // Emocje spoza clipu — tylko gdy ramki NIE niosą własnej ekspresji.
-    if (!meta.carriesEmotion) {
-      for (const [shape, emWeight] of emotionWeights.entries()) {
-        if (shape.startsWith('eyeBlink')) continue;
-        if (meta.shapes.indexOf(shape) !== -1) continue; // kształt absolutny — bez domieszki
-        const w = clamp01(emWeight);
-        this.currentWeights.set(shape, w);
-        this.driver.applyWeight(shape, w);
-      }
+    // Emotions outside the clip: same mix as the viseme track (one policy for both).
+    for (const [shape, emWeight] of emotionWeights.entries()) {
+      if (shape.startsWith('eyeBlink')) continue;
+      if (meta.shapeSet.has(shape)) continue; // absolute shape — no blending
+      const w = clamp01(emWeight * emotion.mixFactorSpeaking);
+      this.currentWeights.set(shape, w);
+      this.driver.applyWeight(shape, w);
     }
 
-    // Koniec tury: audio dobiegło końca -> ramki zużyte -> RELAXING z ostatniej pozy.
-    endTurn();
+    // End of turn: audio has finished -> frames consumed -> RELAXING from the last pose.
+    this.endTurnIfDrained();
+  }
+
+  /** Frames track end-of-turn: once the audio has drained, commit a pending mode or relax. */
+  private endTurnIfDrained(): void {
+    if (this.engine.hasPendingAudio()) return;
+    if (this.commitPendingMode()) return;
+    this.state = 'RELAXING';
+    this.relaxStartedAt = this.nowMs();
   }
 
   /**
-   * Główna pętla aktualizacji mimiki wywoływana z pętli animacji renderera Three.js (dt w sekundach)
+   * Main facial update loop, called from the Three.js renderer animation loop (dt in seconds).
+   *
+   * Write order per frame (the layer-composition contract, later writers win):
+   *   1. blink            eyeBlink*      (skipped when the frames clip carries its own eyes)
+   *   2. gaze morphs      eyeLook*       (via the gaze provider; same carriesEyes gate as blink)
+   *   3. scheduler        jaw/mouth/tongue/cheek/nose ONLY (speech subset — never eye/brow regions)
+   *   4. emotion mix      emotion.mixFactorSpeaking on speech shapes + the non-speech emotion shapes
+   *      (or, in frames mode: clip-absolute shapes first, then the same emotion mix on the rest)
+   *   5. manual overrides HUD sliders / previews, only while not SPEAKING
+   * Clocks: speech/frames use the audible audio clock, RELAXING the wall clock (see 16-03).
    */
   public render(dt: number): void {
-    const nowSec = this.engine.ctx.currentTime;
+    const nowSec = this.audibleClock();
 
-    // 1. Proceduralne mruganie powiekami — pomijane, gdy aktywny clip niesie własne oczy
-    //    (tryb frames + carriesEyes, kontrakt v2). W pozostałych stanach mruganie działa.
-    const framesCarryEyes = this.animationMode === 'frames' && this.framesMeta?.carriesEyes === true;
-    if (this.blinkProvider && !framesCarryEyes) {
+    // 1. Procedural eyelid blinking — skipped when the active clip carries its own eyes
+    //    (frames mode + carriesEyes, contract v2). In all other states blinking runs.
+    const eyesAllowed = this.eyeWritersAllowed();
+    if (this.blinkProvider && eyesAllowed) {
       const blink = this.blinkProvider();
       this.driver.applyWeight('eyeBlinkLeft', blink.left);
       this.driver.applyWeight('eyeBlinkRight', blink.right);
     }
 
-    // 2. Aktualizacja wag warstwy emocjonalnej (REAL-03)
+    // 2. Procedural gaze morphs (single-writer seam): applied here, never by the scene directly.
+    const gazeActive = this.gazeProvider !== null && eyesAllowed;
+    if (gazeActive) {
+      const gaze = this.gazeProvider!();
+      if (gaze) {
+        for (let i = 0; i < EYE_LOOK_SHAPES.length; i++) {
+          const shape = EYE_LOOK_SHAPES[i];
+          if (!shape) continue; // i < EYE_LOOK_SHAPES.length
+          this.driver.applyWeight(shape, gaze[shape] * gazeConfig.morphWeight);
+        }
+      }
+    }
+
+    // Update the emotion-layer weights (REAL-03)
     const emotionWeights = this.emotionLayer.update(dt);
 
-    // 3. Maszyna stanów aparatu mowy
+    // 3. Speech apparatus state machine
     switch (this.state) {
       case 'SPEAKING': {
-        // Tor frames (08-CONTEXT v2): absolutne ramki aplikowane wprost, bez schedulera.
+        // Frames track (08-CONTEXT v2): absolute frames applied directly, without the scheduler.
         if (this.animationMode === 'frames') {
           this.updateFrames(nowSec, emotionWeights);
           break;
         }
 
-        const speechShapes = this.driver.listAvailableShapes();
-        const updatedWeights = this.scheduler.update(nowSec, dt, this.engine.getEpoch(), speechShapes);
+        // The scheduler only sees the speech subset, so its foundation rule (no contribution ->
+        // decay to 0) can never zero eye/brow regions owned by gaze or emotion.
+        const updatedWeights = this.scheduler.update(nowSec, dt, this.engine.getEpoch(), this.speechShapeList);
 
         const activeMouthClose = updatedWeights.get('mouthClose') ?? 0;
 
         for (const [shape, weight] of updatedWeights.entries()) {
-          // Nakładamy emocję (np. uśmiech), chyba że wargi muszą się szczelnie zamknąć (mouthClose)
-          let finalWeight = weight;
+          // Overlay the emotion (e.g. a smile) unless the lips must seal tightly (mouthClose)
+          let finalWeight: number;
           const emWeight = emotionWeights.get(shape) ?? 0;
 
-          if (shape.startsWith('mouthSmile') && activeMouthClose > 0.25) {
-            // Tłumimy uśmiech przy spółgłoskach wargowych M/B/P
+          if (shape.startsWith('mouthSmile') && activeMouthClose > emotion.smileSuppressClose) {
+            // Suppress the smile on bilabial consonants M/B/P
             finalWeight = weight;
           } else {
-            // Subtelny wpływ emocji podczas mowy (30% wagi emocji), by mimika była zbalansowana
-            finalWeight = Math.min(1.0, weight + emWeight * 0.3);
+            // Subtle emotion influence during speech to keep the expression balanced
+            finalWeight = Math.min(1.0, weight + emWeight * emotion.mixFactorSpeaking);
           }
 
           this.currentWeights.set(shape, finalWeight);
           this.driver.applyWeight(shape, finalWeight);
         }
 
-        // Nakładamy emocje niebędące w wizemach mowy (np. brwi)
+        // Emotion shapes outside the speech subset (brows, eyeWide, ...): the scheduler does not
+        // own them, so they get the same emotion mix as speech shapes. eyeLook* belongs to gaze.
         for (const [shape, emWeight] of emotionWeights.entries()) {
-          if (!updatedWeights.has(shape) && !shape.startsWith('eyeBlink')) {
-            this.driver.applyWeight(shape, emWeight);
-          }
+          if (isSpeechShape(shape) || shape.startsWith('eyeBlink')) continue;
+          if (gazeActive && shape.startsWith('eyeLook')) continue;
+          const w = clamp01(emWeight * emotion.mixFactorSpeaking);
+          this.currentWeights.set(shape, w);
+          this.driver.applyWeight(shape, w);
         }
 
-        // Jeśli kolejka wizemów się skończyła i audio przestało grać -> przejście do relaksacji
+        // If the viseme queue has run out and the audio stopped playing -> transition to relaxation
         if (this.scheduler.getQueueLength() === 0 && !this.engine.hasPendingAudio()) {
           if (this.commitPendingMode()) break;
           this.state = 'RELAXING';
-          this.relaxStartedAt = performance.now();
+          this.relaxStartedAt = this.nowMs();
         }
         break;
       }
 
       case 'RELAXING': {
-        const elapsedMs = performance.now() - this.relaxStartedAt;
-        const progress = Math.min(1, elapsedMs / this.relaxDurationMs);
-        // Cosine ease powrotu do neutralu
+        const elapsedMs = this.nowMs() - this.relaxStartedAt;
+        const progress = Math.min(1, elapsedMs / relax.durationMs);
+        // Cosine ease of the return to neutral
         const relaxFactor = 1 - Math.sin((progress * Math.PI) / 2);
 
         let maxWeight = 0;
@@ -609,11 +744,15 @@ export class FaceController {
 
         for (const shape of availableShapes) {
           if (shape.startsWith('eyeBlink')) continue;
+          if (gazeActive && shape.startsWith('eyeLook')) continue; // gaze owns these this frame
 
           const current = this.currentWeights.get(shape) ?? 0;
           const emTarget = emotionWeights.get(shape) ?? 0;
-          // Płynny powrót z pozycji mowy w kierunku emocji bazowej
+          // Smooth return from the speech pose towards the base emotion
           const next = emTarget + (current - emTarget) * relaxFactor;
+
+          // Zero-to-zero: nothing visible to write (saves driver writes x sub-meshes per frame).
+          if (current < common.snapEpsilon && Math.abs(current - next) < common.snapEpsilon) continue;
 
           this.currentWeights.set(shape, next);
           this.driver.applyWeight(shape, next);
@@ -621,11 +760,11 @@ export class FaceController {
           if (next > maxWeight) maxWeight = next;
         }
 
-        if (progress >= 1 || maxWeight < 0.005) {
+        if (progress >= 1 || maxWeight < relax.finishEpsilon) {
           this.state = 'IDLE';
           this.scheduler.resetAll();
-          // Sprzątanie toru frames po zakończonej relaksacji — meta/oczy nie mogą
-          // wyłączać mrugania w IDLE ani trzymać zużytego bufora.
+          // Clean up the frames track after relaxation finishes — meta/eyes must not
+          // disable blinking in IDLE or hold on to a consumed buffer.
           this.frameBuffer = [];
           this.framesMeta = null;
         }
@@ -634,7 +773,7 @@ export class FaceController {
 
       case 'IDLE':
       default:
-        // W stanie IDLE aplikujemy subtelną bazową ekspresję emocjonalną (brwi, delikatny uśmiech)
+        // In IDLE we apply a subtle base emotional expression (brows, a gentle smile)
         for (const [shape, emWeight] of emotionWeights.entries()) {
           if (!shape.startsWith('eyeBlink')) {
             this.driver.applyWeight(shape, emWeight);
@@ -643,17 +782,12 @@ export class FaceController {
         break;
     }
 
-    // 4. Aplikacja manualnych nadpisań z suwaków testowych w HUD (aktywna tylko gdy agent nie mówi)
+    // 4. Apply manual overrides from the HUD test sliders (active only while the agent is not speaking)
     if (this.state !== 'SPEAKING') {
       const currentJaw = this.manualOverrides.get('jawOpen') ?? this.currentWeights.get('jawOpen') ?? 0;
       for (const [shape, val] of this.manualOverrides.entries()) {
-        let safeVal = val;
-        // Anatomiczne zabezpieczenie przed wjechaniem dolnej wargi na nos:
-        if (shape === 'mouthClose') {
-          const maxLimit = currentJaw + 0.20;
-          safeVal = Math.min(val, maxLimit);
-        }
-        this.driver.applyWeight(shape, safeVal);
+        // Anatomical safeguard against the lower lip riding up onto the nose:
+        this.driver.applyWeight(shape, shape === 'mouthClose' ? guardClose(val, currentJaw) : val);
       }
     }
   }
@@ -667,23 +801,30 @@ export class FaceController {
       let safeVal = value;
       if (shape === 'mouthClose') {
         const currentJaw = this.manualOverrides.get('jawOpen') ?? this.currentWeights.get('jawOpen') ?? 0;
-        const maxLimit = currentJaw + 0.20;
-        safeVal = Math.min(value, maxLimit);
+        safeVal = guardClose(value, currentJaw);
       }
       this.driver.applyWeight(shape, safeVal);
 
-      // Gdy użytkownik rusza suwakiem jawOpen, natychmiast adaptuj limit dla aktywnego mouthClose
+      // When the user moves the jawOpen slider, immediately adapt the limit for the active mouthClose
       if (shape === 'jawOpen') {
         const existingClose = this.manualOverrides.get('mouthClose');
         if (existingClose !== undefined) {
-          const closeLimit = value + 0.20;
-          this.driver.applyWeight('mouthClose', Math.min(existingClose, closeLimit));
+          this.driver.applyWeight('mouthClose', guardClose(existingClose, value));
         }
       }
     }
   }
 
-  public clearManualOverrides(): void {
+  /** Forgets the manual (HUD/preview) overrides without touching the driver. */
+  public clearManualOverrideMap(): void {
+    this.manualOverrides.clear();
+  }
+
+  /**
+   * Dev reset: forgets manual overrides AND zero-writes every non-blink shape.
+   * Never call this from a speech path — it pops the face for a frame; use clearManualOverrideMap().
+   */
+  public resetFaceToNeutral(): void {
     for (const shape of this.driver.listAvailableShapes()) {
       if (!shape.startsWith('eyeBlink')) {
         this.driver.applyWeight(shape, 0);
@@ -696,11 +837,8 @@ export class FaceController {
     return this.state;
   }
 
-  public getEpoch(): number {
-    return this.epoch;
-  }
-
-  public getQueueLength(): number {
+  /** Pending visemes in the scheduler (viseme track). */
+  public getVisemeQueueLength(): number {
     return this.scheduler.getQueueLength();
   }
 
@@ -712,7 +850,7 @@ export class FaceController {
     return this.emotionLayer;
   }
 
-  /** Eksport bieżących nadpisań wizemów (dla Edytora / zapisu). */
+  /** Exports the current viseme overrides (for the Editor / saving). */
   public getVisemeOverridesRecord(): VisemeOverrideMap {
     const record: VisemeOverrideMap = {};
     for (const [key, shapes] of this.visemeOverrides.entries()) {

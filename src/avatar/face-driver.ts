@@ -3,16 +3,16 @@ import { FaceDriver } from '../types/avatar';
 import { normalizeShapeName } from './shape-normalizer';
 
 /**
- * Sterownik mimiki ARKit dla Three.js.
- * Odpowiada za bezpośrednią synchronizację wag do wszystkich sub-meshy mowy
- * (np. skóra, zęby, język, wnętrze ust).
+ * ARKit facial expression driver for Three.js.
+ * Responsible for direct weight synchronization to all speech sub-meshes
+ * (e.g. skin, teeth, tongue, mouth interior).
  */
 export class ArKitBlendshapeDriver implements FaceDriver {
   private readonly speechMeshes: THREE.Mesh[];
   private readonly masterMorphDict: Record<string, number>;
   private readonly availableShapes: string[];
 
-  // Mapa szybkiego wyszukiwania: normalizedShapeName -> Array<{ meshIndex, morphIndex }>
+  // Fast lookup map: normalizedShapeName -> Array<{ meshIndex, morphIndex }>
   private readonly shapeTargetMap: Map<string, Array<{ mesh: THREE.Mesh; morphIndex: number }>>;
 
   constructor(speechMeshes: THREE.Mesh[], masterMorphDict: Record<string, number>) {
@@ -56,7 +56,9 @@ export class ArKitBlendshapeDriver implements FaceDriver {
     const clampedWeight = Math.max(0, Math.min(1, weight));
 
     for (let i = 0; i < targets.length; i++) {
-      const { mesh, morphIndex } = targets[i];
+      const target = targets[i];
+      if (!target) continue; // i < targets.length
+      const { mesh, morphIndex } = target;
       if (mesh.morphTargetInfluences) {
         mesh.morphTargetInfluences[morphIndex] = clampedWeight;
       }
@@ -65,50 +67,6 @@ export class ArKitBlendshapeDriver implements FaceDriver {
 
   public listAvailableShapes(): string[] {
     return this.availableShapes;
-  }
-
-  public relaxToNeutral(durationMs = 150): void {
-    if (durationMs <= 0) {
-      // Natychmiastowe wyzerowanie
-      for (const mesh of this.speechMeshes) {
-        if (mesh.morphTargetInfluences) {
-          mesh.morphTargetInfluences.fill(0);
-        }
-      }
-      return;
-    }
-
-    // Płynne wygaszenie do 0 (pętla klatek lub interpolacja)
-    const startTime = performance.now();
-    const initialWeights: Map<THREE.Mesh, Float32Array> = new Map();
-
-    for (const mesh of this.speechMeshes) {
-      if (mesh.morphTargetInfluences) {
-        initialWeights.set(mesh, new Float32Array(mesh.morphTargetInfluences));
-      }
-    }
-
-    const step = () => {
-      const elapsed = performance.now() - startTime;
-      const progress = Math.min(1, elapsed / durationMs);
-      // Cosine ease out
-      const factor = 1 - Math.sin((progress * Math.PI) / 2);
-
-      for (const mesh of this.speechMeshes) {
-        const startValues = initialWeights.get(mesh);
-        if (startValues && mesh.morphTargetInfluences) {
-          for (let i = 0; i < mesh.morphTargetInfluences.length; i++) {
-            mesh.morphTargetInfluences[i] = startValues[i] * factor;
-          }
-        }
-      }
-
-      if (progress < 1) {
-        requestAnimationFrame(step);
-      }
-    };
-
-    requestAnimationFrame(step);
   }
 
   public getSpeechMeshes(): THREE.Mesh[] {

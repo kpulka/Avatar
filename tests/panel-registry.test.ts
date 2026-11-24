@@ -1,9 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import {
-  PanelContext,
-  PanelDefinition,
-  PanelRegistry,
-} from '../src/ui/studio/panel-registry';
+import { PanelContext, PanelDefinition, PanelHandle, PanelRegistry } from '../src/ui/studio/panel-registry';
 
 function fakeContext(container: unknown): PanelContext {
   const noopHandle = () => ({ show: vi.fn(), hide: vi.fn(), destroy: vi.fn() });
@@ -12,19 +8,15 @@ function fakeContext(container: unknown): PanelContext {
     events: { on: () => () => undefined, emit: vi.fn() } as unknown as PanelContext['events'],
     services: {} as PanelContext['services'],
     ui: {
-      toast: noopHandle() as unknown as PanelContext['ui']['toast'],
+      toast: noopHandle(),
       loader: noopHandle() as unknown as PanelContext['ui']['loader'],
-      modal: { open: vi.fn(), close: vi.fn(), isOpen: vi.fn(), destroy: vi.fn() } as unknown as PanelContext['ui']['modal'],
+      modal: { open: vi.fn(), close: vi.fn(), isOpen: vi.fn(), destroy: vi.fn() },
     },
     container: container as HTMLElement,
   };
 }
 
-function makeDefinition(
-  id: string,
-  visibleIn: 'user' | 'studio',
-  mountImpl: (ctx: PanelContext) => PanelHandle
-): PanelDefinition {
+function makeDefinition(id: string, visibleIn: 'user' | 'studio', mountImpl: (ctx: PanelContext) => PanelHandle): PanelDefinition {
   return {
     id,
     title: `Panel ${id}`,
@@ -35,7 +27,7 @@ function makeDefinition(
 }
 
 describe('PanelRegistry', () => {
-  it('list(mode) zwraca wyłącznie panele danej warstwy', () => {
+  it('list(mode) returns only the panels of the given layer', () => {
     const registry = new PanelRegistry();
     registry.register(makeDefinition('a', 'user', () => ({ destroy: vi.fn() })));
     registry.register(makeDefinition('b', 'studio', () => ({ destroy: vi.fn() })));
@@ -45,14 +37,11 @@ describe('PanelRegistry', () => {
     expect(registry.list('studio').map((panel) => panel.id)).toEqual(['b', 'c']);
   });
 
-  it('mount jest idempotentny — poprzedni handle dostaje destroy()', () => {
+  it('mount is idempotent — the previous handle gets destroy()', () => {
     const registry = new PanelRegistry();
     const firstDestroy = vi.fn();
     const secondDestroy = vi.fn();
-    const mount = vi
-      .fn()
-      .mockReturnValueOnce({ destroy: firstDestroy })
-      .mockReturnValueOnce({ destroy: secondDestroy });
+    const mount = vi.fn().mockReturnValueOnce({ destroy: firstDestroy }).mockReturnValueOnce({ destroy: secondDestroy });
     registry.register(makeDefinition('a', 'studio', mount));
 
     const ctx = fakeContext({});
@@ -65,7 +54,7 @@ describe('PanelRegistry', () => {
     expect(registry.isMounted('a')).toBe(true);
   });
 
-  it('błąd montowania trafia do error boundary z akcją ponowienia', () => {
+  it('a mount error reaches the error boundary with a retry action', () => {
     const renderError = vi.fn();
     let attempt = 0;
     const registryWithError = new PanelRegistry({ renderError });
@@ -92,7 +81,7 @@ describe('PanelRegistry', () => {
     expect(registryWithError.isMounted('broken')).toBe(true);
   });
 
-  it('destroyAll niszczy wszystkie zamontowane panele', () => {
+  it('destroyAll destroys all mounted panels', () => {
     const registry = new PanelRegistry();
     const destroyA = vi.fn();
     const destroyB = vi.fn();
@@ -110,7 +99,7 @@ describe('PanelRegistry', () => {
     expect(registry.isMounted('b')).toBe(false);
   });
 
-  it('nieznany panel jest bezpiecznie pomijany', () => {
+  it('an unknown panel is safely skipped', () => {
     const registry = new PanelRegistry();
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
     expect(registry.mount('nope', fakeContext({}))).toBeNull();

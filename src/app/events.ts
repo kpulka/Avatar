@@ -1,10 +1,10 @@
 /**
- * Typowany event bus aplikacji (Faza 11, Pattern 2).
+ * Typed application event bus (Phase 11, Pattern 2).
  *
- * Zasady:
- * - `on` zwraca `Unsub` (idempotentny) — komponenty MUSZĄ odpinać w `destroy()`,
- * - `emit` iteruje po kopii zbioru — odpinanie w trakcie emisji nie gubi subskrybentów,
- * - błąd jednego handlera nie przerywa emisji.
+ * Rules:
+ * - `on` returns an `Unsub` (idempotent) — components MUST unsubscribe in `destroy()`,
+ * - `emit` iterates over a copy of the set — unsubscribing during emission does not lose subscribers,
+ * - an error in one handler does not interrupt the emission.
  */
 export type Unsub = () => void;
 
@@ -19,17 +19,17 @@ export class TypedEventBus<Events extends Record<string, unknown>> {
       set = new Set();
       this.handlers.set(type, set);
     }
-    set.add(handler as EventHandler<never>);
+    set.add(handler);
     let active = true;
     return () => {
       if (!active) return;
       active = false;
-      set?.delete(handler as EventHandler<never>);
+      set?.delete(handler);
     };
   }
 
   public off<K extends keyof Events>(type: K, handler: EventHandler<Events[K]>): void {
-    this.handlers.get(type)?.delete(handler as EventHandler<never>);
+    this.handlers.get(type)?.delete(handler);
   }
 
   public emit<K extends keyof Events>(type: K, payload: Events[K]): void {
@@ -39,7 +39,7 @@ export class TypedEventBus<Events extends Record<string, unknown>> {
       try {
         (handler as EventHandler<Events[K]>)(payload);
       } catch (error) {
-        console.warn(`[EventBus] Błąd handlera dla '${String(type)}':`, error);
+        console.warn(`[EventBus] Handler error for '${String(type)}':`, error);
       }
     }
   }
@@ -47,9 +47,20 @@ export class TypedEventBus<Events extends Record<string, unknown>> {
   public clear(): void {
     this.handlers.clear();
   }
+
+  /**
+   * Total number of live handlers across all events. TEST / DEBUG ONLY (lifecycle regression in
+   * tests/container.test.ts: after `dispose()` the bus must hold zero handlers). Feature logic must
+   * never branch on it.
+   */
+  public handlerCount(): number {
+    let count = 0;
+    for (const set of this.handlers.values()) count += set.size;
+    return count;
+  }
 }
 
-/** Zbieracz subskrypcji — jedno miejsce na `dispose()`. */
+/** Subscription collector — a single place for `dispose()`. */
 export function disposables(): { add(unsub: Unsub): void; dispose(): void; size(): number } {
   const collected: Unsub[] = [];
   return {

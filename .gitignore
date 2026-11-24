@@ -8,29 +8,31 @@ a2f/.venv/
 **/__pycache__/
 *.pyc
 
-# Audio2Face-3D SDK (2 GB, binarki) — trzymane lokalnie, NIE commitujemy
-# (klon: git clone https://github.com/NVIDIA/Audio2Face-3D-SDK a2f/sdk; patrz a2f/README.md)
+# Audio2Face-3D SDK (2 GB, binaries): kept locally, never committed
+# (clone: git clone https://github.com/NVIDIA/Audio2Face-3D-SDK a2f/sdk; see a2f/README.md)
 a2f/sdk/
-# rig/ = pochodna ekstrakcja z public/models/avatar.glb (regenerowalna: tools/extract_rig.py)
+# rig/ = derived extraction from public/models/avatar.glb (regenerate with tools/extract_rig.py)
 a2f/rig/
-# UWAGA: fixtures/ (kontrakt predict.sample.json dla 09-02), wrapper/ (FastAPI) i
-# docker/ (obraz OCI, Faza 10) to ŹRÓDŁA/artefakty kontraktowe — celowo POZA tą listą.
+# NOTE: fixtures/ (predict.sample.json contract for 09-02), wrapper/ (FastAPI) and
+# docker/ (OCI image, Phase 10) are SOURCES/contract artifacts and are deliberately NOT ignored.
 
-# --- Sekrety / logi ---
+# --- Secrets / logs ---
 .env
 .env.*
+*.pem
+*.key
 *.log
 logs/
 
-# --- OS / edytory ---
+# --- OS / editors ---
 .DS_Store
 Thumbs.db
 *.swp
 *~
 
-# --- Cache researchu (regenerowalny) ---
+# --- Research cache (regenerable) ---
 .planning/research/.cache/
-# porzadki 2026-09-18: material testowy, zrzuty, modele
+# Cleanup 2026-09-18: test material, captures, models
 *.tsbuildinfo
 coverage/
 test-results/
@@ -47,3 +49,13 @@ a2f/deps/
 *.engine
 *.plan
 public/models/*.glb
+
+# Owner decision 2026-11-19 (Phase 11.2 O-1): the showcase avatar ships with the repo.
+!public/models/avatar.glb
+
+# --- Local tooling (not project sources) ---
+# Claude Code agent worktrees and per-user settings
+.claude/worktrees/
+.claude/settings.local.json
+# Ad-hoc config backups
+*.bak-*

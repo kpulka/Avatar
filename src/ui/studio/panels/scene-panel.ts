@@ -1,14 +1,16 @@
 /**
- * Panel „Scena" (Faza 11, 11-04/11-07): ładowanie modelu (demo / .glb), informacje o modelu,
- * presety sceny (pełne przełączanie w 11-07 — tu zapis wyboru do store).
+ * "Scene" panel (Phase 11, 11-04/11-07): model loading (demo / .glb), model info,
+ * scene presets (full switching in 11-07 — here the choice is written to the store).
  */
 import { PanelContext, PanelDefinition, PanelHandle } from '../panel-registry';
 import { el } from '../../shared/dom';
+import { setSkinSSSEnabled } from '../../../scene/skin-shader';
+import { t } from '../../../app/copy';
 
 export function createScenePanel(): PanelDefinition {
   return {
     id: 'scene',
-    title: 'Scena',
+    title: t('panel.title.scene'),
     icon: '🎨',
     visibleIn: 'studio',
     region: 'right',
@@ -17,41 +19,47 @@ export function createScenePanel(): PanelDefinition {
       const root = el('div', { className: 'panel panel-scene' });
 
       // --- Model
-      const modelInfo = el('p', { className: 'drawer-subtitle', text: 'Model: brak (ładowanie w toku...)' });
+      const modelInfo = el('p', { className: 'drawer-subtitle', text: t('scene.modelNone') });
       const renderInfo = (info: { name: string; shapesCount: number; speechMeshes: number }): void => {
-        modelInfo.textContent = `Model: ${info.name} · shapes: ${info.shapesCount} · meshe mowy: ${info.speechMeshes}`;
+        modelInfo.textContent = t('scene.modelInfo', { name: info.name, shapes: info.shapesCount, meshes: info.speechMeshes });
       };
       const existingInfo = services.scene.getAvatarInfo();
       if (existingInfo) renderInfo(existingInfo);
-      const loadDemoButton = el('button', { className: 'btn btn-small btn-primary', type: 'button', text: 'Wczytaj demo' });
+      const loadDemoButton = el('button', { className: 'btn btn-small btn-primary', type: 'button', text: t('scene.loadDemo') });
       loadDemoButton.addEventListener('click', () => {
-        ui.loader.show('Generowanie demonstracyjnego awatara...');
+        ui.loader.show(t('scene.generatingDemo'));
         setTimeout(() => {
           try {
             services.scene.loadDemo();
           } catch (error) {
             ui.loader.hide();
-            ui.toast.show(`Błąd generowania: ${(error as Error).message}`, 'error');
+            ui.toast.show(t('scene.demoError', { message: (error as Error).message }), 'error');
           }
         }, 50);
       });
 
-      const fileInput = el('input', { type: 'file', attrs: { accept: '.glb,.gltf' } }) as HTMLInputElement;
-      fileInput.style.display = 'none';
-      const fileButton = el('label', { className: 'btn btn-small btn-secondary file-upload-btn' }, [
-        el('span', { text: 'Wybierz .GLB' }),
-        fileInput,
-      ]);
+      const fileInput = el('input', { type: 'file', attrs: { accept: '.glb,.gltf' } });
+      // Keyboard users go through the visible button; the native input stays out of the tab order / a11y tree.
+      fileInput.classList.add('hidden');
+      fileInput.tabIndex = -1;
+      fileInput.setAttribute('aria-hidden', 'true');
+      const fileButton = el('button', {
+        className: 'btn btn-small btn-secondary file-upload-btn',
+        type: 'button',
+        text: t('scene.chooseGlb'),
+      });
+      fileButton.addEventListener('click', () => fileInput.click());
+      // eslint-disable-next-line @typescript-eslint/no-misused-promises -- async DOM event handler: the browser ignores the returned promise
       fileInput.addEventListener('change', async () => {
         const file = fileInput.files?.[0];
         fileInput.value = '';
         if (!file) return;
-        ui.loader.show(`Wczytywanie pliku ${file.name}...`);
+        ui.loader.show(t('scene.loadingFile', { name: file.name }));
         try {
           await services.scene.loadFile(file);
         } catch (error) {
           ui.loader.hide();
-          ui.toast.show(`Błąd ładowania: ${(error as Error).message}`, 'error');
+          ui.toast.show(t('scene.fileError', { message: (error as Error).message }), 'error');
         }
       });
 
@@ -60,12 +68,12 @@ export function createScenePanel(): PanelDefinition {
         ui.loader.hide();
       });
 
-      // --- Presety sceny (F11) — picker ukryty, gdy dostępnych jest < 2
+      // --- Scene presets (F11) — picker hidden when fewer than 2 are available
       const presetList = el('div', { className: 'scene-preset-list' });
       const availablePresets = services.scenePresets.list();
       if (availablePresets.length >= 2) {
         for (const preset of availablePresets) {
-          const radio = el('input', { type: 'radio', attrs: { name: 'scene-preset' } }) as HTMLInputElement;
+          const radio = el('input', { type: 'radio', attrs: { name: 'scene-preset' } });
           radio.value = preset.id;
           radio.checked = services.scenePresets.getCurrentId() === preset.id;
           radio.addEventListener('change', () => {
@@ -73,28 +81,31 @@ export function createScenePanel(): PanelDefinition {
             store.setUser('scenePresetManual', true);
             services.scenePresets.apply(preset.id);
           });
-          presetList.append(
-            el('label', { className: 'engine-toggle' }, [
-              radio,
-              el('span', { text: preset.label }),
-            ])
-          );
+          presetList.append(el('label', { className: 'engine-toggle' }, [radio, el('span', { text: preset.label })]));
         }
       }
 
+      // --- Skin subsurface scattering toggle (uniform flip, no shader recompile)
+      const sssToggle = el('input', { type: 'checkbox' });
+      sssToggle.checked = true;
+      sssToggle.addEventListener('change', () => setSkinSSSEnabled(sssToggle.checked));
+
       root.append(
         el('div', { className: 'drawer-section' }, [
-          el('span', { className: 'section-title', text: 'Model awatara:' }),
+          el('span', { className: 'section-title', text: t('scene.modelTitle') }),
           modelInfo,
-          el('div', { className: 'panel-actions' }, [loadDemoButton, fileButton]),
+          el('div', { className: 'panel-actions' }, [loadDemoButton, fileButton, fileInput]),
         ]),
         el('div', { className: 'drawer-section' }, [
-          el('span', { className: 'section-title', text: 'Presety sceny:' }),
+          el('span', { className: 'section-title', text: t('scene.presetsTitle') }),
           presetList,
           el('p', {
             className: 'drawer-subtitle',
-            text: 'Preset zmienia tło, światło, exposure i kadr (crossfade 280 ms; reduced-motion = natychmiast).',
+            text: t('scene.presetsHint'),
           }),
+        ]),
+        el('div', { className: 'drawer-section' }, [
+          el('label', { className: 'engine-toggle' }, [sssToggle, el('span', { text: t('scene.sssLabel') })]),
         ])
       );
       container.append(root);

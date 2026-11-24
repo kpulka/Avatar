@@ -1,83 +1,128 @@
 import * as THREE from 'three';
 
 /**
- * Struktura danych alignmentu z ElevenLabs (Tryb A: audio_event.alignment)
+ * Alignment data structure from ElevenLabs (Mode A: audio_event.alignment)
  */
 export interface CharAlignment {
   chars: string[];
   char_start_times_ms: number[];
   char_durations_ms: number[];
-  /** Źródło danych: prawdziwy alignment ElevenLabs vs fallback akustyczny */
+  /** Data source: the real ElevenLabs alignment vs the acoustic fallback */
   source?: 'elevenlabs' | 'energy-fallback';
-  /** Energia RMS 0..1 per znak — wypełniane TYLKO przez fallback akustyczny */
+  /** RMS energy 0..1 per character — filled ONLY by the acoustic fallback */
   energies?: number[];
 }
 
 /**
- * Źródło mowy — implementacje: ElevenAgentsWs, (Faza 2) ElevenTtsWs + własny STT/LLM
+ * Speech source — implementations: ElevenAgentsWs, (Phase 2) ElevenTtsWs + own STT/LLM
  */
 export interface SpeechBackend {
   start(): Promise<void>;
   stop(): Promise<void>;
-  onAudioChunk: (pcm: ArrayBuffer, alignment: CharAlignment, epoch: number, scheduledStartTime?: number) => void;
+  onAudioChunk: (
+    pcm: ArrayBuffer,
+    alignment: CharAlignment,
+    epoch: number,
+    scheduledStartTime: number | undefined,
+    sampleRate: number
+  ) => void;
   onInterruption: (reason: string) => void;
   onUserTranscript: (text: string) => void;
   onStateChange: (state: 'listening' | 'speaking' | 'thinking' | 'idle') => void;
 }
 
 /**
- * Sterownik mimiki — implementacje: ArKitBlendshapeDriver (Three.js), (alt) BabylonDriver
+ * Facial-expression driver — implementations: ArKitBlendshapeDriver (Three.js), (alt) BabylonDriver
  */
 export interface FaceDriver {
-  /** Aplikuje wagi słownika do wszystkich powiązanych sub-meshy */
+  /** Applies the dictionary weights to all linked sub-meshes */
   applyTargets(weights: Record<string, number>): void;
 
-  /** Aplikuje wagę dla pojedynczego kształtu do wszystkich sub-meshy */
+  /** Applies the weight of a single shape to all sub-meshes */
   applyWeight(shape: string, weight: number): void;
 
-  /** Zwraca listę dostępnych blendshape'ów w załadowanym modelu */
+  /** Returns the list of blendshapes available in the loaded model */
   listAvailableShapes(): string[];
 
-  /** Płynny powrót do pozycji neutralnej (wszystkie wagi 0) */
-  relaxToNeutral(durationMs?: number): void;
-
-  /** Zwraca listę siatek aparatu mowy */
+  /** Returns the list of speech-apparatus meshes */
   getSpeechMeshes(): THREE.Mesh[];
 
-  /** Zwraca słownik indeksów morph targetów */
+  /** Returns the dictionary of morph target indices */
   getMorphTargetDictionary(): Record<string, number>;
 }
 
 /**
- * Kontrakt ramek absolutnych (08-CONTEXT v2) — jeden z dwóch torów animacji FaceControllera.
+ * Absolute-frames contract (08-CONTEXT v2) — one of the two FaceController animation tracks.
  */
 export interface PoseFrame {
-  /** CZAS WZGLĘDNY startu audio tury (s). Baza (baseSec) dodawana JEDNORAZOWO
-   *  w FaceController.feedFrames(clip, baseSec, epoch) — NIE absolutny. */
+  /** RELATIVE TIME of the turn's audio start (s). The base (baseSec) is added ONCE
+   *  in FaceController.feedFrames(clip, baseSec, epoch) — NOT absolute. */
   timeSec: number;
-  /** znormalizowane wagi: klucz = nasz camelCase (jawOpen, mouthSmileLeft…) */
+  /** normalized weights: key = our camelCase (jawOpen, mouthSmileLeft…) */
   weights: Record<string, number>;
 }
 
 export interface FramesClip {
-  /** Ramki posortowane rosnąco po timeSec (porządkuje parser/demo). */
+  /** Frames sorted ascending by timeSec (ordered by the parser/demo). */
   frames: PoseFrame[];
-  /** Informacyjne (nie zakładamy stałego kroku — v3.0 diffusion = 30 fps). */
+  /** Informational (we do not assume a fixed step — v3.0 diffusion = 30 fps). */
   fps: number;
-  /** Kształty, którymi strumień WŁADA — brak klucza w ramce → 0 dla tych kształtów. */
+  /** Shapes the stream OWNS — a missing key in a frame → 0 for those shapes. */
   shapes: string[];
-  /** true → blink proceduralny OFF + GazeSaccades nie pisze eyeLook* (A2F niesie oczy). */
+  /** true → procedural blink, gaze morphs and eyeball bones are OFF (A2F carries the eyes). */
   carriesEyes: boolean;
-  /** true → EmotionLayer addytywna OFF w trakcie tury (A2E prowadzi ekspresję). */
-  carriesEmotion: boolean;
-  /** Wyjście A2E (opcjonalne) — może zasilić EmotionLayer po zakończeniu tury. */
-  emotions?: Array<{ timeSec: number; weights: Record<string, number> }>;
 }
+
+/**
+ * Procedural eye-look morph weights [0..1] (ARKit eyeLook*) — data only. The gaze controller
+ * computes them; FaceController is the single module that writes them to the driver.
+ */
+export interface EyeLookWeights {
+  eyeLookInLeft: number;
+  eyeLookOutLeft: number;
+  eyeLookUpLeft: number;
+  eyeLookDownLeft: number;
+  eyeLookInRight: number;
+  eyeLookOutRight: number;
+  eyeLookUpRight: number;
+  eyeLookDownRight: number;
+}
+
+/** Source of procedural gaze weights (mirrors the blink provider); null = nothing to apply yet. */
+export type GazeProvider = () => Readonly<EyeLookWeights> | null;
 
 export type AnimationMode = 'viseme' | 'frames';
 
 /**
- * Wynik załadowania awatara
+ * Narrow capability surface FaceController hands to a track source adapter (16-06).
+ * A source can only feed data in or interrupt — it never writes morphs (single writer).
+ */
+export interface FaceTrackContext {
+  /** Absolute frames (contract v2: relative timeSec, baseSec added once). */
+  feedFrames(clip: FramesClip, baseSec: number, epoch: number): void;
+  /** Character alignment -> visemes (scheduler track). */
+  feedAlignment(alignment: CharAlignment, startTimeSec: number, epoch: number): void;
+  /** Barge-in for the whole face (same as an interruption). */
+  interrupt(): void;
+}
+
+/**
+ * Thin adapter between an animation source and the FaceController tracks. `kind` selects the
+ * runtime track (and so its smoothing/safety); today there are exactly two payload kinds. A new
+ * source with a genuinely new payload kind extends this union by contract (see 16-DRAFT).
+ */
+export interface FaceTrackSource {
+  kind: AnimationMode;
+  /** The source takes over: FaceController has already switched to the matching track. */
+  start(ctx: FaceTrackContext): void;
+  /** Delivers a payload for the given epoch (stale epochs are rejected inside the track). */
+  feed(payload: unknown, epoch: number): void;
+  /** The source ends its turn (default adapters interrupt the face). */
+  stop(epoch: number): void;
+}
+
+/**
+ * Result of loading the avatar
  */
 export interface LoadedAvatar {
   root: THREE.Object3D;
@@ -87,7 +132,7 @@ export interface LoadedAvatar {
 }
 
 /**
- * Dostawca modelu — implementacje: MetaPersonLoader, (alt) CustomGlbLoader
+ * Model provider — implementations: MetaPersonLoader, (alt) CustomGlbLoader
  */
 export interface AvatarLoader {
   load(urlOrFile: string | File, scene?: THREE.Scene): Promise<LoadedAvatar>;

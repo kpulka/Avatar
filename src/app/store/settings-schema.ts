@@ -1,28 +1,29 @@
 /**
- * Schemat i walidacja ustawień aplikacji (Faza 11 — SettingsStore v1).
+ * Application settings schema and validation (Phase 11 — SettingsStore v1).
  *
- * Zasady:
- * - jedno źródło prawdy dla kluczy localStorage (blob `avatar_settings_v1`),
- * - odczyt traktowany jako UNTRUSTED: whitelist kluczy, clampy, limity map, odrzucanie
- *   kluczy zarezerwowanych (`__proto__`/`constructor`/`prototype`) — ochrona przed
- *   prototype pollution i DoS przez import (ASVS L1, T-11-01/T-11-02),
- * - brak martwego pola czułości mikrofonu (usunięte w F11, UI-05).
+ * Rules:
+ * - a single source of truth for the localStorage keys (the `avatar_settings_v1` blob),
+ * - reads are treated as UNTRUSTED: key whitelist, clamps, map limits, rejection of
+ *   reserved keys (`__proto__`/`constructor`/`prototype`) — protection against
+ *   prototype pollution and DoS via import (ASVS L1, T-11-01/T-11-02),
+ * - no dead microphone-sensitivity field (removed in F11, UI-05).
  */
-import { CalibrationProfile, DEFAULT_CALIBRATION_PROFILE } from '../../lipsync/calibration';
+import { CalibrationProfile, DEFAULT_CALIBRATION_PROFILE, LEGACY_SYNC_OFFSETS, SYNC_CLOCK_VERSION } from '../../lipsync/calibration';
 import { VisemeOverrideMap } from '../../lipsync/viseme-overrides';
+import { DEFAULT_LIP_SYNC_ENGINE, LipSyncEngine, parseLipSyncEngine } from '../../lipsync/lipsync-engine';
 import { DEFAULT_AGENT_CONFIG } from '../../audio/agent-config';
 
-/** Domyślny adres lokalnego wrappera A2F (docelowo także cloud w Fazie 10). */
-export const DEFAULT_A2F_URL = 'http://127.0.0.1:8000';
+/** Default address of the local A2F wrapper (eventually cloud too, in Phase 10). */
+const DEFAULT_A2F_URL = 'http://127.0.0.1:8000';
 
-/** Maksymalna liczba wpisów nadpisań wizemów (ochrona przed DoS, T-11-02). */
+/** Maximum number of viseme override entries (DoS protection, T-11-02). */
 export const MAX_VISEME_OVERRIDES = 512;
 
 const RESERVED_KEYS = new Set(['__proto__', 'constructor', 'prototype']);
 
 export type UiMode = 'user' | 'studio';
 export type ThemeMode = 'dark' | 'light';
-export type LipSyncEngine = 'phoneme' | 'char';
+export type { LipSyncEngine };
 
 export interface UserSettings {
   uiMode: UiMode;
@@ -40,7 +41,7 @@ export interface StudioSettings {
   lipSyncEngine: LipSyncEngine;
   calibration: CalibrationProfile;
   visemeOverrides: VisemeOverrideMap;
-  /** Klucz = ścieżka ustawienia (np. 'volume'); true = user nie może zmienić. */
+  /** Key = setting path (e.g. 'volume'); true = the user cannot change it. */
   locks: Record<string, boolean>;
 }
 
@@ -50,7 +51,7 @@ export interface SettingsStateV1 {
   studio: StudioSettings;
 }
 
-/** Interfejs kompatybilny z localStorage (wstrzykiwany — testy w env node). */
+/** localStorage-compatible interface (injected — tests run in a node env). */
 export interface StorageLike {
   getItem(key: string): string | null;
   setItem(key: string, value: string): void;
@@ -71,14 +72,14 @@ export const DEFAULT_SETTINGS: SettingsStateV1 = {
   studio: {
     agentId: DEFAULT_AGENT_CONFIG.agentId,
     a2fUrl: DEFAULT_A2F_URL,
-    lipSyncEngine: 'phoneme',
+    lipSyncEngine: DEFAULT_LIP_SYNC_ENGINE,
     calibration: { ...DEFAULT_CALIBRATION_PROFILE },
     visemeOverrides: {},
     locks: {},
   },
 };
 
-export function clampVolume(value: number): number {
+function clampVolume(value: number): number {
   if (!Number.isFinite(value)) return DEFAULT_SETTINGS.user.volume;
   return Math.max(0, Math.min(1, value));
 }
@@ -92,6 +93,11 @@ export function isValidA2fUrl(value: string): boolean {
   } catch {
     return false;
   }
+}
+
+/** A prototype-less map (no inherited keys): Object.create(null) is typed any, so the cast lives here once. */
+function nullProtoRecord<T extends object>(): T {
+  return Object.create(null) as T;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -113,23 +119,46 @@ function sanitizeCalibration(value: unknown): CalibrationProfile {
       profile[key] = raw;
     }
   }
+  return migrateSyncClock(profile, value);
+}
+
+const LEGACY_SYNC_OFFSET_MAP: Readonly<Record<number, number>> = { 90: 20, 100: 30, 120: 40 };
+
+/**
+ * One-time migration (Phase 11.2 D-6): offsets saved before the audible clock compensated for
+ * ctx.currentTime. Preset values map to the new residuals; custom values lose the ~70 ms typical latency.
+ */
+function migrateSyncClock(profile: CalibrationProfile, stored: Record<string, unknown>): CalibrationProfile {
+  if (stored.clockVersion === SYNC_CLOCK_VERSION) {
+    profile.clockVersion = SYNC_CLOCK_VERSION;
+    return profile;
+  }
+  const storedOffset = stored.syncOffsetMs;
+  if (typeof storedOffset === 'number' && Number.isFinite(storedOffset)) {
+    if ((LEGACY_SYNC_OFFSETS as readonly number[]).includes(storedOffset)) {
+      profile.syncOffsetMs = LEGACY_SYNC_OFFSET_MAP[storedOffset] ?? profile.syncOffsetMs;
+    } else {
+      profile.syncOffsetMs = Math.max(-150, Math.min(400, storedOffset - 70));
+    }
+  }
+  profile.clockVersion = SYNC_CLOCK_VERSION;
   return profile;
 }
 
 function sanitizeVisemeOverrides(value: unknown): VisemeOverrideMap {
-  const result: VisemeOverrideMap = Object.create(null);
+  const result = nullProtoRecord<VisemeOverrideMap>();
   if (!isRecord(value)) return result;
   if (hasReservedKeys(value)) return result;
   let total = 0;
   for (const [visemeKey, shapesRaw] of Object.entries(value)) {
-    if (RESERVED_KEYS.has(visemeKey)) return Object.create(null);
+    if (RESERVED_KEYS.has(visemeKey)) return nullProtoRecord<VisemeOverrideMap>();
     if (!isRecord(shapesRaw) || hasReservedKeys(shapesRaw)) continue;
     const shapes: Record<string, number> = {};
     for (const [shapeKey, raw] of Object.entries(shapesRaw)) {
       if (typeof raw !== 'number' || !Number.isFinite(raw)) continue;
       shapes[shapeKey] = Math.max(0, Math.min(1, raw));
       total += 1;
-      if (total > MAX_VISEME_OVERRIDES) return Object.create(null);
+      if (total > MAX_VISEME_OVERRIDES) return nullProtoRecord<VisemeOverrideMap>();
     }
     result[visemeKey] = shapes;
   }
@@ -137,7 +166,7 @@ function sanitizeVisemeOverrides(value: unknown): VisemeOverrideMap {
 }
 
 function sanitizeLocks(value: unknown): Record<string, boolean> {
-  const locks: Record<string, boolean> = Object.create(null);
+  const locks = nullProtoRecord<Record<string, boolean>>();
   if (!isRecord(value)) return locks;
   for (const [key, raw] of Object.entries(value)) {
     if (RESERVED_KEYS.has(key)) continue;
@@ -147,19 +176,21 @@ function sanitizeLocks(value: unknown): Record<string, boolean> {
 }
 
 /**
- * Waliduje nieznany obiekt do pełnego stanu v1 (merge z defaultami, clampy, whitelist).
- * Zwraca błąd tylko gdy wejście nie jest obiektem lub schemaVersion jest nieobsługiwana
- * albo wykryto klucze zarezerwowane na najwyższym poziomie.
+ * Validates an unknown object into a full v1 state (merge with defaults, clamps, whitelist).
+ * Returns an error only when the input is not an object or the schemaVersion is unsupported
+ * or reserved keys are detected at the top level.
  */
 export function validateSettings(raw: unknown): { ok: true; value: SettingsStateV1 } | { ok: false; error: string } {
   if (!isRecord(raw)) {
-    return { ok: false, error: 'Ustawienia muszą być obiektem JSON.' };
+    return { ok: false, error: 'Settings must be a JSON object.' };
   }
   if (hasReservedKeys(raw)) {
-    return { ok: false, error: 'Ustawienia zawierają zarezerwowane klucze (__proto__/constructor/prototype).' };
+    return { ok: false, error: 'Settings contain reserved keys (__proto__/constructor/prototype).' };
   }
   if (raw.schemaVersion !== undefined && raw.schemaVersion !== 1) {
-    return { ok: false, error: `Nieobsługiwana wersja schematu: ${String(raw.schemaVersion)}.` };
+    // eslint-disable-next-line @typescript-eslint/no-base-to-string -- message text only; an object version prints as [object Object] on purpose
+    const version = String(raw.schemaVersion);
+    return { ok: false, error: `Unsupported schema version: ${version}.` };
   }
 
   const userRaw = isRecord(raw.user) && !hasReservedKeys(raw.user) ? raw.user : {};
@@ -187,8 +218,8 @@ export function validateSettings(raw: unknown): { ok: true; value: SettingsState
     a2fUrl: DEFAULT_SETTINGS.studio.a2fUrl,
     lipSyncEngine: DEFAULT_SETTINGS.studio.lipSyncEngine,
     calibration: { ...DEFAULT_CALIBRATION_PROFILE },
-    visemeOverrides: Object.create(null),
-    locks: Object.create(null),
+    visemeOverrides: nullProtoRecord<VisemeOverrideMap>(),
+    locks: nullProtoRecord<Record<string, boolean>>(),
   };
   if (typeof studioRaw.agentId === 'string' && studioRaw.agentId.trim() !== '') {
     studio.agentId = studioRaw.agentId.trim();
@@ -196,9 +227,9 @@ export function validateSettings(raw: unknown): { ok: true; value: SettingsState
   if (typeof studioRaw.a2fUrl === 'string' && isValidA2fUrl(studioRaw.a2fUrl)) {
     studio.a2fUrl = studioRaw.a2fUrl.trim();
   }
-  if (studioRaw.lipSyncEngine === 'phoneme' || studioRaw.lipSyncEngine === 'char') {
-    studio.lipSyncEngine = studioRaw.lipSyncEngine;
-  }
+  // Legacy 'phoneme' (pre 17-04) -> 'phoneme-en'; unknown values keep the default.
+  const engine = parseLipSyncEngine(studioRaw.lipSyncEngine);
+  if (engine !== undefined) studio.lipSyncEngine = engine;
   studio.calibration = sanitizeCalibration(studioRaw.calibration);
   studio.visemeOverrides = sanitizeVisemeOverrides(studioRaw.visemeOverrides);
   studio.locks = sanitizeLocks(studioRaw.locks);

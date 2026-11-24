@@ -1,20 +1,20 @@
 import { describe, expect, it, vi } from 'vitest';
 import { buildAudioConstraints, MicCapture } from '../src/audio/mic-capture';
 
-describe('MicCapture — wybór urządzenia (F11)', () => {
-  it('buildAudioConstraints bez deviceId nie wymusza urządzenia', () => {
+describe('MicCapture — device selection (F11)', () => {
+  it('buildAudioConstraints without deviceId does not force a device', () => {
     const constraints = buildAudioConstraints(null);
     expect('deviceId' in constraints).toBe(false);
     expect(constraints.channelCount).toBe(1);
     expect(constraints.echoCancellation).toBe(true);
   });
 
-  it('buildAudioConstraints z deviceId używa exact', () => {
+  it('buildAudioConstraints with deviceId uses exact', () => {
     const constraints = buildAudioConstraints('mic-42');
     expect(constraints.deviceId).toEqual({ exact: 'mic-42' });
   });
 
-  it('setDeviceId normalizuje pusty string do null', () => {
+  it('setDeviceId normalizes an empty string to null', () => {
     const capture = new MicCapture();
     capture.setDeviceId('  ');
     expect(capture.getDeviceId()).toBeNull();
@@ -22,7 +22,7 @@ describe('MicCapture — wybór urządzenia (F11)', () => {
     expect(capture.getDeviceId()).toBe('mic-7');
   });
 
-  it('listDevices zwraca wyłącznie audioinput z fallbackiem etykiety', async () => {
+  it('listDevices returns only audioinput, with a label fallback', async () => {
     vi.stubGlobal('navigator', {
       mediaDevices: {
         enumerateDevices: async () => [
@@ -36,14 +36,14 @@ describe('MicCapture — wybór urządzenia (F11)', () => {
     const capture = new MicCapture();
     const devices = await capture.listDevices();
     expect(devices).toEqual([
-      { id: 'mic1', label: 'Mikrofon' },
+      { id: 'mic1', label: 'Microphone' },
       { id: 'mic2', label: 'Yeti' },
     ]);
 
     vi.unstubAllGlobals();
   });
 
-  it('listDevices zwraca pustą listę bez API (graceful degrade)', async () => {
+  it('listDevices returns an empty list without the API (graceful degrade)', async () => {
     vi.stubGlobal('navigator', { mediaDevices: undefined });
     const capture = new MicCapture();
     await expect(capture.listDevices()).resolves.toEqual([]);

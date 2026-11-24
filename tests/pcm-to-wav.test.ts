@@ -11,7 +11,7 @@ function ascii(bytes: Uint8Array, offset: number, length: number): string {
 }
 
 describe('encodeWav', () => {
-  it('tworzy poprawny nagłówek RIFF/WAVE (mono 16-bit)', async () => {
+  it('creates a valid RIFF/WAVE header (mono 16-bit)', async () => {
     const pcm = new Uint8Array(1000);
     const wav = encodeWav(pcm, 44100);
     expect(wav.type).toBe('audio/wav');
@@ -32,7 +32,7 @@ describe('encodeWav', () => {
     expect(view.getUint32(40, true)).toBe(pcm.byteLength);
   });
 
-  it('obsługuje pusty PCM (poprawny, zerowy data)', async () => {
+  it('handles empty PCM (valid, zero-length data chunk)', async () => {
     const wav = encodeWav(new Uint8Array(0), 16000);
     expect(wav.size).toBe(44);
     const { bytes, view } = await readHeader(wav);

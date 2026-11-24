@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { RawWssClient } from '../src/audio/raw-wss-client';
 import { AudioEventPayload } from '../src/types/audio';
+import { defined } from './helpers/defined';
 
 // Mock WebSocket
 class MockWebSocket {
@@ -59,15 +60,17 @@ describe('RawWssClient', () => {
     client.connect();
 
     expect(MockWebSocket.instances).toHaveLength(1);
-    const mockWs = MockWebSocket.instances[0];
+    const mockWs = defined(MockWebSocket.instances[0]);
     expect(mockWs.url).toContain('agent_id=test-agent-123');
 
     // Otwarcie socketu
     mockWs.open();
 
-    // Powinno wysłać conversation_initiation_client_data
+    // Should send conversation_initiation_client_data
     expect(mockWs.sentData).toHaveLength(1);
-    const sent = JSON.parse(mockWs.sentData[0]);
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- test double / mock typing: the value comes from an untyped mock or JSON fixture
+    const sent = JSON.parse(defined(mockWs.sentData[0]));
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access -- test double / mock typing: the value comes from an untyped mock or JSON fixture
     expect(sent.type).toBe('conversation_initiation_client_data');
     expect(client.getState()).toBe('connected');
   });
@@ -76,7 +79,7 @@ describe('RawWssClient', () => {
     const onAudioChunk = vi.fn();
     const client = new RawWssClient('test-agent-123', { onAudioChunk });
     client.connect();
-    const mockWs = MockWebSocket.instances[0];
+    const mockWs = defined(MockWebSocket.instances[0]);
     mockWs.open();
 
     const sampleAudioPayload: AudioEventPayload = {
@@ -101,7 +104,7 @@ describe('RawWssClient', () => {
     vi.useFakeTimers();
     const client = new RawWssClient('test-agent-123');
     client.connect();
-    const mockWs = MockWebSocket.instances[0];
+    const mockWs = defined(MockWebSocket.instances[0]);
     mockWs.open();
 
     mockWs.receiveMessage({
@@ -118,11 +121,59 @@ describe('RawWssClient', () => {
     vi.useRealTimers();
   });
 
+  it('ignores delayed events and pongs from a stopped session after restarting', () => {
+    vi.useFakeTimers();
+    const onError = vi.fn();
+    const onAgentResponse = vi.fn();
+    const client = new RawWssClient('test-agent-123', { onError, onAgentResponse });
+    client.connect();
+    const oldSocket = defined(MockWebSocket.instances[0]);
+    oldSocket.open();
+    oldSocket.receiveMessage({ type: 'ping', ping_event: { event_id: 42, ping_ms: 50 } });
+    // Simulate a browser delivering the close event after disconnect returns.
+    const delayedClose = oldSocket.onclose!;
+    oldSocket.close = vi.fn();
+    client.disconnect();
+    client.connect();
+    const newSocket = defined(MockWebSocket.instances[1]);
+    newSocket.open();
+
+    delayedClose({ code: 1008, reason: 'old session' });
+    oldSocket.open();
+    oldSocket.receiveMessage({ type: 'agent_response', agent_response_event: { agent_response: 'stale' } });
+    oldSocket.onerror?.(new Event('error'));
+    vi.advanceTimersByTime(60_000);
+
+    expect(client.getState()).toBe('connected');
+    expect(onError).not.toHaveBeenCalled();
+    expect(onAgentResponse).not.toHaveBeenCalled();
+    expect(MockWebSocket.instances).toHaveLength(2);
+    expect(newSocket.sentData).toHaveLength(1);
+    client.sendUserAudio('current');
+    expect(newSocket.sentData.at(-1)).toContain('current');
+    vi.useRealTimers();
+  });
+
+  it('reports the current socket error once when a connection is rejected', () => {
+    const onError = vi.fn();
+    const client = new RawWssClient('test-agent-123', { onError });
+    client.connect();
+    const socket = defined(MockWebSocket.instances[0]);
+    socket.onerror?.(new Event('error'));
+    socket.close(1008, 'rejected');
+    socket.close(1008, 'rejected');
+
+    expect(onError).toHaveBeenCalledTimes(1);
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access -- test double / mock typing: the value comes from an untyped mock or JSON fixture
+    expect(defined(onError.mock.calls[0])[0].message).toContain('WebSocket connection error');
+    expect(client.getState()).toBe('disconnected');
+  });
+
   it('triggers onInterruption callback when interruption event is received', () => {
     const onInterruption = vi.fn();
     const client = new RawWssClient('test-agent-123', { onInterruption });
     client.connect();
-    const mockWs = MockWebSocket.instances[0];
+    const mockWs = defined(MockWebSocket.instances[0]);
     mockWs.open();
 
     mockWs.receiveMessage({
@@ -137,7 +188,7 @@ describe('RawWssClient', () => {
   it('sends user_audio_chunk when sendUserAudio is called', () => {
     const client = new RawWssClient('test-agent-123');
     client.connect();
-    const mockWs = MockWebSocket.instances[0];
+    const mockWs = defined(MockWebSocket.instances[0]);
     mockWs.open();
 
     client.sendUserAudio('base64pcmdata==');

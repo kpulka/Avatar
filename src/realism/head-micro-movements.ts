@@ -1,17 +1,20 @@
 import { Object3D } from 'three';
+import { ANIM_DEFAULTS } from './anim-config';
+
+const { head: headConfig, breath: breathConfig } = ANIM_DEFAULTS;
 
 export interface MicroMovementOptions {
-  maxYawRad?: number; // Maksymalny kąt yaw (domyślnie 0.012 rad < 0.7°)
-  maxPitchRad?: number; // Maksymalny kąt pitch (domyślnie 0.008 rad < 0.5°)
-  maxRollRad?: number; // Maksymalny kąt roll (domyślnie 0.004 rad < 0.25°)
-  breathingFreqHz?: number; // Częstotliwość oddechu (domyślnie 0.22 Hz, ~4.5s cykl)
-  breathingAmplitudeY?: number; // Amplituda unoszenia klatki piersiowej (domyślnie 0.002 m)
+  maxYawRad?: number; // Maximum yaw angle (default head.ampYawRad)
+  maxPitchRad?: number; // Maximum pitch angle (default head.ampPitchRad)
+  maxRollRad?: number; // Maximum roll angle (default head.ampRollRad)
+  breathingFreqHz?: number; // Breathing frequency (default breath.freqHz)
+  breathingAmplitudeY?: number; // Chest rise amplitude (default breath.ampM)
 }
 
 /**
- * Generator proceduralnych mikroruchów głowy i cyklu oddechowego (REAL-01, docs/5).
- * Zasada fizjologiczna: głowa nie pulsuje ani nie kołysze się w pionie.
- * Oddech jest aplikowany wyłącznie do klatki piersiowej (unoszenie i rozszerzanie żeber).
+ * Generator of procedural head micro-movements and the breathing cycle (REAL-01, docs/5).
+ * Physiological rule: the head neither pulses nor bobs vertically.
+ * Breathing is applied only to the chest (rib rise and expansion).
  */
 export class HeadMicroMovements {
   private readonly maxYaw: number;
@@ -30,15 +33,15 @@ export class HeadMicroMovements {
   private isChestBaseSet = false;
 
   constructor(options: MicroMovementOptions = {}) {
-    this.maxYaw = options.maxYawRad ?? 0.012; // bardzo subtelny dryf lewo/prawo (< 0.7°)
-    this.maxPitch = options.maxPitchRad ?? 0.008; // subtelne pochylenie (< 0.5°), BEZ rytmicznego kiwania
-    this.maxRoll = options.maxRollRad ?? 0.004; // (< 0.25°)
-    this.breathingFreq = options.breathingFreqHz ?? 0.22; // ~4.5s cykl oddechu
-    this.breathingAmpY = options.breathingAmplitudeY ?? 0.002; // unoszenie klatki piersiowej (2 mm)
+    this.maxYaw = options.maxYawRad ?? headConfig.ampYawRad; // very subtle left/right drift
+    this.maxPitch = options.maxPitchRad ?? headConfig.ampPitchRad; // subtle tilt, WITHOUT rhythmic nodding
+    this.maxRoll = options.maxRollRad ?? headConfig.ampRollRad;
+    this.breathingFreq = options.breathingFreqHz ?? breathConfig.freqHz;
+    this.breathingAmpY = options.breathingAmplitudeY ?? breathConfig.ampM;
   }
 
   /**
-   * Oblicza przesunięcia rotacji głowy oraz parametry oddechu klatki piersiowej
+   * Computes head rotation offsets and chest breathing parameters
    */
   public compute(time: number): {
     yaw: number;
@@ -47,24 +50,14 @@ export class HeadMicroMovements {
     offsetY: number;
     breathNorm: number;
   } {
-    // 1. Bardzo wolny, naturalny szum harmoniczny głowy (brak rytmicznego pulsowania)
-    const yaw =
-      (0.6 * Math.sin(time * 0.43) +
-        0.3 * Math.sin(time * 0.89) +
-        0.1 * Math.cos(time * 1.31)) *
-      this.maxYaw;
+    // 1. Very slow, natural harmonic head noise (no rhythmic pulsing)
+    const yaw = (0.6 * Math.sin(time * 0.43) + 0.3 * Math.sin(time * 0.89) + 0.1 * Math.cos(time * 1.31)) * this.maxYaw;
 
-    const pitch =
-      (0.6 * Math.cos(time * 0.37) +
-        0.4 * Math.sin(time * 0.79)) *
-      this.maxPitch;
+    const pitch = (0.6 * Math.cos(time * 0.37) + 0.4 * Math.sin(time * 0.79)) * this.maxPitch;
 
-    const roll =
-      (0.7 * Math.sin(time * 0.31) +
-        0.3 * Math.cos(time * 0.67)) *
-      this.maxRoll;
+    const roll = (0.7 * Math.sin(time * 0.31) + 0.3 * Math.cos(time * 0.67)) * this.maxRoll;
 
-    // 2. Cykl oddechu klatki piersiowej (asymetryczny wdech/wydech)
+    // 2. Chest breathing cycle (asymmetric inhale/exhale)
     const breathPhase = time * this.breathingFreq * Math.PI * 2;
     const breathNorm = (Math.sin(breathPhase) + 1) / 2; // [0, 1]
     const offsetY = Math.pow(breathNorm, 1.2) * this.breathingAmpY;
@@ -73,8 +66,8 @@ export class HeadMicroMovements {
   }
 
   /**
-   * Aktualizuje obiekty: głowa wykonuje wyłącznie mikrorotację,
-   * a klatka piersiowa (chestTarget) unosi się i rozszerza przy oddechu.
+   * Updates the objects: the head performs only a micro-rotation,
+   * while the chest (chestTarget) rises and expands with the breath.
    */
   public update(dt: number, headTarget: Object3D, chestTarget?: Object3D): void {
     if (!this.isBaseSet) {
@@ -86,13 +79,13 @@ export class HeadMicroMovements {
     this.elapsedTime += dt;
     const { yaw, pitch, roll, offsetY, breathNorm } = this.compute(this.elapsedTime);
 
-    // GŁOWA: stała pozycja Y (ZERO pulsowania w pionie), wyłącznie subtelna mikrorotacja w miejscu
+    // HEAD: fixed Y position (ZERO vertical pulsing), only a subtle in-place micro-rotation
     headTarget.rotation.x = this.baseRotation.x + pitch;
     headTarget.rotation.y = this.baseRotation.y + yaw;
     headTarget.rotation.z = this.baseRotation.z + roll;
     headTarget.position.y = this.basePosition.y;
 
-    // KLATKA PIERSIOWA: wyłącznie tu zachodzi fizjologiczne unoszenie i rozszerzanie oddechu
+    // CHEST: the physiological breathing rise and expansion happens ONLY here
     if (chestTarget) {
       if (!this.isChestBaseSet) {
         this.baseChestPosition = { x: chestTarget.position.x, y: chestTarget.position.y, z: chestTarget.position.z };
@@ -100,11 +93,11 @@ export class HeadMicroMovements {
         this.isChestBaseSet = true;
       }
 
-      // Unoszenie klatki piersiowej przy wdechu
+      // Chest rise on inhalation
       chestTarget.position.y = this.baseChestPosition.y + offsetY;
-      // Rozszerzanie klatki piersiowej (obwód klatki rośnie o ~2% przy wdechu)
-      chestTarget.scale.x = this.baseChestScale.x * (1 + breathNorm * 0.02);
-      chestTarget.scale.z = this.baseChestScale.z * (1 + breathNorm * 0.035);
+      // Chest expansion (the chest circumference grows on inhalation)
+      chestTarget.scale.x = this.baseChestScale.x * (1 + breathNorm * breathConfig.chestScaleX);
+      chestTarget.scale.z = this.baseChestScale.z * (1 + breathNorm * breathConfig.chestScaleZ);
     }
   }
 

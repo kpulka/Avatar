@@ -2,8 +2,8 @@ import { isWebGLAvailable, handleWebGLFailure } from './ui/webgl-fallback';
 import { createApp } from './app/container';
 
 /**
- * Bootstrap aplikacji (Faza 11): cała kompozycja w `src/app/container.ts`,
- * tu tylko sprawdzenie WebGL i start.
+ * Application bootstrap (Phase 11): the whole composition lives in `src/app/container.ts`,
+ * only the WebGL check and start happen here.
  */
 function initApp(): void {
   if (!isWebGLAvailable()) {
@@ -13,7 +13,7 @@ function initApp(): void {
 
   const canvas = document.getElementById('avatar-canvas') as HTMLCanvasElement | null;
   if (!canvas) {
-    console.error('Nie znaleziono canvas elementu #avatar-canvas');
+    console.error('Could not find the #avatar-canvas canvas element');
     return;
   }
 

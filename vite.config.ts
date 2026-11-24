@@ -1,8 +1,29 @@
 import { defineConfig } from 'vite';
 
 export default defineConfig({
+  plugins: [
+    {
+      name: 'production-content-security-policy',
+      apply: 'build',
+      transformIndexHtml() {
+        return [
+          {
+            tag: 'meta',
+            // Production CSP: connect-src allows only same origin and the ElevenLabs WSS endpoint, so the
+            // local A2F HTTP backend (docs/a2f-local-setup.md) is blocked in `dist/`; use `npm run dev` for A2F demos.
+            attrs: {
+              'http-equiv': 'Content-Security-Policy',
+              content:
+                "default-src 'self'; connect-src 'self' blob: wss://api.elevenlabs.io; img-src 'self' data: blob:; media-src 'self' blob:; style-src 'self' 'unsafe-inline'; script-src 'self'; worker-src 'self' blob:",
+            },
+            injectTo: 'head-prepend',
+          },
+        ];
+      },
+    },
+  ],
   server: {
-    // Port 3000 zajmuje AI Heritage (img2life) — Avatar ma własny, żeby nie kolidować.
+    // Port 3000 is taken by AI Heritage (img2life) — Avatar uses its own, to avoid a clash.
     port: 5310,
     strictPort: true,
     open: false,
@@ -12,16 +33,15 @@ export default defineConfig({
     target: 'esnext',
     rollupOptions: {
       output: {
-        // Vendor chunking: three (~596 kB) osobno od kodu aplikacji (~154 kB), żeby zmiany
-        // w kodzie nie unieważniały cache'u silnika 3D.
-        // UWAGA: największy chunk w projekcie to NIE three, lecz słownik
-        // `cmu-pronouncing-dictionary` (~3,92 MB / 961 kB gzip) — celowo ładowany
-        // dynamicznym importem w `src/lipsync/g2p/g2p-en.ts` (lazy, poza pierwszym renderem).
+        // Vendor chunking: three (~596 kB) separate from the app code (~154 kB), so that changes
+        // in the code do not invalidate the cache of the 3D engine.
+        // The EN G2P lexicon (`src/lipsync/g2p/dict-en-pruned.json`, pruned by `npm run build:dict`) is
+        // a separate lazy chunk loaded via a dynamic import in `g2p-en.ts` (outside the first render).
         manualChunks: (id: string) => (id.includes('node_modules/three') ? 'three' : undefined),
       },
     },
-    // Chunk słownika (`cmu-pronouncing-dictionary`, ~3,92 MB) jest celowy i lazy —
-    // limit 4000 kB wycisza szum, a nadal łapie realny wzrost kodu aplikacji (~750 kB).
-    chunkSizeWarningLimit: 4000,
+    // three is the largest chunk (~596 kB); the 700 kB limit still flags real growth of the app code
+    // or an accidental return of the full CMU dictionary (it was 3.92 MB before Phase 17).
+    chunkSizeWarningLimit: 700,
   },
 });

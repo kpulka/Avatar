@@ -1,18 +1,16 @@
 /**
- * Konfiguracja integracji z agentem konwersacyjnym ElevenAgents (docs/2)
+ * Integration config for the ElevenAgents conversational agent (docs/2)
  */
 export interface AgentConfig {
-  /** Identyfikator publicznego lub prywatnego agenta */
+  /** Identifier of the public or private agent */
   agentId: string;
-  /** Podstawowy URL endpointu WebSocket */
+  /** Base URL of the WebSocket endpoint */
   wssBaseUrl: string;
-  /** Format audio wejściowego z mikrofonu */
+  /** Audio format of the microphone input */
   inputAudioFormat: 'pcm_16000';
-  /** Format audio wyjściowego z agenta */
-  outputAudioFormat: 'pcm_44100';
-  /** Lista subskrybowanych zdarzeń klienta */
+  /** List of subscribed client events */
   clientEvents: string[];
-  /** Nazwa i rola awatara */
+  /** Name and role of the avatar */
   systemRole: string;
 }
 
@@ -20,7 +18,6 @@ export const DEFAULT_AGENT_CONFIG: AgentConfig = {
   agentId: 'agent_4901m0gnjzpcevev1q5ekvdjhbj3',
   wssBaseUrl: 'wss://api.elevenlabs.io/v1/convai/conversation',
   inputAudioFormat: 'pcm_16000',
-  outputAudioFormat: 'pcm_44100',
   clientEvents: [
     'audio',
     'interruption',
@@ -34,33 +31,16 @@ export const DEFAULT_AGENT_CONFIG: AgentConfig = {
   systemRole: 'Conversational 3D Avatar Assistant',
 };
 
-let memoryAgentId = DEFAULT_AGENT_CONFIG.agentId;
+export type AgentIdSource = 'url' | 'settings' | 'default';
 
-/**
- * Pobiera aktywny agent_id z parametru URL ?agent_id= lub localStorage, z fallbackiem do domyślnego
- */
-export function getActiveAgentId(): string {
-  if (typeof window !== 'undefined' && window.location) {
-    const params = new URLSearchParams(window.location.search);
-    const fromUrl = params.get('agent_id');
-    if (fromUrl && fromUrl.trim() !== '') {
-      return fromUrl.trim();
-    }
-  }
-
-  if (typeof localStorage !== 'undefined') {
-    const fromStorage = localStorage.getItem('elevenlabs_agent_id');
-    if (fromStorage && fromStorage.trim() !== '') {
-      return fromStorage.trim();
-    }
-  }
-
-  return memoryAgentId;
-}
-
-export function setActiveAgentId(agentId: string): void {
-  memoryAgentId = agentId;
-  if (typeof localStorage !== 'undefined') {
-    localStorage.setItem('elevenlabs_agent_id', agentId);
-  }
+/** Resolve URL, settings, and default agent IDs in order of precedence. */
+export function resolveAgentId(
+  storeValue: string | undefined,
+  search: string = typeof window !== 'undefined' && window.location ? window.location.search : ''
+): { id: string; source: AgentIdSource } {
+  const fromUrl = new URLSearchParams(search).get('agent_id')?.trim();
+  if (fromUrl) return { id: fromUrl, source: 'url' };
+  const fromStore = storeValue?.trim();
+  if (fromStore) return { id: fromStore, source: 'settings' };
+  return { id: DEFAULT_AGENT_CONFIG.agentId, source: 'default' };
 }

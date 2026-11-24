@@ -1,8 +1,8 @@
 /**
- * Drobne helpery DOM (Faza 11, 11-03) — bez zależności, tekst zawsze przez textContent.
+ * Small DOM helpers (Phase 11, 11-03) — no dependencies beyond the `Unsub` type, text always via textContent.
  */
 
-export type Unsub = () => void;
+import { Unsub } from '../../app/events';
 
 export interface ElOptions {
   className?: string;
@@ -14,6 +14,18 @@ export interface ElOptions {
   placeholder?: string;
   title?: string;
   ariaLabel?: string;
+  /** ARIA role (e.g. `status`, `alert`, `log`). */
+  role?: string;
+  /** Sets the `hidden` attribute (kept out of the accessibility tree). */
+  hidden?: boolean;
+}
+
+let uidCounter = 0;
+
+/** Unique DOM id for `for` / `aria-controls` / `aria-labelledby` wiring (`a15-<prefix>-<n>`). */
+export function uid(prefix: string): string {
+  uidCounter += 1;
+  return `a15-${prefix}-${uidCounter}`;
 }
 
 export function el<K extends keyof HTMLElementTagNameMap>(
@@ -30,6 +42,8 @@ export function el<K extends keyof HTMLElementTagNameMap>(
   if (options.placeholder) node.setAttribute('placeholder', options.placeholder);
   if (options.title) node.title = options.title;
   if (options.ariaLabel) node.setAttribute('aria-label', options.ariaLabel);
+  if (options.role) node.setAttribute('role', options.role);
+  if (options.hidden) node.setAttribute('hidden', '');
   if (options.attrs) {
     for (const [name, value] of Object.entries(options.attrs)) {
       node.setAttribute(name, value);
@@ -41,12 +55,7 @@ export function el<K extends keyof HTMLElementTagNameMap>(
   return node;
 }
 
-export function listen(
-  target: EventTarget,
-  type: string,
-  handler: EventListener,
-  options?: AddEventListenerOptions
-): Unsub {
+export function listen(target: EventTarget, type: string, handler: EventListener, options?: AddEventListenerOptions): Unsub {
   target.addEventListener(type, handler, options);
   return () => target.removeEventListener(type, handler, options);
 }

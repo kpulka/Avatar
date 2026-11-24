@@ -34,18 +34,18 @@ describe('Lip-Sync Calibration Module', () => {
     expect(profile).toEqual(DEFAULT_CALIBRATION_PROFILE);
     expect(profile.jawScale).toBe(1.0);
     expect(profile.closeScale).toBe(0.6);
-    expect(profile.syncOffsetMs).toBe(100);
+    expect(profile.syncOffsetMs).toBe(30); // residual after audible-clock compensation (11.2 D-6)
   });
 
   it('ignores legacy v1 localStorage profile (v2 key isolation -> automatic reset to DEFAULT)', () => {
-    // Stary zapis pod kluczem v1 (semantyka 0.3-0.65 tłumików) nie może zatruć v2:
-    const legacyV1: CalibrationProfile = {
+    // An old record under the v1 key (0.3-0.65 attenuation semantics) must not poison v2:
+    const legacyV1: Omit<CalibrationProfile, 'clockVersion'> = {
       jawScale: 0.55,
-      closeScale: 0.30,
-      puckerScale: 0.50,
-      funnelScale: 0.40,
+      closeScale: 0.3,
+      puckerScale: 0.5,
+      funnelScale: 0.4,
       rollScale: 0.65,
-      teethExposureScale: 0.50,
+      teethExposureScale: 0.5,
       smileScale: 0.45,
       coarticulationSpeed: 18,
       syncOffsetMs: -25,
@@ -56,7 +56,7 @@ describe('Lip-Sync Calibration Module', () => {
     expect(profile).toEqual(DEFAULT_CALIBRATION_PROFILE);
     expect(profile.jawScale).toBe(1.0);
     expect(profile.closeScale).toBe(0.6);
-    expect(profile.syncOffsetMs).toBe(100);
+    expect(profile.syncOffsetMs).toBe(30); // residual after audible-clock compensation (11.2 D-6)
   });
 
   it('saves and reloads custom calibration profile from localStorage', () => {
@@ -65,11 +65,12 @@ describe('Lip-Sync Calibration Module', () => {
       closeScale: 0.58,
       puckerScale: 0.45,
       funnelScale: 0.35,
-      rollScale: 0.60,
-      teethExposureScale: 0.50,
-      smileScale: 0.40,
+      rollScale: 0.6,
+      teethExposureScale: 0.5,
+      smileScale: 0.4,
       coarticulationSpeed: 20,
       syncOffsetMs: -15,
+      clockVersion: 2,
     };
 
     saveCalibrationProfile(custom);
@@ -101,15 +102,15 @@ describe('Lip-Sync Calibration Module', () => {
   it('dynamically adapts VisemeScheduler scaling and coarticulation speed when profile is updated', () => {
     const scheduler = new VisemeScheduler();
     scheduler.setCalibrationProfile({
-      jawScale: 0.30,
+      jawScale: 0.3,
       coarticulationSpeed: 25,
     });
 
     const activeProfile = scheduler.getCalibrationProfile();
-    expect(activeProfile.jawScale).toBe(0.30);
+    expect(activeProfile.jawScale).toBe(0.3);
     expect(activeProfile.coarticulationSpeed).toBe(25);
 
-    // Sprawdź wkład fonemu 'a' z mniejszym jawScale
+    // Check the contribution of phoneme 'a' with a smaller jawScale
     scheduler.enqueue({
       epoch: 0,
       char: 'a',
@@ -120,9 +121,8 @@ describe('Lip-Sync Calibration Module', () => {
 
     const updated = scheduler.update(1.05, 0.016, 0, ['jawOpen']);
     const jawWeight = updated.get('jawOpen') ?? 0;
-    // Przy maxVal 0.55 i jawScale 0.30 target wynosi 0.55 * 0.30 = 0.165
+    // With maxVal 0.55 and jawScale 0.30 the target is 0.55 * 0.30 = 0.165
     expect(jawWeight).toBeLessThan(0.25);
     expect(jawWeight).toBeGreaterThan(0.05);
   });
 });
-

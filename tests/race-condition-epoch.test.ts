@@ -14,9 +14,6 @@ class MockFaceDriver implements FaceDriver {
   public listAvailableShapes(): string[] {
     return ['jawOpen', 'mouthClose', 'mouthFunnel', 'eyeBlinkLeft', 'eyeBlinkRight'];
   }
-  public relaxToNeutral(): void {
-    this.appliedWeights = {};
-  }
   public getSpeechMeshes(): never[] {
     return [];
   }
@@ -45,7 +42,7 @@ class MockAudioContext {
   public createGain() {
     return { gain: { value: 1, setValueAtTime: vi.fn() }, connect: vi.fn() };
   }
-  public createBuffer(channels: number, length: number, sampleRate: number) {
+  public createBuffer(_channels: number, length: number, sampleRate: number) {
     return { duration: length / sampleRate, copyToChannel: vi.fn() };
   }
   public createBufferSource() {
@@ -67,7 +64,7 @@ describe('Race Condition & Epoch Invalidation (INT-01)', () => {
   });
 
   it('silently ignores delayed audio chunks and visemes from previous epoch', () => {
-    // 1. Rozpoczynamy wypowiedź w epoce 0
+    // 1. Start an utterance in epoch 0
     const chunk0 = new Uint8Array(44100);
     const start0 = engine.playChunk(chunk0, 44100, 0);
     expect(start0).toBeGreaterThan(0);
@@ -82,23 +79,23 @@ describe('Race Condition & Epoch Invalidation (INT-01)', () => {
       start0,
       0
     );
-    expect(controller.getQueueLength()).toBe(1);
+    expect(controller.getVisemeQueueLength()).toBe(1);
 
-    // 2. Występuje przerwanie (barge-in): epoka przechodzi na 1
+    // 2. Interruption (barge-in) occurs: the epoch moves to 1
     engine.hardStop();
     controller.onInterruption();
     expect(engine.getEpoch()).toBe(1);
-    expect(controller.getQueueLength()).toBe(0);
+    expect(controller.getVisemeQueueLength()).toBe(0);
 
-    // 3. Spóźniony pakiet sieciowy z epoki 0 dociera do klienta (jitter sieciowy)
+    // 3. A late network packet from epoch 0 reaches the client (network jitter)
     const delayedPcm = new Uint8Array(22050);
-    const delayedStart = engine.playChunk(delayedPcm, 44100, 0); // epoka 0
+    const delayedStart = engine.playChunk(delayedPcm, 44100, 0); // epoch 0
 
-    // Odrzucenie audio
+    // Audio rejected
     expect(delayedStart).toBe(0);
     expect(engine.getActiveNodesCount()).toBe(0);
 
-    // Odrzucenie mimiki
+    // Expression update rejected
     controller.onAudioChunk(
       {
         chars: ['Z'],
@@ -106,13 +103,13 @@ describe('Race Condition & Epoch Invalidation (INT-01)', () => {
         char_durations_ms: [80],
       },
       10.5,
-      0 // epoka 0
+      0 // epoch 0
     );
-    expect(controller.getQueueLength()).toBe(0);
+    expect(controller.getVisemeQueueLength()).toBe(0);
 
-    // 4. Nowy, prawidłowy chunk z epoki 1 zostaje pomyślnie zaakceptowany
+    // 4. A new, valid chunk from epoch 1 is accepted
     const newPcm = new Uint8Array(22050);
-    const newStart = engine.playChunk(newPcm, 44100, 1); // epoka 1
+    const newStart = engine.playChunk(newPcm, 44100, 1); // epoch 1
     expect(newStart).toBeGreaterThan(0);
     expect(engine.getActiveNodesCount()).toBe(1);
 
@@ -123,9 +120,9 @@ describe('Race Condition & Epoch Invalidation (INT-01)', () => {
         char_durations_ms: [50, 50, 80],
       },
       newStart,
-      1 // epoka 1
+      1 // epoch 1
     );
-    expect(controller.getQueueLength()).toBe(3);
+    expect(controller.getVisemeQueueLength()).toBe(3);
     expect(controller.getState()).toBe('SPEAKING');
   });
 });

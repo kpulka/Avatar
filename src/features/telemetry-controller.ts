@@ -1,8 +1,8 @@
 /**
- * TelemetryController (Faza 11, 11-02) — jedyne miejsce znakowania telemetrii.
+ * TelemetryController (Phase 11, 11-02) — the only place where telemetry is stamped.
  *
- * Subskrybuje zdarzenia stanu i zasila `TelemetryManager`; `sample()` dostarcza
- * gotowy pakiet dla pętli render (legacy HUD lub panele).
+ * Subscribes to state events and feeds `TelemetryManager`; `sample()` delivers a
+ * ready-made package for the render loop (legacy HUD or panels).
  */
 import { TelemetryManager } from '../prod/telemetry';
 import { TypedEventBus, Unsub } from '../app/events';

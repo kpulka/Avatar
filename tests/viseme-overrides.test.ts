@@ -4,13 +4,11 @@ import {
   saveVisemeOverrides,
   clearVisemeOverrides,
   defaultVisemeShapes,
-  charTokenFor,
   isEditableViseme,
 } from '../src/lipsync/viseme-overrides';
-import { charTokenFor as charTokenFn } from '../src/lipsync/viseme-overrides';
-import { mapCharToShapes, charDefaultShapesForToken } from '../src/lipsync/viseme-mappings';
+import { mapCharToShapes, charDefaultShapesForToken, charTokenFor } from '../src/lipsync/viseme-mappings';
 
-describe('Edytor Wizemów — nadpisania (viseme-overrides)', () => {
+describe('Viseme editor — overrides (viseme-overrides)', () => {
   const mockStorage: Record<string, string> = {};
 
   beforeEach(() => {
@@ -29,29 +27,29 @@ describe('Edytor Wizemów — nadpisania (viseme-overrides)', () => {
     });
   });
 
-  it('zapisuje i odczytuje nadpisania (round-trip)', () => {
+  it('saves and reads overrides (round-trip)', () => {
     saveVisemeOverrides({ M: { mouthClose: 0.5, mouthPressLeft: 0.1 } });
     expect(loadVisemeOverrides()).toEqual({ M: { mouthClose: 0.5, mouthPressLeft: 0.1 } });
   });
 
-  it('clearVisemeOverrides czyści zapis', () => {
+  it('clearVisemeOverrides clears the saved data', () => {
     saveVisemeOverrides({ M: { mouthClose: 0.5 } });
     clearVisemeOverrides();
     expect(loadVisemeOverrides()).toEqual({});
   });
 
-  it('defaultVisemeShapes: fonem M -> mouthClose 0.8; char A -> jawOpen 0.55', () => {
-    expect(defaultVisemeShapes('M')?.get('mouthClose')).toBe(0.8);
+  it('defaultVisemeShapes: phoneme M -> mouthClose 0.5 (11.2 SHOW-06); char A -> jawOpen 0.55', () => {
+    expect(defaultVisemeShapes('M')?.get('mouthClose')).toBe(0.5);
     expect(defaultVisemeShapes('A')?.get('jawOpen')).toBeCloseTo(0.55);
   });
 
-  it('precedencja fonem nad tokenem znakowym dla kluczy wspólnych (TH)', () => {
-    // 'TH' istnieje w ARPAbet (phoneme) i jako dwuznak — dla podglądu wygrywa fonem.
+  it('a phoneme takes precedence over a character token for shared keys (TH)', () => {
+    // 'TH' exists in ARPAbet (phoneme) and as a digraph — for the preview the phoneme wins.
     const th = defaultVisemeShapes('TH');
     expect(th?.has('tongueOut')).toBe(true);
   });
 
-  it('charTokenFor: dwuznak SH, litera A, null dla spacji/interpunkcji', () => {
+  it('charTokenFor: digraph SH, letter A, null for space/punctuation', () => {
     expect(charTokenFor(['s', 'h', 'i', 'p'], 0)).toBe('SH');
     expect(charTokenFor(['a', 'b'], 0)).toBe('A');
     expect(charTokenFor([' ', 'x'], 0)).toBeNull();
@@ -59,22 +57,17 @@ describe('Edytor Wizemów — nadpisania (viseme-overrides)', () => {
     expect(charTokenFor(['a', 'b'], 1)).toBe('B');
   });
 
-  it('charDefaultShapesForToken zgadza się z mapCharToShapes (brak kontekstu C)', () => {
-    // 'SZ' -> dwuznak tunel
+  it('charDefaultShapesForToken matches mapCharToShapes (no C context)', () => {
+    // 'SZ' -> digraph (lip tube)
     expect(mapCharToShapes(['s', 'z', 'y'], 0)?.get('mouthFunnel')).toBeCloseTo(0.6);
     expect(charDefaultShapesForToken('SZ')?.get('mouthFunnel')).toBeCloseTo(0.6);
-    // 'C' bez kontekstu -> twarde K (jawOpen 0.35)
+    // 'C' without context -> hard K (jawOpen 0.35)
     expect(charDefaultShapesForToken('C')?.get('jawOpen')).toBeCloseTo(0.35);
   });
 
-  it('isEditableViseme: znane głoski true, spacja/nieznane false', () => {
+  it('isEditableViseme: known sounds true, space/unknown false', () => {
     expect(isEditableViseme('M')).toBe(true);
     expect(isEditableViseme('AA')).toBe(true);
     expect(isEditableViseme(' ')).toBe(false);
-  });
-
-  it('charTokenFor jest eksportowane (tożsamość z funkcją z viseme-mappings)', () => {
-    expect(charTokenFn).toBeTypeOf('function');
-    expect(charTokenFn(['s', 'h'], 0)).toBe('SH');
   });
 });

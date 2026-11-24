@@ -1,12 +1,14 @@
+import { el } from './shared/dom';
+import { t } from '../app/copy';
+
 /**
- * Sprawdza czy przeglądarka wspiera WebGL2 lub WebGL
+ * Checks whether the browser supports WebGL2 or WebGL.
  */
 export function isWebGLAvailable(): boolean {
   try {
     const canvas = document.createElement('canvas');
     return Boolean(
-      window.WebGLRenderingContext &&
-        (canvas.getContext('webgl2') || canvas.getContext('webgl') || canvas.getContext('experimental-webgl'))
+      window.WebGLRenderingContext && (canvas.getContext('webgl2') || canvas.getContext('webgl') || canvas.getContext('experimental-webgl'))
     );
   } catch {
     return false;
@@ -14,22 +16,23 @@ export function isWebGLAvailable(): boolean {
 }
 
 /**
- * Pokazuje planszę awaryjną w przypadku braku WebGL
+ * Shows the fallback card when WebGL is unavailable. The card is rendered into the
+ * `#webgl-fallback` mount (an empty, initially hidden overlay in index.html).
  */
-export function handleWebGLFailure(onFallbackAudio?: () => void): void {
+export function handleWebGLFailure(): void {
   const fallbackElement = document.getElementById('webgl-fallback');
   if (fallbackElement) {
+    fallbackElement.replaceChildren(
+      el('div', { className: 'card error-card', attrs: { role: 'alert', 'aria-labelledby': 'webgl-fallback-title' } }, [
+        el('h2', { id: 'webgl-fallback-title', text: t('webgl.title') }),
+        el('p', { text: t('webgl.body') }),
+        el('p', { className: 'subtext', text: t('webgl.subtext') }),
+        el('p', { className: 'subtext', text: t('webgl.browserHint') }),
+      ])
+    );
     fallbackElement.classList.remove('hidden');
-
-    const btnFallbackAudio = document.getElementById('btn-fallback-audio');
-    btnFallbackAudio?.addEventListener('click', () => {
-      fallbackElement.classList.add('hidden');
-      const canvas = document.getElementById('avatar-canvas');
-      if (canvas) {
-        canvas.style.display = 'none';
-      }
-      onFallbackAudio?.();
-    });
+    // S9: the dead canvas must not sit visible behind the overlay card.
+    document.getElementById('avatar-canvas')?.classList.add('hidden');
   }
-  console.warn('[WebGL Fallback] Brak wsparcia WebGL w przeglądarce. Aktywowano graceful degradation.');
+  console.warn('[WebGL Fallback] WebGL is not supported in this browser. Graceful degradation activated.');
 }

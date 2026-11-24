@@ -1,45 +1,41 @@
 /**
- * Panel „Wizemy" (Faza 11, 11-04): edytor wizemów per głoska — 1:1 z hud.ts.
- * Nadpisania zapisywane przez store (`studio.visemeOverrides`) i aplikowane na FaceController.
+ * "Visemes" panel (Phase 11, 11-04): per-key viseme editor — 1:1 from hud.ts.
+ * Overrides are persisted through the store (`studio.visemeOverrides`) and applied to FaceController.
  */
 import { PanelContext, PanelDefinition, PanelHandle } from '../panel-registry';
-import { el } from '../../shared/dom';
-import {
-  VISEME_GROUPS,
-  EDITOR_SHAPES,
-  defaultVisemeShapes,
-  VisemeOverrideMap,
-} from '../../../lipsync/viseme-overrides';
+import { el, uid } from '../../shared/dom';
+import { VISEME_GROUPS, EDITOR_SHAPES, defaultVisemeShapes, VisemeOverrideMap } from '../../../lipsync/viseme-overrides';
+import { t } from '../../../app/copy';
 
 interface ShapeControl {
   id: string;
-  shapes: readonly string[];
+  shapes: readonly [string, ...string[]]; // non-empty: the slider is driven by the first shape
   label: string;
 }
 
 const SHAPE_CONTROLS: ShapeControl[] = [
-  { id: 'jawOpen', shapes: ['jawOpen'], label: 'Otwarcie żuchwy (jawOpen)' },
-  { id: 'mouthClose', shapes: ['mouthClose'], label: 'Domknięcie warg (mouthClose)' },
-  { id: 'mouthPucker', shapes: ['mouthPucker'], label: 'Zaokrąglenie (mouthPucker)' },
-  { id: 'mouthFunnel', shapes: ['mouthFunnel'], label: 'Tuba (mouthFunnel)' },
-  { id: 'mouthRollLower', shapes: ['mouthRollLower'], label: 'Podwinięcie dolnej wargi (mouthRollLower)' },
-  { id: 'mouthShrugLower', shapes: ['mouthShrugLower'], label: 'Uniesienie dolnej wargi (mouthShrugLower)' },
-  { id: 'tongueOut', shapes: ['tongueOut'], label: 'Język na zewnątrz (tongueOut)' },
-  { id: 'mouthUpperUp', shapes: ['mouthUpperUpLeft', 'mouthUpperUpRight'], label: 'Uniesienie górnej wargi (L+P)' },
-  { id: 'mouthLowerDown', shapes: ['mouthLowerDownLeft', 'mouthLowerDownRight'], label: 'Opuść dolną wargę (L+P)' },
-  { id: 'mouthSmile', shapes: ['mouthSmileLeft', 'mouthSmileRight'], label: 'Rozciągnięcie kącików (L+P)' },
-  { id: 'mouthPress', shapes: ['mouthPressLeft', 'mouthPressRight'], label: 'Ściśnięcie warg (L+P)' },
+  { id: 'jawOpen', shapes: ['jawOpen'], label: t('visemes.shape.jawOpen') },
+  { id: 'mouthClose', shapes: ['mouthClose'], label: t('visemes.shape.mouthClose') },
+  { id: 'mouthPucker', shapes: ['mouthPucker'], label: t('visemes.shape.mouthPucker') },
+  { id: 'mouthFunnel', shapes: ['mouthFunnel'], label: t('visemes.shape.mouthFunnel') },
+  { id: 'mouthRollLower', shapes: ['mouthRollLower'], label: t('visemes.shape.mouthRollLower') },
+  { id: 'mouthShrugLower', shapes: ['mouthShrugLower'], label: t('visemes.shape.mouthShrugLower') },
+  { id: 'tongueOut', shapes: ['tongueOut'], label: t('visemes.shape.tongueOut') },
+  { id: 'mouthUpperUp', shapes: ['mouthUpperUpLeft', 'mouthUpperUpRight'], label: t('visemes.shape.mouthUpperUp') },
+  { id: 'mouthLowerDown', shapes: ['mouthLowerDownLeft', 'mouthLowerDownRight'], label: t('visemes.shape.mouthLowerDown') },
+  { id: 'mouthSmile', shapes: ['mouthSmileLeft', 'mouthSmileRight'], label: t('visemes.shape.mouthSmile') },
+  { id: 'mouthPress', shapes: ['mouthPressLeft', 'mouthPressRight'], label: t('visemes.shape.mouthPress') },
 ];
 
 export function createVisemesPanel(): PanelDefinition {
   return {
     id: 'visemes',
-    title: 'Wizemy',
+    title: t('panel.title.visemes'),
     icon: '✏️',
     visibleIn: 'studio',
     region: 'left',
     mount(ctx: PanelContext): PanelHandle {
-      const { store, services, container } = ctx;
+      const { store, services, container, ui } = ctx;
       const root = el('div', { className: 'panel panel-visemes' });
 
       let group: 'en' | 'char' = 'en';
@@ -47,15 +43,20 @@ export function createVisemesPanel(): PanelDefinition {
       let selectedKey: string | null = null;
       let record: VisemeOverrideMap = store.getEffective<VisemeOverrideMap>('visemeOverrides') ?? {};
 
-      const groupSelect = el('select', { className: 'viseme-group-select' }) as HTMLSelectElement;
+      const groupSelect = el('select', { className: 'viseme-group-select', ariaLabel: t('visemes.groupAria') });
       groupSelect.append(
-        el('option', { value: 'en', text: 'Silnik EN (fonemy G2P)' }),
-        el('option', { value: 'char', text: 'Ścieżka znaków (PL / fallback)' })
+        el('option', { value: 'en', text: t('visemes.groupEn') }),
+        el('option', { value: 'char', text: t('visemes.groupChar') })
       );
-      const searchInput = el('input', { className: 'search-input', placeholder: '🔍 Filtruj głoski...', type: 'text' }) as HTMLInputElement;
+      const searchInput = el('input', {
+        className: 'search-input',
+        placeholder: t('visemes.searchPlaceholder'),
+        ariaLabel: t('visemes.searchAria'),
+        type: 'text',
+      });
 
       const chipsEl = el('div', { className: 'viseme-chip-list' });
-      const detailName = el('strong', { text: '— wybierz głoskę —' });
+      const detailName = el('strong', { text: t('visemes.pickViseme') });
       const detailState = el('span', { className: 'viseme-detail-state' });
       const slidersEl = el('div', { className: 'viseme-shape-sliders' });
       const detail = el('div', { className: 'viseme-detail' }, [
@@ -63,15 +64,15 @@ export function createVisemesPanel(): PanelDefinition {
         slidersEl,
       ]);
 
-      const resetKeyButton = el('button', { className: 'btn btn-tiny btn-secondary', type: 'button', text: '↺ Reset tej głoski (domyślna)' });
-      const resetAllButton = el('button', { className: 'btn btn-tiny btn-danger', type: 'button', text: '✖ Reset WSZYSTKICH głosek' });
+      const resetKeyButton = el('button', { className: 'btn btn-tiny btn-secondary', type: 'button', text: t('visemes.resetKey') });
+      const resetAllButton = el('button', { className: 'btn btn-tiny btn-danger', type: 'button', text: t('visemes.resetAll') });
       detail.append(el('div', { className: 'viseme-detail-actions' }, [resetKeyButton, resetAllButton]));
 
       root.append(
         el('div', { className: 'viseme-toolbar' }, [groupSelect, searchInput]),
         chipsEl,
         detail,
-        el('p', { className: 'viseme-hint', text: 'Zmiany zapisują się automatycznie i działają w live lip-syncu. Podgląd znika, gdy agent zacznie mówić.' })
+        el('p', { className: 'viseme-hint', text: t('visemes.hint') })
       );
       container.append(root);
 
@@ -98,7 +99,7 @@ export function createVisemesPanel(): PanelDefinition {
       };
 
       const clearDetail = (): void => {
-        detailName.textContent = '— wybierz głoskę —';
+        detailName.textContent = t('visemes.pickViseme');
         detailState.textContent = '';
         slidersEl.replaceChildren();
       };
@@ -107,15 +108,16 @@ export function createVisemesPanel(): PanelDefinition {
         selectedKey = ref.key;
         renderChips();
         detailName.textContent = `${ref.key} — ${ref.label}`;
-        detailState.textContent = record[ref.key] ? '⚙ nadpisana' : 'domyślna';
+        detailState.textContent = record[ref.key] ? t('visemes.stateOverride') : t('visemes.stateDefault');
         slidersEl.replaceChildren();
 
         for (const control of SHAPE_CONTROLS) {
           const valueSpan = el('span', { text: shapeVal(ref.key, control.shapes[0]).toFixed(2) });
           const input = el('input', {
+            id: uid('viseme-shape'),
             type: 'range',
             attrs: { min: '0', max: '1', step: '0.01' },
-          }) as HTMLInputElement;
+          });
           input.value = String(shapeVal(ref.key, control.shapes[0]));
           input.addEventListener('input', () => {
             const value = parseFloat(input.value);
@@ -124,14 +126,14 @@ export function createVisemesPanel(): PanelDefinition {
             for (const shape of EDITOR_SHAPES) base[shape] = shapeVal(ref.key, shape);
             for (const shape of control.shapes) base[shape] = value;
             record[ref.key] = base;
-            detailState.textContent = '⚙ nadpisana';
+            detailState.textContent = t('visemes.stateOverride');
             renderChips();
             notifyRecord();
             preview();
           });
           slidersEl.append(
             el('div', { className: 'slider-group' }, [
-              el('label', {}, [el('span', { text: `${control.label}: ` }), valueSpan]),
+              el('label', { attrs: { for: input.id } }, [el('span', { text: `${control.label}: ` }), valueSpan]),
               input,
             ])
           );
@@ -152,7 +154,7 @@ export function createVisemesPanel(): PanelDefinition {
           chipsEl.append(chip);
         }
         if (chipsEl.childElementCount === 0) {
-          chipsEl.textContent = 'Brak głosek dla filtra.';
+          chipsEl.textContent = t('visemes.noMatches');
         }
       };
 
@@ -176,13 +178,31 @@ export function createVisemesPanel(): PanelDefinition {
         selectViseme(ref ?? { key: selectedKey, label: selectedKey });
       });
 
-      resetAllButton.addEventListener('click', () => {
+      const wipeAll = (): void => {
         record = {};
         selectedKey = null;
         notifyRecord();
         renderChips();
         clearDetail();
         services.animation.previewViseme(null);
+      };
+
+      // S5: wiping every persisted override is destructive, so it goes through a confirm dialog.
+      resetAllButton.addEventListener('click', () => {
+        const accept = el('button', { className: 'btn btn-primary', type: 'button', text: t('visemes.resetAllConfirmAccept') });
+        const cancel = el('button', { className: 'btn btn-secondary', type: 'button', text: t('visemes.resetAllConfirmCancel') });
+        accept.addEventListener('click', () => {
+          ui.modal.close();
+          wipeAll();
+        });
+        cancel.addEventListener('click', () => ui.modal.close());
+        ui.modal.open(
+          t('visemes.resetAllConfirmTitle'),
+          el('div', { className: 'confirm-body' }, [
+            el('p', { text: t('visemes.resetAllConfirmBody') }),
+            el('div', { className: 'drawer-actions' }, [accept, cancel]),
+          ])
+        );
       });
 
       renderChips();

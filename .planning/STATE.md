@@ -1,19 +1,19 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.0
-milestone_name: milestone
-current_phase: 11
-current_phase_name: UI dual-persona i modularny frontend
-status: executed_uat_pending
-stopped_at: "Domknięte tor A: review A1 (APPROVED-WITH-NITS; P1 locki + P2 unsub naprawione), artefakty GSD F7/F8/F11 dopisane, kod zabezpieczony w git (5 commitów). Został UAT manualny (A2/B3) — człowiek."
-last_updated: "2026-09-12"
-last_activity: "2026-09-12"
-last_activity_desc: "Tor A domknięty: 5 commitów ratujących nieśledzony kod (repo śledziło tylko 14 plików docs), 15 brakujących artefaktów SUMMARY/VERIFICATION (07/08/11), review A1 przez architekta (APPROVED-WITH-NITS), fix P1 (lock zamraża bieżącą wartość) + P2 (unsub w dispose), pełna regresja 41 plików/204 testów + build zielone"
+milestone: v1.1
+milestone_name: Portfolio Polish
+current_phase: 11.2
+current_phase_name: Showcase wow pack
+status: in_progress
+stopped_at: "Implement run 20261122-071333 closed. Owner-blocked: 11.2-03, 11.2-09, 13-03, 18-05, 18-06. Partial: 13-04, 17-05, 18-03, 18-07."
+last_updated: "2026-11-24"
+last_activity: "2026-11-24"
+last_activity_desc: "Implement run 20261122-071333: waves A-F executed; gate 78 files / 855 tests (after audit remediation 2026-11-24; CI green on PR #1), npm run verify green. Owner-blocked plans recorded."
 progress:
-  total_phases: 11
-  completed_phases: 6
-  total_plans: 50
-  completed_plans: 39
+  total_phases: 20
+  completed_phases: 10
+  total_plans: 108
+  completed_plans: 84
 ---
 
 # Project State
@@ -23,16 +23,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-09-01)
 
 **Core value:** Płynna rozmowa głosowa z realistycznym awatarem — usta idealnie zsynchronizowane z mową, naturalne przerwania bez zamrożonej miny.
-**Current focus:** UAT Faz 11 i 8-04 (człowiek); Faza 9 odblokowana środowiskowo (patrz Blockers — OOM przy budowie silników TRT); Faza 7 wstrzymana (UAT później)
+**Current focus:** v1.1 implement run 20261122-071333 closed at automated level. Remaining work is owner-blocked (see Blockers/Pending human).
 
 ## Current Position
 
-Phase: 11 of 11 (UI dual-persona i modularny frontend) — wykonana, review A1 zamknięty; Faza 7 ⏸ deferred; Fazy 8–10 zrównoleglone
-Plan: 11-01..11-07 ✅ (kod); UAT manualny ⏳ (11-VERIFICATION.md §3); 08-04 UAT ⏳
-Status: F11 executed + reviewed (APPROVED-WITH-NITS, nity P1/P2 naprawione) — bramki automatyczne PASS (41 plików / 204 testy, build)
-Last activity: 2026-09-12 — domknięcie toru A (artefakty GSD + commity + fixy z review)
+Phase: v1.1 Portfolio Polish — implement run closed (11.2 7/9, 12, 14-17 executed, 13 and 18 partial).
+Plan: 11.2-03 and 11.2-09 blocked on owner; 13-03 blocked; 18-05 and 18-06 blocked; 13-04, 17-05, 18-03, 18-07 partial.
+Status: implement run done. Automated gates green (npm run verify: typecheck 0, 78 files / 855 tests (after audit remediation 2026-11-24; CI green on PR #1), build, lint, format). v1.0: F11/F8 manual UAT pending, F9 blocked on OOM, F10 subject to go/no-go.
+Last activity: 2026-11-24 — implement run 20261122-071333 results recorded in ROADMAP and REQUIREMENTS.
 
-Progress: 39/50 planów wykonanych (F1–F6 26/26, F7 3/4, F8 3/4, F11 7/7; UAT-y F7-04/F8-04/F11 do sesji człowieka)
+Progress: 84/108 plan SUMMARY files without PARTIAL status (4 partial excluded; 5 owner-blocked plans have no SUMMARY). Completed phases: 1-6, 11.1, 12, 14, 15.
 
 ## Performance Metrics
 
@@ -72,6 +72,9 @@ Progress: 39/50 planów wykonanych (F1–F6 26/26, F7 3/4, F8 3/4, F11 7/7; UAT-
 Decisions are logged in PROJECT.md Key Decisions table.
 Recent decisions affecting current work:
 
+- Implement run 20261122-071333 (v1.1 Portfolio Polish, 2026-11-22/24): ARR license (All Rights Reserved; wording approval pending); cmu-pronouncing-dictionary is ISC (not BSD-2 as 18-CONTEXT said); anim-config and alloc-probe moved to `realism/` (no shim); `npm test` scoped to `tests/` (`vitest run --dir tests`, agent worktrees excluded); Prettier 140 cols, es5, quoteProps preserve; ESLint 10 needs Node >= 20.19; total JS gzip 1162 -> 277 kB (CMU dictionary pruned 961 -> 64.5 kB gz).
+- v1.1 owner decisions (2026-11-19): GitHub Pages demo is offline, with no live agent. Keep the original showcase GLB for 11.2-01. In 18-06, preserve the local config.json changes and remove the backup. Project code: all rights reserved. README directs commercial licensing inquiries to the owner via GitHub. Third-party terms are preserved. This decision supersedes MIT and the GitHub standard-license recognition gate in 18-02.
+
 - Init: ElevenAgents (Tryb A) jako mózg konwersacji — barge-in i alignment serwerowo
 - Init: Surowy WSS zamiast SDK — audio + alignment na jednej osi czasu (precyzja lipsync)
 - Init: Epoch-based barge-in + FaceController jako jedyny właściciel morph targetów
@@ -80,7 +83,7 @@ Recent decisions affecting current work:
 - P7: ElevenLabs daje timing liter, nie fonemy — warstwa G2P (CMUdict) po stronie klienta; litery nieme wchłaniają czas sąsiadów
 - P7: Lambda wygładzania per grupa mięśni (domknięcie 1.7×, żuchwa 1.55×, okrągłe 1.0×, smile 0.45×)
 - P7: Fallback bez alignmentu = tylko jawOpen ∝ energia RMS + telemetria źródła alignmentu w HUD
-- P7: v1.3 EN — mocniejsze amplitudy + "smaczek" (zęby/język/pucker per wizem); docs/EN-visemes.md jako dokument roboczy
+- P7: v1.3 EN — mocniejsze amplitudy + "smaczek" (zęby/język/pucker per wizem); docs/en-visemes.md jako dokument roboczy
 - P8-10: Kierunek = zunifikowany tor animacji (wizemy + absolutne ramki A2F), wspólny barge-in (epoka); A2F lokalnie (RTX 3090) → dopiero potem Cloud Run (go/no-go w Fazie 9)
 - P8-10 review (2026-09-02): A2F = Audio2Face-3D SDK MIT + wagi HF (nie NIM/NGC); kontrakt ramek v2 (relatywny timeSec, FramesClip carriesEyes/carriesEmotion, dekapitalizer PascalCase); solver na rigu z avatar.glb; model v3.0 primary; chmura wyłącznie scale-to-zero (płacimy tylko za przetworzenie); emocje: A2E w turach A2F + EmotionLayer w IDLE; EN-only
 - P11 review A1 (2026-09-12): **lock zamraża bieżącą wartość klucza**, nie nadpisuje jej własną — tweaker tylko odbiera userowi prawo zmiany (CONTEXT:53,57). Klucze usera i studia są rozłączne, więc źródłem wartości zamrożonej jest właściwy profil (`getEffective`). Regresja: `tests/settings-store.test.ts` (lock po zmianie wartości).
@@ -92,10 +95,25 @@ Recent decisions affecting current work:
 ### Roadmap Evolution
 
 - Phase 11 added (2026-09-10): UI dual-persona i modularny frontend — user/studio, porównywarka algorytmów, scene presets, refaktor modułowy; decyzje w `11-CONTEXT.md`; start po UAT 08-04, równolegle z Fazą 9 (UI-01..UI-05)
+- Milestone v1.1 added (2026-11-18): **Portfolio Polish** — fazy 12–18 (EN-ization, README, architektura+guards, web UI, mechanika animacji, fonemy/lip-sync, CI/security/licencja/deploy/higiena); 58 wymagań (I18N/READ/ARCH/UIX/ANIM/LIP/QUAL); artefakty 12+ po angielsku (D2 w 12-CONTEXT); komplet CONTEXT/PLAN/VERIFICATION + drafty per faza; kolejność wykonania w ROADMAP §Progress
+
+- Phases 11.1 + 11.2 inserted (2026-11-19): po rewizji `refactoring.md` (7 subagentów weryfikujących + baseline tsc 0 / vitest 209 zielonych). 11.1 = HARD-01..07 (embed-bridge: atak przez opener/referrer, trwała podmiana agenta, wildcard w prod; split-brain agentId; sampleRate dema; wyciek GPU; tory A/B). 11.2 = SHOW-01..10 (cel właściciela: „zrobić wrażenie”; licencja MetaPerson po stronie właściciela → GLB do repo). Kolejność 12–18 bez zmian.
 
 ### Pending Todos
 
-> **Kolejka GSD (stan 2026-09-12).** Tor A = domknięcie F11/F8 — **WYKONANY**; Tor B = F9→F10 (środowisko gotowe, blokada OOM — zgoda człowieka); Tor C = po F10.
+> **Kolejka GSD (stan 2026-11-18).** Tor A = domknięcie F11/F8 — **WYKONANY**; Tor B = F9→F10 (środowisko gotowe, blokada OOM — zgoda człowieka); Tor C = po F10; **Tor D = wykonanie v1.1 (fazy 12–18)**.
+
+**Tor D — v1.1 Portfolio Polish (nowe, 2026-11-18):**
+
+- **D1**: `18-01` secrets scan NAJPIERW (repo publiczne; pełna historia git) + SECURITY.md — może wykonać się natychmiast, niezależnie od reszty
+- **D2**: `/gsd-execute-phase 12` (EN-ization; 7 planów, 3 fale tłumaczeń docs) — rekomendowane przed 13–17 (tłumaczenie komentarzy przed refaktorami)
+- **D3**: `/gsd-execute-phase 13` (README; 13-03 gated na Fazę 15 — screenshots po naprawie light theme)
+- **D4**: `/gsd-execute-phase 15` → `/gsd-execute-phase 16` → `/gsd-execute-phase 17` (refaktory; 16 i 17 świadomie sekwencjonowane z 14 — patrz 16-CONTEXT §11)
+- **D5**: `/gsd-execute-phase 14` (ARCHITECTURE.md + guards; 14-05 po 16/17 żeby dokument był prawdziwy; 14-01/14-02 przed 18-03/18-04)
+- **D6**: `/gsd-execute-phase 18` (reszta: CI, licencja, demo, higiena; 3 decyzje ownera zbiorczo: licencja MIT, quota demo Pages, dyspozycja .bak/config.json — patrz 18-CONTEXT §6.5)
+- **D7**: decyzje człowieka zebrane w jednym asku na starcie Fazy 18: licencja (D2), live-agent na Pages (D4), `.bak`/`config.json` (D6)
+
+**Tory A–C (zaległe z v1.0):**
 
 - ~~**GATE:** review-unifikacja podejścia A2F ↔ wizemy~~ — **WYKONANE 2026-09-02**: decyzje w PROJECT.md, plany 08–10 zaktualizowane
 - ~~**A1**: review kodu F11 przed UAT~~ — **WYKONANE 2026-09-12** (architekt GLM 5.3): **APPROVED-WITH-NITS**, plany 11-01..11-07 wszystkie DONE; P1 (semantyka locków) i P2 (unsub w `dispose()`) naprawione + testy regresyjne; pozostałe P2 w decyzjach powyżej
@@ -113,8 +131,16 @@ Recent decisions affecting current work:
 
 ### Blockers/Concerns
 
+- **Implement run 20261122-071333 — not executed (owner):** 11.2-03 (Listen recording, real ElevenLabs), 11.2-09 (hero capture), 13-03 (visual assets), 18-05 (Pages demo, needs D4 decision), 18-06 (`.claude/`, `scripts/make-demo-clip.mjs`, `config.json.bak-*` dispositions, repo metadata). PARTIAL: 13-04, 17-05, 18-03, 18-07.
+- **Deferred human sign-offs:** 11.2-04..08 visual on real GPU; 12 UI/console UAT; 13 manual; 14 cold-open doc review and `npm run dev` boot; 15 sections 2-5 (a11y, states, responsive, screenshots); 16 UAT and 5 intentional behavior changes; 17 live UAT (`17-UAT-PROTOCOL.md`) and unowned T-8 a2f-parser gap; 18 LICENSE wording and first GitHub CI run.
+- **18-07 close-out leftovers:** `@elevenlabs/client` unused runtime dependency; 5 dev-only npm audit advisories; Node 22 CI not run locally (local Node 25.6.1); EmbedBridge window listener, AudioEngine.dispose, vignette DOM gaps (Phase 14); language gate matches diacritics only.
+
+- 11.2 wave 1 fresh clone: npm ci passed. npm audit reported two moderate and three high advisories in the current lockfile (Vite, Vitest and transitive development dependencies). Review during CI/security work.
+
+- **Rate limit API OpenCode (miesięczny, reset ~23 dni od 2026-11-18):** subagenci padają natychmiast na RateLimitError — planning v1.1 wykonany w całości inline przez orkiestratora. Przy wykonaniu faz 12–18: albo czekać na reset, albo wykonywać plany inline (`/gsd-fast`/`/gsd-quick` zamiast swarmów), albo delegować pojedynczo z dużymi przerwami. Wpływa na tempo, nie na treść planów.
+- **Decyzje człowieka wymagane na starcie Fazy 18** (zbiorczo, 18-CONTEXT §6.5): licencja (rekomendacja MIT — audyt zależności: same permissive), live-agent na demo Pages (rekomendacja: NIE — quota), dyspozycja `.planning/config.json.bak-*` i zmodyfikowanego `config.json` (pliki sprzed tej sesji — nietknięte).
 - ~~Luka artefaktów GSD (A3/A4)~~ — **ZAMKNIĘTE 2026-09-12**: dopisane SUMMARY 07-01..07-04, 08-01..08-03, 11-01..11-07 oraz `08-VERIFICATION.md`; `manual_uat` w 07-04/08-VERIFICATION/11-VERIFICATION pozostaje `pending` (świadomie, bez konfabulacji wyników).
-- **OOM przy budowie silników TRT (blokuje B2):** `gen_sample_data.py` → TRT `buildSerializedNetwork` rzuca `OutOfMemory` (brak wolnego commitu/RAM). Pomiar 2026-09-12: 32 GB total / **11,2 GB wolne** (przy pierwszej próbie było 7,7 GB) — retry ma sens, ale to ciężki job GPU/CPU wymagający zgody użytkownika; alternatywa: zamknięcie aplikacji/restart. Komenda i env w `docs/A2F-LOCAL.md` §4.
+- **OOM przy budowie silników TRT (blokuje B2):** `gen_sample_data.py` → TRT `buildSerializedNetwork` rzuca `OutOfMemory` (brak wolnego commitu/RAM). Pomiar 2026-09-12: 32 GB total / **11,2 GB wolne** (przy pierwszej próbie było 7,7 GB) — retry ma sens, ale to ciężki job GPU/CPU wymagający zgody użytkownika; alternatywa: zamknięcie aplikacji/restart. Komenda i env w `docs/a2f-local-setup.md` §4.
 - `extract_rig.py` odroczone: solver wymaga szablonu topologii NPZ, który powstaje dopiero z wyjścia A2F (09-01) — nie da się napisać wcześniej bez zgadywania.
 - 07-04 wymaga sesji z żywym agentem EN (mikrofon + model MetaPerson) — plan typu verify, nieautonomiczny.
 - Faza 9 wymaga: RTX 3090 + CUDA/TensorRT + konto HF (click-through A2E) — kroki nieautonomiczne; A2E gated = click-through licencji.
@@ -135,6 +161,6 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-09-12
-Stopped at: Tor A domknięty (review A1 + artefakty GSD + 5 commitów + fixy P1/P2; 204 testy i build zielone). NEXT: (1) UAT 08-04 + UAT F11 przez nowe Studio → Animacja — człowiek; (2) odblokowanie OOM → `gen_sample_data.py` → 09-01 dump fixture.
-Resume file: .planning/phases/11-ui-dual-persona-i-modularny-frontend-user-studio-scene-prese/11-VERIFICATION.md
+Last session: 2026-11-24
+Stopped at: implement run 20261122-071333 closed. Resume with owner decisions (18-05/18-06), real ElevenLabs recording (11.2-03) and manual UAT sessions.
+Resume file: .planning/ROADMAP.md (§Progress — v1.1 execution order) + .planning/STATE.md (Tor D)

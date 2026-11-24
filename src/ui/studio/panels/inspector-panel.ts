@@ -1,9 +1,10 @@
 /**
- * Panel „Inspektor" (Faza 11, 11-04): ręczne testowanie 51 blendshape'ów ARKit
- * w kategoriach, z filtrem, symetrią L/R i resetem — 1:1 z sekcji inspektora w hud.ts.
+ * "Inspector" panel (Phase 11, 11-04): manual testing of the 51 ARKit blendshapes
+ * by category, with filter, L/R symmetry and reset — 1:1 from the inspector section of hud.ts.
  */
 import { PanelContext, PanelDefinition, PanelHandle } from '../panel-registry';
-import { el } from '../../shared/dom';
+import { el, uid } from '../../shared/dom';
+import { t } from '../../../app/copy';
 
 interface ShapeRow {
   shape: string;
@@ -18,89 +19,103 @@ interface Category {
 
 const CATEGORIES: Category[] = [
   {
-    title: '🦴 Żuchwa (4)',
+    title: t('inspector.category.jaw'),
     open: true,
     rows: [
-      { shape: 'jawOpen', label: 'jawOpen (Otwarcie żuchwy)' },
-      { shape: 'jawForward', label: 'jawForward (Wysunięcie)' },
-      { shape: 'jawLeft', label: 'jawLeft (W lewo)' },
-      { shape: 'jawRight', label: 'jawRight (W prawo)' },
+      { shape: 'jawOpen', label: t('inspector.shape.jawOpen') },
+      { shape: 'jawForward', label: t('inspector.shape.jawForward') },
+      { shape: 'jawLeft', label: t('inspector.shape.jawLeft') },
+      { shape: 'jawRight', label: t('inspector.shape.jawRight') },
     ],
   },
   {
-    title: '👄 Usta & Wargi (23)',
+    title: t('inspector.category.mouth'),
     open: true,
     rows: [
-      { shape: 'mouthClose', label: 'mouthClose (Domykanie warg)' },
-      { shape: 'mouthFunnel', label: 'mouthFunnel (Tuba)' },
-      { shape: 'mouthPucker', label: 'mouthPucker (Dzióbek)' },
-      { shape: 'mouthRollLower', label: 'mouthRollLower (Podwinięcie dolnej)' },
-      { shape: 'mouthRollUpper', label: 'mouthRollUpper (Podwinięcie górnej)' },
-      { shape: 'mouthShrugLower', label: 'mouthShrugLower (Wypchnięcie dolnej)' },
-      { shape: 'mouthShrugUpper', label: 'mouthShrugUpper (Pociągnięcie górnej)' },
-      { shape: 'mouthPressLeft', label: 'mouthPressLeft (Docisk L)' },
-      { shape: 'mouthPressRight', label: 'mouthPressRight (Docisk P)' },
-      { shape: 'mouthUpperUpLeft', label: 'mouthUpperUpLeft (Górna warga góra L)' },
-      { shape: 'mouthUpperUpRight', label: 'mouthUpperUpRight (Górna warga góra P)' },
-      { shape: 'mouthLowerDownLeft', label: 'mouthLowerDownLeft (Dolna warga dół L)' },
-      { shape: 'mouthLowerDownRight', label: 'mouthLowerDownRight (Dolna warga dół P)' },
-      { shape: 'mouthSmileLeft', label: 'mouthSmileLeft (Uśmiech L)' },
-      { shape: 'mouthSmileRight', label: 'mouthSmileRight (Uśmiech P)' },
-      { shape: 'mouthFrownLeft', label: 'mouthFrownLeft (Smutek L)' },
-      { shape: 'mouthFrownRight', label: 'mouthFrownRight (Smutek P)' },
-      { shape: 'mouthDimpleLeft', label: 'mouthDimpleLeft (Dołeczek L)' },
-      { shape: 'mouthDimpleRight', label: 'mouthDimpleRight (Dołeczek P)' },
-      { shape: 'mouthStretchLeft', label: 'mouthStretchLeft (Rozciągnięcie L)' },
-      { shape: 'mouthStretchRight', label: 'mouthStretchRight (Rozciągnięcie P)' },
-      { shape: 'mouthLeft', label: 'mouthLeft (Usta w lewo)' },
-      { shape: 'mouthRight', label: 'mouthRight (Usta w prawo)' },
+      { shape: 'mouthClose', label: t('inspector.shape.mouthClose') },
+      { shape: 'mouthFunnel', label: t('inspector.shape.mouthFunnel') },
+      { shape: 'mouthPucker', label: t('inspector.shape.mouthPucker') },
+      { shape: 'mouthRollLower', label: t('inspector.shape.mouthRollLower') },
+      { shape: 'mouthRollUpper', label: t('inspector.shape.mouthRollUpper') },
+      { shape: 'mouthShrugLower', label: t('inspector.shape.mouthShrugLower') },
+      { shape: 'mouthShrugUpper', label: t('inspector.shape.mouthShrugUpper') },
+      { shape: 'mouthPressLeft', label: t('inspector.shape.mouthPressLeft') },
+      { shape: 'mouthPressRight', label: t('inspector.shape.mouthPressRight') },
+      { shape: 'mouthUpperUpLeft', label: t('inspector.shape.mouthUpperUpLeft') },
+      { shape: 'mouthUpperUpRight', label: t('inspector.shape.mouthUpperUpRight') },
+      { shape: 'mouthLowerDownLeft', label: t('inspector.shape.mouthLowerDownLeft') },
+      { shape: 'mouthLowerDownRight', label: t('inspector.shape.mouthLowerDownRight') },
+      { shape: 'mouthSmileLeft', label: t('inspector.shape.mouthSmileLeft') },
+      { shape: 'mouthSmileRight', label: t('inspector.shape.mouthSmileRight') },
+      { shape: 'mouthFrownLeft', label: t('inspector.shape.mouthFrownLeft') },
+      { shape: 'mouthFrownRight', label: t('inspector.shape.mouthFrownRight') },
+      { shape: 'mouthDimpleLeft', label: t('inspector.shape.mouthDimpleLeft') },
+      { shape: 'mouthDimpleRight', label: t('inspector.shape.mouthDimpleRight') },
+      { shape: 'mouthStretchLeft', label: t('inspector.shape.mouthStretchLeft') },
+      { shape: 'mouthStretchRight', label: t('inspector.shape.mouthStretchRight') },
+      { shape: 'mouthLeft', label: t('inspector.shape.mouthLeft') },
+      { shape: 'mouthRight', label: t('inspector.shape.mouthRight') },
     ],
   },
   {
-    title: '👁️ Oczy & Spojrzenie (14)',
+    title: t('inspector.category.eyes'),
     rows: [
-      { shape: 'eyeBlinkLeft', label: 'eyeBlinkLeft (Mrugnięcie L)' },
-      { shape: 'eyeBlinkRight', label: 'eyeBlinkRight (Mrugnięcie P)' },
-      { shape: 'eyeWideLeft', label: 'eyeWideLeft (Szerokie oko L)' },
-      { shape: 'eyeWideRight', label: 'eyeWideRight (Szerokie oko P)' },
-      { shape: 'eyeSquintLeft', label: 'eyeSquintLeft (Zmrużenie L)' },
-      { shape: 'eyeSquintRight', label: 'eyeSquintRight (Zmrużenie P)' },
-      { shape: 'eyeLookUpLeft', label: 'eyeLookUpLeft (Wzrok góra L)' },
-      { shape: 'eyeLookUpRight', label: 'eyeLookUpRight (Wzrok góra P)' },
-      { shape: 'eyeLookDownLeft', label: 'eyeLookDownLeft (Wzrok dół L)' },
-      { shape: 'eyeLookDownRight', label: 'eyeLookDownRight (Wzrok dół P)' },
-      { shape: 'eyeLookInLeft', label: 'eyeLookInLeft (Wzrok wewnątrz L)' },
-      { shape: 'eyeLookInRight', label: 'eyeLookInRight (Wzrok wewnątrz P)' },
-      { shape: 'eyeLookOutLeft', label: 'eyeLookOutLeft (Wzrok zewnątrz L)' },
-      { shape: 'eyeLookOutRight', label: 'eyeLookOutRight (Wzrok zewnątrz P)' },
+      { shape: 'eyeBlinkLeft', label: t('inspector.shape.eyeBlinkLeft') },
+      { shape: 'eyeBlinkRight', label: t('inspector.shape.eyeBlinkRight') },
+      { shape: 'eyeWideLeft', label: t('inspector.shape.eyeWideLeft') },
+      { shape: 'eyeWideRight', label: t('inspector.shape.eyeWideRight') },
+      { shape: 'eyeSquintLeft', label: t('inspector.shape.eyeSquintLeft') },
+      { shape: 'eyeSquintRight', label: t('inspector.shape.eyeSquintRight') },
+      { shape: 'eyeLookUpLeft', label: t('inspector.shape.eyeLookUpLeft') },
+      { shape: 'eyeLookUpRight', label: t('inspector.shape.eyeLookUpRight') },
+      { shape: 'eyeLookDownLeft', label: t('inspector.shape.eyeLookDownLeft') },
+      { shape: 'eyeLookDownRight', label: t('inspector.shape.eyeLookDownRight') },
+      { shape: 'eyeLookInLeft', label: t('inspector.shape.eyeLookInLeft') },
+      { shape: 'eyeLookInRight', label: t('inspector.shape.eyeLookInRight') },
+      { shape: 'eyeLookOutLeft', label: t('inspector.shape.eyeLookOutLeft') },
+      { shape: 'eyeLookOutRight', label: t('inspector.shape.eyeLookOutRight') },
     ],
   },
   {
-    title: '🤨 Brwi & Czoło (5)',
+    title: t('inspector.category.brows'),
     rows: [
-      { shape: 'browInnerUp', label: 'browInnerUp (Wewnętrzne uniesienie)' },
-      { shape: 'browDownLeft', label: 'browDownLeft (Ściągnięcie dół L)' },
-      { shape: 'browDownRight', label: 'browDownRight (Ściągnięcie dół P)' },
-      { shape: 'browOuterUpLeft', label: 'browOuterUpLeft (Zewnętrzne uniesienie L)' },
-      { shape: 'browOuterUpRight', label: 'browOuterUpRight (Zewnętrzne uniesienie P)' },
+      { shape: 'browInnerUp', label: t('inspector.shape.browInnerUp') },
+      { shape: 'browDownLeft', label: t('inspector.shape.browDownLeft') },
+      { shape: 'browDownRight', label: t('inspector.shape.browDownRight') },
+      { shape: 'browOuterUpLeft', label: t('inspector.shape.browOuterUpLeft') },
+      { shape: 'browOuterUpRight', label: t('inspector.shape.browOuterUpRight') },
     ],
   },
   {
-    title: '😊 Policzki & Nos (5)',
+    title: t('inspector.category.cheeks'),
     rows: [
-      { shape: 'cheekPuff', label: 'cheekPuff (Nadęcie policzków)' },
-      { shape: 'cheekSquintLeft', label: 'cheekSquintLeft (Podciągnięcie policzka L)' },
-      { shape: 'cheekSquintRight', label: 'cheekSquintRight (Podciągnięcie policzka P)' },
-      { shape: 'noseSneerLeft', label: 'noseSneerLeft (Marszczenie nozdrza L)' },
-      { shape: 'noseSneerRight', label: 'noseSneerRight (Marszczenie nozdrza P)' },
+      { shape: 'cheekPuff', label: t('inspector.shape.cheekPuff') },
+      { shape: 'cheekSquintLeft', label: t('inspector.shape.cheekSquintLeft') },
+      { shape: 'cheekSquintRight', label: t('inspector.shape.cheekSquintRight') },
+      { shape: 'noseSneerLeft', label: t('inspector.shape.noseSneerLeft') },
+      { shape: 'noseSneerRight', label: t('inspector.shape.noseSneerRight') },
     ],
   },
 ];
 
 const MIRROR_BASES = [
-  'eyeBlink', 'eyeSquint', 'eyeWide', 'eyeLookUp', 'eyeLookDown', 'eyeLookIn', 'eyeLookOut',
-  'browDown', 'browOuterUp', 'cheekSquint', 'noseSneer',
-  'mouthSmile', 'mouthPress', 'mouthUpperUp', 'mouthLowerDown', 'mouthDimple', 'mouthFrown',
+  'eyeBlink',
+  'eyeSquint',
+  'eyeWide',
+  'eyeLookUp',
+  'eyeLookDown',
+  'eyeLookIn',
+  'eyeLookOut',
+  'browDown',
+  'browOuterUp',
+  'cheekSquint',
+  'noseSneer',
+  'mouthSmile',
+  'mouthPress',
+  'mouthUpperUp',
+  'mouthLowerDown',
+  'mouthDimple',
+  'mouthFrown',
   'mouthStretch',
 ];
 
@@ -119,7 +134,7 @@ function mirrorCounterpart(shape: string): string {
 export function createInspectorPanel(): PanelDefinition {
   return {
     id: 'inspector',
-    title: 'Inspektor',
+    title: t('panel.title.inspector'),
     icon: '🧪',
     visibleIn: 'studio',
     region: 'left',
@@ -129,20 +144,21 @@ export function createInspectorPanel(): PanelDefinition {
 
       const searchInput = el('input', {
         className: 'search-input',
-        placeholder: '🔍 Szukaj kształtu (np. jaw, roll, eye)...',
+        placeholder: t('inspector.searchPlaceholder'),
+        ariaLabel: t('inspector.searchAria'),
         type: 'text',
-      }) as HTMLInputElement;
-      const resetAllButton = el('button', { className: 'btn btn-tiny btn-secondary', type: 'button', text: 'Resetuj wszystko' });
+      });
+      const resetAllButton = el('button', { className: 'btn btn-tiny btn-secondary', type: 'button', text: t('inspector.resetAll') });
       const toolbar = el('div', { className: 'drawer-toolbar' }, [searchInput, resetAllButton]);
 
-      const mirrorCheckbox = el('input', { type: 'checkbox' }) as HTMLInputElement;
+      const mirrorCheckbox = el('input', { type: 'checkbox' });
       const mirrorToggle = el('label', { className: 'engine-toggle inspector-mirror-toggle' }, [
         mirrorCheckbox,
-        el('span', { text: 'Symetrycznie L/R (smile, press, brow, oko…)' }),
+        el('span', { text: t('inspector.mirror') }),
       ]);
       const mirrorRow = el('div', { className: 'drawer-toolbar mirror-row' }, [
         mirrorToggle,
-        el('span', { className: 'mirror-hint', text: 'jaw/mouth translacje zostają osobno' }),
+        el('span', { className: 'mirror-hint', text: t('inspector.mirrorHint') }),
       ]);
 
       const body = el('div', { className: 'drawer-body' });
@@ -153,9 +169,10 @@ export function createInspectorPanel(): PanelDefinition {
         for (const row of category.rows) {
           const valueLabel = el('span', { text: '0.00' });
           const input = el('input', {
+            id: uid('inspector-shape'),
             type: 'range',
             attrs: { min: '0', max: '1', step: '0.01' },
-          }) as HTMLInputElement;
+          });
           input.value = '0';
 
           input.addEventListener('input', () => {
@@ -173,7 +190,7 @@ export function createInspectorPanel(): PanelDefinition {
           });
 
           const rowEl = el('div', { className: 'slider-group inspector-row', attrs: { 'data-shape': row.shape } }, [
-            el('label', {}, [el('span', { text: `${row.label} ` }), valueLabel]),
+            el('label', { attrs: { for: input.id } }, [el('span', { text: `${row.label} ` }), valueLabel]),
             input,
           ]);
           rowsByShape.set(row.shape, { row: rowEl, input, label: valueLabel });

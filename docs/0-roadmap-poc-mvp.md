@@ -1,92 +1,94 @@
-# 0. Roadmapa: PoC → MVP → Faza 2
+# 0. Roadmap: PoC → MVP → Phase 2
 
-Zasada nadrzędna: **wąski pion (thin vertical slice)** — każdy etap kończy się działającym, demoowalnym produktem, a nie kolekcją modułów. Dokumenty 1–6 są referencją techniczną; ten plik jest planem wykonawczym.
+> **Status (checked 2026-11-24):** the PoC (ROADMAP phases 1–4) and the MVP (phases 5–6) are marked complete in `.planning/ROADMAP.md` (2026-09-01). Their acceptance runs are recorded in `.planning/phases/04-barge-in-i-szlif-poc/04-VERIFICATION.md` and `.planning/phases/06-produktyzacja-mvp/06-VERIFICATION.md`, both with `status: passed`. The checkboxes in the sections below are the original targets; they were not ticked in place. The current milestone is v1.1 (phases 12–18, plus the inserted 11.1 and 11.2; see ROADMAP). "Stage 2" below lists directions, not commitments.
+
+Guiding principle: **thin vertical slice** — each stage ends with a working, demonstrable product, not a collection of modules. Documents 1–6 are the technical reference; this file is the execution plan.
 
 ---
 
-## 🎯 Etap 0 — PoC (cel: 3–5 dni roboczych)
+## 🎯 Stage 0 — PoC (goal: 3–5 working days)
 
-**Cel biznesowy:** "Mówię do przeglądarki, realistyczna postać odpowiada głosem, usta są zsynchronizowane, mogę jej przerwać w pół zdania."
+**Business goal:** "I speak to the browser, a realistic character answers with a voice, the lips are in sync, and I can interrupt it mid-sentence."
 
-**Zakres IN:**
-1. Agent ElevenAgents skonfigurowany w dashboardzie (prompt, głos, model LLM, język EN).
-2. Klient web (Vite + TypeScript + Three.js), połączenie przez **surowy WebSocket** `wss://api.elevenlabs.io/v1/convai/conversation?agent_id=...` (dlaczego nie SDK — patrz [docs/2, sekcja "SDK vs surowy WSS"](2-integracja-elevenlabs-wss.md)).
-3. Model MetaPerson `.glb` (bust/head — nie pełne ciało) z blendshape'ami ARKit.
-4. Lip-sync z `audio_event.alignment` (mapowanie EN z [docs/3](3-lip-sync-i-koartykulacja.md)).
-5. Odtwarzanie PCM przez Web Audio + harmonogram wizemów na tej samej osi czasu.
-6. Obsługa eventów `interruption` → stop audio + relaks twarzy (`FaceController` z [docs/4](4-audio-i-obsluga-przerwan.md)).
-7. Proceduralne mruganie (idle) — najtańszy sposób ożywienia postaci.
+**Scope IN:**
+1. ElevenAgents agent configured in the dashboard (prompt, voice, LLM model, language EN).
+2. Web client (Vite + TypeScript + Three.js), connected via a **raw WebSocket** `wss://api.elevenlabs.io/v1/convai/conversation?agent_id=...` (why not the SDK — see [docs/2, section "SDK vs raw WSS"](2-elevenlabs-wss-integration.md)).
+3. MetaPerson `.glb` model (bust/head — not a full body) with ARKit blendshapes.
+4. Lip-sync from `audio_event.alignment` (EN mapping from [docs/3](3-lip-sync-and-coarticulation.md)).
+5. PCM playback via Web Audio + viseme scheduling on the same time axis.
+6. Handling of `interruption` events → stop audio + face relaxation (`FaceController` from [docs/4](4-audio-and-barge-in.md)).
+7. Procedural blinking (idle) — the cheapest way to bring the character to life.
 
-**Zakres OUT (świadomie):** emocje, język PL, pełne ciało/gestyka, custom SSS (stock PBR wystarczy), UI produktowe, autoryzacja (publiczny agent), testy automatyczne.
+**Scope OUT (deliberately):** emotions, Polish language, full body/gestures, custom SSS (stock PBR is enough), product UI, authentication (public agent), automated tests.
 
-**Kroki:**
-| Dzień | Zadanie | Definition of Done |
+**Steps:**
+| Day | Task | Definition of Done |
 | :--- | :--- | :--- |
-| 1 | Agent w dashboardzie + pusty klient 3D (scena, światło, kamera) + ładowanie GLB | Awatar renderuje się statycznie; `Conversation` odpowiada głosem przez chwilę testową (SDK do testu agenta). |
-| 2 | Surowy WSS: mic capture (AudioWorklet → PCM 16 kHz → base64), eventy `audio` → odtwarzanie PCM | Płynna rozmowa głosowa (bez ust) — gapless, bez trzasków. |
-| 3 | `FaceController` + scheduler wizemów z alignmentu | Usta wizualnie zgadzają się z mową (test kontrolny: M/B/P domyka wargi). |
-| 4 | `interruption` → stop audio + relaks twarzy; reconnect/obsługa błędów WSS | Przerwanie w dowolnym momencie nie zostawia "zamrożonej" miny. |
-| 5 | Bufforowanie, szlif latencji, pomiar metryk | Spełnione kryteria akceptacji poniżej. |
+| 1 | Agent in the dashboard + empty 3D client (scene, light, camera) + GLB loading | The avatar renders statically; `Conversation` answers by voice for a short test prompt (SDK used to test the agent). |
+| 2 | Raw WSS: mic capture (AudioWorklet → PCM 16 kHz → base64), `audio` events → PCM playback | Smooth voice conversation (no lips yet) — gapless, no crackles. |
+| 3 | `FaceController` + viseme scheduler from the alignment | Lips visually match the speech (control test: M/B/P closes the lips). |
+| 4 | `interruption` → stop audio + face relaxation; WSS reconnect/error handling | Interrupting at any moment does not leave a "frozen" expression. |
+| 5 | Buffering, latency tuning, metrics measurement | The acceptance criteria below are met. |
 
-**Kryteria akceptacji PoC (mierzalne):**
-- [ ] Start odpowiedzi audio < 1,5 s od zakończenia wypowiedzi użytkownika (mierzane: `user_transcript` → pierwszy `audio`).
-- [ ] Lip-sync: brak wyraźnego dryfu usta/dźwięk w wypowiedzi 30 s (kontrola wzrokowa + log różnic czasów).
-- [ ] Barge-in: audio zamiera < 50 ms od event `interruption`; twarz w stanie neutralnym < 300 ms.
-- [ ] 60 FPS @ 1080p na GPU klasy GTX 1060 / Apple M1; model < 25 MB; pierwszy render < 5 s na łączy 20 Mbps.
-- [ ] Rozmowa 10 min bez wycieku pamięci (audio nodes sprzątane w `onended`).
-
----
-
-## 🚀 Etap 1 — MVP (cel: 2–4 tygodnie)
-
-**Cel biznesowy:** produkt możliwy do pokazania klientowi/stakeholderom z branded UI i polskim językiem.
-
-Zakres (każdy punkt ma swój rozdział w docs):
-1. **Agent "as code"** — konfiguracja przez ElevenLabs CLI (wersjonowanie promptów w repo), agent prywatny, **signed URL z backendu** zamiast publicznego `agent_id` ([docs/2](2-integracja-elevenlabs-wss.md)).
-2. **Lip-sync PL** — tabela EN+PL z dwuznakami (`sz`, `cz`, `rz`, `ch`, `ą`, `ę`...) ([docs/3](3-lip-sync-i-koartykulacja.md)).
-3. **Realizm skóry** — pre-integrated SSS przez `onBeforeCompile` + oświetlenie studiem + ACES tone mapping ([docs/5](5-shadery-i-realizm.md)).
-4. **Ożywienie** — proceduralne mikro-ruchy głowy, sakkady oczu, idle sway; tekstura mowy ciała z [docs/6](6-analiza-opensource-i-rozwoj.md).
-5. **Emocje** — agent wywołuje client tool `set_emotion` → `FaceController` ustawia bazy emocjonalne blendshape'ów ([docs/6](6-analiza-opensource-i-rozwoj.md)).
-6. **UI/UX** — mute, wybór wejścia/wyjścia audio, wskaźnik stanu (`listening/speaking`), transkrypcja.
-7. **Twardość** — reconnect z backoffem, telemetria (TTFB, drift, FPS), obsługa braku WebGL/mikrofonu.
-
-**Kryteria akceptacji MVP:**
-- [ ] Pełny flow PL: pytanie → odpowiedź z poprawnym lips-synciem dwuznaków.
-- [ ] Barge-in działa przy każdym z 10 losowych momentów przerwania (0 zamrożeń twarzy).
-- [ ] Awatar prywatny (signed URL); klucz API niewidoczny w sieci przeglądarki.
-- [ ] SSS widoczny na uszach/nosie/wargach w porównaniu przed/po (zrzuty referencyjne).
-- [ ] Lighthouse/metryki: cold load < 5 s, brak stutter > 5 ms/frame w mowie.
+**PoC acceptance criteria (measurable):**
+- [ ] Audio response starts < 1.5 s after the end of the user's utterance (measured: `user_transcript` → first `audio`).
+- [ ] Lip-sync: no visible mouth/sound drift in a 30 s utterance (visual check + log of time differences).
+- [ ] Barge-in: audio stops < 50 ms after the `interruption` event; face in neutral state < 300 ms.
+- [ ] 60 FPS @ 1080p on a GTX 1060 / Apple M1-class GPU; model < 25 MB; first render < 5 s on a 20 Mbps connection.
+- [ ] 10-minute conversation without a memory leak (audio nodes cleaned up in `onended`).
 
 ---
 
-## 🔭 Etap 2 — Rozwój (kierunki, nie zobowiązania)
+## 🚀 Stage 1 — MVP (goal: 2–4 weeks)
 
-- **Własny mózg (tryb B)**: Speech Engine / Multi-Context WSS + własny LLM (pełna kontrola nad promptami, narzędziami, kosztami) — patrz [docs/2](2-integracja-elevenlabs-wss.md).
-- **Mowa ciała**: szkielet Mixamo, gestykulacja, crossfade animacji `AnimationMixer`.
-- **Lip-sync akustyczny** (Rhubarb WASM) jako fallback dla języków bez fonetycznego zapisu.
-- **Alternatywny renderer**: MetaHuman przez Unreal Pixel Streaming (maksymalny realizm, koszt GPU na stream) — macierz decyzji w [docs/1](1-architektura-i-modele-3d.md).
+**Business goal:** a product that can be shown to a client/stakeholders with branded UI and the Polish language.
+
+Scope (each point has its own chapter in the docs):
+1. **Agent "as code"** — configuration via the ElevenLabs CLI (prompt versioning in the repo), private agent, **signed URL from the backend** instead of a public `agent_id` ([docs/2](2-elevenlabs-wss-integration.md)).
+2. **Polish lip-sync** — EN+PL table with digraphs (`sz`, `cz`, `rz`, `ch`, and the nasal vowels `a-ogonek`, `e-ogonek`...) ([docs/3](3-lip-sync-and-coarticulation.md)).
+3. **Skin realism** — pre-integrated SSS via `onBeforeCompile` + studio lighting + ACES tone mapping ([docs/5](5-shaders-and-realism.md)).
+4. **Aliveness** — procedural head micro-movements, eye saccades, idle sway; body-speech texture from [docs/6](6-opensource-analysis-and-future.md).
+5. **Emotions** — the agent calls the client tool `set_emotion` → `FaceController` sets the blendshape emotion bases ([docs/6](6-opensource-analysis-and-future.md)).
+6. **UI/UX** — mute, audio input/output selection, status indicator (`listening/speaking`), transcription.
+7. **Robustness** — reconnect with backoff, telemetry (TTFB, drift, FPS), handling of missing WebGL/microphone.
+
+**MVP acceptance criteria:**
+- [ ] Full Polish flow: question → answer with correct digraph lip-sync.
+- [ ] Barge-in works at each of 10 random interruption moments (0 face freezes).
+- [ ] Private avatar (signed URL); API key not visible in the browser's network traffic.
+- [ ] SSS visible on ears/nose/lips in a before/after comparison (reference screenshots).
+- [ ] Lighthouse/metrics: cold load < 5 s, no stutter > 5 ms/frame during speech.
 
 ---
 
-## ⚠️ Rejestr ryzyk
+## 🔭 Stage 2 — Development (directions, not commitments)
 
-| Ryzyko | Prawdopodob. | Wpływ | Mitygacja |
+- **Own brain (mode B)**: Speech Engine / Multi-Context WSS + own LLM (full control over prompts, tools, costs) — see [docs/2](2-elevenlabs-wss-integration.md).
+- **Body speech**: Mixamo skeleton, gesturing, `AnimationMixer` animation crossfade.
+- **Acoustic lip-sync** (Rhubarb WASM) as a fallback for languages without phonetic spelling.
+- **Alternative renderer**: MetaHuman via Unreal Pixel Streaming (maximum realism, GPU cost per stream) — decision matrix in [docs/1](1-architecture-and-3d-models.md).
+
+---
+
+## ⚠️ Risk register
+
+| Risk | Probability | Impact | Mitigation |
 | :--- | :--- | :--- | :--- |
-| Dryf lip-syncu przy odtwarzaniu przez SDK (WebRTC) | wysokie | średni | PoC używa surowego WSS: audio + alignment na jednej osi `AudioContext` ([docs/2](2-integracja-elevenlabs-wss.md), [docs/4](4-audio-i-obsluga-przerwan.md)). |
-| Autoplay policy przeglądarki (AudioContext zablokowany) | pewne | bloker PoC | Start rozmowy wyłącznie po geście użytkownika (klik "Talk"); `ctx.resume()` w handlerze. |
-| Nazwy blendshape'ów inne niż ARKit camelCase w eksporcie | średnie | wysoki | Walidacja przy ładowaniu: brakujące klucze → lista błędów w konsoli + normalizacja nazw (`jaw_open` → `jawOpen`) ([docs/1](1-architektura-i-modele-3d.md)). |
-| Szczeliny/trzaski między chunkami audio | średnie | średni | Format PCM (nie mp3) — `createBuffer` + `copyToChannel`, brak kosztu dekodera; bufor startu 2–3 chunki ([docs/4](4-audio-i-obsluga-przerwan.md)). |
-| Licencje MetaPerson (koszt komercyjny) | średnie | wysoki | Sprawdzić cennik Avatar SDK przed fazą produktową; alternatywy w [docs/1](1-architektura-i-modele-3d.md). |
-| Koszt agentów ElevenLabs (minuty rozmowy, burst) | niskie | średni | Budżet w dashboardzie; agent shared-layer/flash TTS; monitoring zużycia. |
-| Retencja danych (nagrania rozmów) — RODO | średnie | wysoki | Konfiguracja privacy/retention agenta; tryb Zero Retention jeśli wymagane ([docs/6](6-analiza-opensource-i-rozwoj.md)). |
-| Wydajność SSS na słabych GPU | średnie | średni | Presety jakości (PoC: brak SSS; auto-detekcja GPU na MVP). |
+| Lip-sync drift when playing through the SDK (WebRTC) | high | medium | The PoC uses raw WSS: audio + alignment on one `AudioContext` time axis ([docs/2](2-elevenlabs-wss-integration.md), [docs/4](4-audio-and-barge-in.md)). |
+| Browser autoplay policy (AudioContext blocked) | certain | PoC blocker | Start the conversation only after a user gesture (click "Talk"); `ctx.resume()` in the handler. |
+| Blendshape names other than ARKit camelCase in the export | medium | high | Validation on load: missing keys → list of errors in the console + name normalization (`jaw_open` → `jawOpen`) ([docs/1](1-architecture-and-3d-models.md)). |
+| Gaps/crackles between audio chunks | medium | medium | PCM format (not mp3) — `createBuffer` + `copyToChannel`, no decoder cost; start buffer of 2–3 chunks ([docs/4](4-audio-and-barge-in.md)). |
+| MetaPerson licenses (commercial cost) | medium | high | Check the Avatar SDK price list before the product phase; alternatives in [docs/1](1-architecture-and-3d-models.md). |
+| ElevenLabs agent costs (conversation minutes, bursts) | low | medium | Budget in the dashboard; shared-layer/flash TTS agent; usage monitoring. |
+| Data retention (conversation recordings) — GDPR | medium | high | Agent privacy/retention configuration; Zero Retention mode if required ([docs/6](6-opensource-analysis-and-future.md)). |
+| SSS performance on weak GPUs | medium | medium | Quality presets (PoC: no SSS; GPU auto-detection in the MVP). |
 
 ---
 
-## 🧭 Zasady inżyniersne
+## 🧭 Engineering principles
 
-1. **Interfejsy przed implementacjami** — `SpeechBackend`, `FaceDriver`, `AvatarLoader` ([docs/1](1-architektura-i-modele-3d.md)): jedyny sposób na utrzymanie elastyczności technologicznej.
-2. **Jeden właściciel morph targetów** (`FaceController`) — zakaz pisania do `morphTargetInfluences` z innych modułów.
-3. **Jedna oś czasu** — audio i wizemy planowane wyłącznie na `AudioContext.currentTime`.
-4. **Fail-fast na ładowaniu** — model/agent bez wymaganych kluczy/parametrów = czytelny błąd, nie cicha degradacja.
-5. **Każda faza kończy się demem** — jeśli czegoś nie da się pokazać, nie jest gotowe.
+1. **Interfaces before implementations** — `SpeechBackend`, `FaceDriver`, `AvatarLoader` ([docs/1](1-architecture-and-3d-models.md)): the only way to keep technological flexibility.
+2. **One owner of morph targets** (`FaceController`) — no writing to `morphTargetInfluences` from other modules.
+3. **One time axis** — audio and visemes are scheduled exclusively on `AudioContext.currentTime`.
+4. **Fail fast on load** — a model/agent without the required keys/parameters = a clear error, not silent degradation.
+5. **Every phase ends with a demo** — if it cannot be shown, it is not ready.

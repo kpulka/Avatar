@@ -1,9 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import {
-  DEFAULT_SETTINGS,
-  MAX_VISEME_OVERRIDES,
-  validateSettings,
-} from '../src/app/store/settings-schema';
+import { DEFAULT_SETTINGS, MAX_VISEME_OVERRIDES, validateSettings } from '../src/app/store/settings-schema';
 import { BLOB_KEY, LEGACY_KEYS, migrateLegacy } from '../src/app/store/migrate';
 import { SettingsStore } from '../src/app/store/settings-store';
 import { attachLegacyBridge } from '../src/app/store/legacy-bridge';
@@ -19,7 +15,7 @@ function buildOverrides(count: number): Record<string, Record<string, number>> {
 }
 
 describe('validateSettings (schema)', () => {
-  it('odrzuca klucze zarezerwowane i nie pozwala zatruć prototypu', () => {
+  it('rejects reserved keys and does not allow prototype poisoning', () => {
     const evil = JSON.parse('{"__proto__":{"polluted":true}}') as unknown;
     const result = validateSettings(evil);
     expect(result.ok).toBe(false);
@@ -39,7 +35,7 @@ describe('validateSettings (schema)', () => {
     expect(good.ok && good.value.studio.a2fUrl).toBe('http://127.0.0.1:8000');
   });
 
-  it('limit mapy nadpisań wizemów: 511 przechodzi, 600 jest odrzucane', () => {
+  it('viseme override map limit: 511 passes, 600 is rejected', () => {
     const small = validateSettings({ schemaVersion: 1, studio: { visemeOverrides: buildOverrides(MAX_VISEME_OVERRIDES - 1) } });
     expect(small.ok).toBe(true);
     if (small.ok) {
@@ -52,14 +48,59 @@ describe('validateSettings (schema)', () => {
     }
   });
 
-  it('nie zna martwego pola micSensitivity', () => {
+  it('does not know the dead micSensitivity field', () => {
     expect('micSensitivity' in DEFAULT_SETTINGS.user).toBe(false);
     expect('micSensitivity' in DEFAULT_SETTINGS.studio).toBe(false);
   });
 
-  it('odrzuca nieobsługiwaną wersję schematu', () => {
+  it('lip-sync engine (17-04): new ids round-trip, legacy "phoneme" becomes "phoneme-en", unknown keeps the default', () => {
+    const withEngine = (value: unknown) => validateSettings({ schemaVersion: 1, user: {}, studio: { lipSyncEngine: value } });
+    for (const id of ['phoneme-en', 'phoneme-pl', 'char']) {
+      const r = withEngine(id);
+      expect(r.ok && r.value.studio.lipSyncEngine).toBe(id);
+    }
+    const legacy = withEngine('phoneme');
+    expect(legacy.ok && legacy.value.studio.lipSyncEngine).toBe('phoneme-en');
+    const bogus = withEngine('klingon');
+    expect(bogus.ok && bogus.value.studio.lipSyncEngine).toBe(DEFAULT_SETTINGS.studio.lipSyncEngine);
+    expect(DEFAULT_SETTINGS.studio.lipSyncEngine).toBe('phoneme-en');
+  });
+
+  it('rejects an unsupported schema version', () => {
     const result = validateSettings({ schemaVersion: 99 });
     expect(result.ok).toBe(false);
+  });
+});
+
+describe('calibration sync-clock migration (Phase 11.2 D-6)', () => {
+  const calibrationOf = (calibration: Record<string, unknown>) => {
+    const result = validateSettings({ schemaVersion: 1, studio: { calibration } });
+    if (!result.ok) throw new Error('validateSettings failed');
+    return result.value.studio.calibration;
+  };
+
+  it('maps legacy preset offsets to the new residuals (100 -> 30)', () => {
+    const migrated = calibrationOf({ ...DEFAULT_CALIBRATION_PROFILE, syncOffsetMs: 100, clockVersion: undefined });
+    expect(migrated.syncOffsetMs).toBe(30);
+    expect(migrated.clockVersion).toBe(2);
+    expect(calibrationOf({ syncOffsetMs: 90 }).syncOffsetMs).toBe(20);
+    expect(calibrationOf({ syncOffsetMs: 120 }).syncOffsetMs).toBe(40);
+  });
+
+  it('shifts custom legacy offsets by -70 ms and clamps (180 -> 110)', () => {
+    expect(calibrationOf({ syncOffsetMs: 180 }).syncOffsetMs).toBe(110);
+    expect(calibrationOf({ syncOffsetMs: -140 }).syncOffsetMs).toBe(-150);
+  });
+
+  it('leaves already-migrated (clockVersion 2) values untouched and is idempotent', () => {
+    const v2 = calibrationOf({ ...DEFAULT_CALIBRATION_PROFILE, syncOffsetMs: 100, clockVersion: 2 });
+    expect(v2.syncOffsetMs).toBe(100);
+    const again = calibrationOf({ ...calibrationOf({ syncOffsetMs: 180 }) });
+    expect(again.syncOffsetMs).toBe(110);
+  });
+
+  it('keeps the default offset when no offset was stored', () => {
+    expect(calibrationOf({ jawScale: 1.1 }).syncOffsetMs).toBe(DEFAULT_CALIBRATION_PROFILE.syncOffsetMs);
   });
 });
 
@@ -80,7 +121,7 @@ describe('migrateLegacy', () => {
     });
   }
 
-  it('przenosi legacy bez utraty kalibracji i wizemów + robi backup + zapisuje blob', () => {
+  it('migrates legacy without losing calibration and visemes, makes a backup and writes the blob', () => {
     const storage = seedLegacy();
     const state = migrateLegacy(storage, () => 1234567890);
     expect(state).not.toBeNull();
@@ -103,13 +144,32 @@ describe('migrateLegacy', () => {
     expect('micSensitivity' in state.user).toBe(false);
   });
 
-  it('jest idempotentna — drugie wywołanie zwraca null', () => {
+  it('maps the legacy lip-sync engine value "phoneme" to "phoneme-en" and keeps the new ids (17-04)', () => {
+    for (const [legacy, expected] of [
+      ['phoneme', 'phoneme-en'],
+      ['phoneme-pl', 'phoneme-pl'],
+      ['char', 'char'],
+    ] as const) {
+      const storage = createMemoryStorage({ [LEGACY_KEYS.lipSyncEngine]: legacy });
+      expect(migrateLegacy(storage, () => 1)?.studio.lipSyncEngine).toBe(expected);
+    }
+  });
+
+  it('a persisted pre-17-04 blob with lipSyncEngine "phoneme" loads without error (17-04)', () => {
+    const storage = createMemoryStorage({
+      [BLOB_KEY]: JSON.stringify({ schemaVersion: 1, user: {}, studio: { lipSyncEngine: 'phoneme' } }),
+    });
+    const store = new SettingsStore(storage);
+    expect(store.getEffective('lipSyncEngine')).toBe('phoneme-en');
+  });
+
+  it('is idempotent — the second call returns null', () => {
     const storage = seedLegacy();
     expect(migrateLegacy(storage)).not.toBeNull();
     expect(migrateLegacy(storage)).toBeNull();
   });
 
-  it('uszkodzony JSON kalibracji nie przerywa migracji (default pola, reszta zachowana)', () => {
+  it('corrupt calibration JSON does not abort the migration (field default, rest preserved)', () => {
     const storage = createMemoryStorage({
       [LEGACY_KEYS.calibration]: '{oops',
       [LEGACY_KEYS.agentId]: 'agent_ok',
@@ -127,7 +187,7 @@ describe('migrateLegacy', () => {
 });
 
 describe('SettingsStore', () => {
-  it('stosuje precedencję defaults → studio → user', () => {
+  it('applies the precedence defaults → studio → user', () => {
     const store = new SettingsStore(createMemoryStorage());
     expect(store.getEffective('volume')).toBe(1);
     expect(store.getEffective('a2fUrl')).toBe(DEFAULT_SETTINGS.studio.a2fUrl);
@@ -139,7 +199,7 @@ describe('SettingsStore', () => {
     expect(store.getEffective('theme')).toBe('light');
   });
 
-  it('lock blokuje setUser, a wartość efektywna się nie zmienia', () => {
+  it('lock blocks setUser, and the effective value does not change', () => {
     const store = new SettingsStore(createMemoryStorage());
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
     store.setLock('volume', true);
@@ -154,7 +214,7 @@ describe('SettingsStore', () => {
     expect(store.getEffective('volume')).toBeCloseTo(0.3);
   });
 
-  it('lock zamraża bieżącą wartość klucza usera (regresja P1 — nie zrzuca na default)', () => {
+  it('lock freezes the current user key value (P1 regression — does not drop to default)', () => {
     const store = new SettingsStore(createMemoryStorage());
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
     store.setUser('volume', 0.42);
@@ -170,14 +230,14 @@ describe('SettingsStore', () => {
     warn.mockRestore();
   });
 
-  it('lock klucza studia nadal korzysta z wartości profilu studia', () => {
+  it('a locked studio key still uses the studio profile value', () => {
     const store = new SettingsStore(createMemoryStorage());
     const before = store.getEffective('lipSyncEngine');
     store.setLock('lipSyncEngine', true);
     expect(store.getEffective('lipSyncEngine')).toBe(before);
   });
 
-  it('ignoruje nieznane ścieżki zapisu', () => {
+  it('ignores unknown write paths', () => {
     const store = new SettingsStore(createMemoryStorage());
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
     const before = JSON.stringify(store.getState());
@@ -187,7 +247,7 @@ describe('SettingsStore', () => {
     warn.mockRestore();
   });
 
-  it('persystuje stan między instancjami', () => {
+  it('persists state across instances', () => {
     const storage = createMemoryStorage();
     const store = new SettingsStore(storage);
     store.setUser('volume', 0.7);
@@ -198,7 +258,7 @@ describe('SettingsStore', () => {
     expect(restored.getEffective('lipSyncEngine')).toBe('char');
   });
 
-  it('export → import jest round-tripem', () => {
+  it('export → import is a round trip', () => {
     const store = new SettingsStore(createMemoryStorage());
     store.setUser('volume', 0.42);
     store.setUser('scenePreset', 'cinema');
@@ -219,16 +279,16 @@ describe('SettingsStore', () => {
     expect(fresh.getState()).toEqual(store.getState());
   });
 
-  it('odrzuca zły JSON i zatruty import bez zmiany stanu', () => {
+  it('rejects bad JSON and a poisoned import without changing the state', () => {
     const store = new SettingsStore(createMemoryStorage());
     const before = JSON.stringify(store.getState());
 
-    expect(store.importProfile('to nie json').ok).toBe(false);
+    expect(store.importProfile('this is not json').ok).toBe(false);
     expect(store.importProfile('{"__proto__":{"x":1}}').ok).toBe(false);
     expect(JSON.stringify(store.getState())).toBe(before);
   });
 
-  it('reset przywraca defaulty', () => {
+  it('reset restores the defaults', () => {
     const store = new SettingsStore(createMemoryStorage());
     store.setUser('volume', 0.1);
     store.setLock('volume', true);
@@ -239,7 +299,7 @@ describe('SettingsStore', () => {
 });
 
 describe('legacy bridge (write-through)', () => {
-  it('zapisuje zmiany store do kluczy legacy bez pętli', () => {
+  it('writes store changes to legacy keys without a loop', () => {
     const storage = createMemoryStorage();
     const store = new SettingsStore(storage);
     attachLegacyBridge(store, storage);
@@ -256,7 +316,7 @@ describe('legacy bridge (write-through)', () => {
     expect(listener).toHaveBeenCalledTimes(1);
   });
 
-  it('most synchronizuje stan początkowy (po migracji)', () => {
+  it('the bridge syncs the initial state (after migration)', () => {
     const storage = createMemoryStorage({ [LEGACY_KEYS.agentId]: 'agent_seed' });
     const store = new SettingsStore(storage);
     attachLegacyBridge(store, storage);
