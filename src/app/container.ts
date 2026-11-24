@@ -325,6 +325,7 @@ export function createApp(canvas: HTMLCanvasElement): AppHandle {
   // ---- Render loop
   let lastTimestamp = performance.now();
   let rafId = 0;
+  let disposed = false;
   let frameCount = 0;
   let fpsWindowStart = performance.now();
   const adaptiveRes = AdaptiveResolution.create(renderer.maxPixelRatio);
@@ -369,6 +370,10 @@ export function createApp(canvas: HTMLCanvasElement): AppHandle {
       console.log('Avatar application initialized successfully.');
     },
     dispose(): void {
+      if (disposed) return; // idempotent: a second call must not release anything twice
+      disposed = true;
+      // End the session first (WSS closed, mic stopped) while the bus still has its listeners.
+      conversationController.dispose();
       cancelAnimationFrame(rafId);
       window.removeEventListener('pointermove', onPointerMove);
       window.removeEventListener('resize', onResize);
@@ -396,6 +401,10 @@ export function createApp(canvas: HTMLCanvasElement): AppHandle {
       modal.destroy();
       environment.dispose();
       loader.dispose();
+      renderer.dispose();
+      // The context is created by AudioEngine in this function, so this function owns closing it.
+      // close() rejects when the context is already closed; nothing to do then.
+      void audioEngine.ctx.close().catch(() => undefined);
     },
   };
 }

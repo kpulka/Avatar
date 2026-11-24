@@ -47,6 +47,17 @@ export class TypedEventBus<Events extends Record<string, unknown>> {
   public clear(): void {
     this.handlers.clear();
   }
+
+  /**
+   * Total number of live handlers across all events. TEST / DEBUG ONLY (lifecycle regression in
+   * tests/container.test.ts: after `dispose()` the bus must hold zero handlers). Feature logic must
+   * never branch on it.
+   */
+  public handlerCount(): number {
+    let count = 0;
+    for (const set of this.handlers.values()) count += set.size;
+    return count;
+  }
 }
 
 /** Subscription collector — a single place for `dispose()`. */

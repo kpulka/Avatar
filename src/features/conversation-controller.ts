@@ -94,6 +94,30 @@ export class ConversationController implements ConversationService {
     });
   }
 
+  /**
+   * Teardown for the composition root: ends a running session (WSS closed, microphone tracks
+   * stopped, audio hard-stopped via `speechBackend.stop()`), then detaches every callback this
+   * controller installed on the backend and the embed bridge so nothing can emit on, or start a
+   * session for, a disposed app.
+   */
+  public dispose(): void {
+    void this.speechBackend.stop().catch(() => undefined);
+    const noop = (): void => undefined;
+    this.speechBackend.onError = noop;
+    this.speechBackend.onStateChange = noop;
+    this.speechBackend.onUserTranscript = noop;
+    this.speechBackend.onAgentResponse = noop;
+    this.speechBackend.onAgentCorrection = noop;
+    this.speechBackend.onAudioChunk = noop;
+    this.speechBackend.onInterruption = noop;
+    this.embedBridge.setCallbacks({
+      onConnect: undefined,
+      onDisconnect: undefined,
+      onInterrupt: undefined,
+      onSay: undefined,
+    });
+  }
+
   public start(): Promise<void> {
     if (this.speechBackend.getIsRunning()) return Promise.resolve();
     if (this.startPromise) return this.startPromise;
