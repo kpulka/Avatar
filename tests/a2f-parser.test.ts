@@ -175,4 +175,39 @@ describe('a2f-parser (kontrakt v2)', () => {
     expect('carriesEmotion' in clip).toBe(false);
     expect('emotions' in clip).toBe(false);
   });
+
+  describe('edge cases (T-8)', () => {
+    it('empty frames array yields an empty clip without throwing', () => {
+      const { clip, unknownShapes } = parseA2fPayload({ fps: 30, frames: [] });
+      expect(clip.frames).toEqual([]);
+      expect(clip.shapes).toEqual([]);
+      expect(clip.carriesEyes).toBe(false);
+      expect(clip.fps).toBe(30);
+      expect(unknownShapes).toEqual([]);
+    });
+
+    it('duplicate frame_time keeps every frame in stable input order', () => {
+      const { clip } = parseA2fPayload({
+        frames: [
+          { frame_time: 0.5, blendshapes: { JawOpen: 0.7 } },
+          { frame_time: 0.0, blendshapes: { JawOpen: 0.1 } },
+          { frame_time: 0.5, blendshapes: { JawOpen: 0.9 } },
+        ],
+      });
+      expect(clip.frames).toHaveLength(3);
+      expect(clip.frames.map((f) => f.timeSec)).toEqual([0.0, 0.5, 0.5]);
+      expect(defined(clip.frames[1]).weights['jawOpen']).toBe(0.7);
+      expect(defined(clip.frames[2]).weights['jawOpen']).toBe(0.9);
+    });
+
+    it('absent fps defaults to 60', () => {
+      const { clip } = parseA2fPayload({ frames: [{ frame_time: 0.0, blendshapes: { JawOpen: 0.1 } }] });
+      expect(clip.fps).toBe(60);
+    });
+
+    it('non-numeric fps also falls back to 60', () => {
+      const { clip } = parseA2fPayload({ fps: '30' as unknown as number, frames: [] });
+      expect(clip.fps).toBe(60);
+    });
+  });
 });
