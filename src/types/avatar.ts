@@ -88,6 +88,34 @@ export type GazeProvider = () => Readonly<EyeLookWeights> | null;
 export type AnimationMode = 'viseme' | 'frames';
 
 /**
+ * Narrow capability surface FaceController hands to a track source adapter (16-06).
+ * A source can only feed data in or interrupt — it never writes morphs (single writer).
+ */
+export interface FaceTrackContext {
+  /** Absolute frames (contract v2: relative timeSec, baseSec added once). */
+  feedFrames(clip: FramesClip, baseSec: number, epoch: number): void;
+  /** Character alignment -> visemes (scheduler track). */
+  feedAlignment(alignment: CharAlignment, startTimeSec: number, epoch: number): void;
+  /** Barge-in for the whole face (same as an interruption). */
+  interrupt(): void;
+}
+
+/**
+ * Thin adapter between an animation source and the FaceController tracks. `kind` selects the
+ * runtime track (and so its smoothing/safety); today there are exactly two payload kinds. A new
+ * source with a genuinely new payload kind extends this union by contract (see 16-DRAFT).
+ */
+export interface FaceTrackSource {
+  kind: AnimationMode;
+  /** The source takes over: FaceController has already switched to the matching track. */
+  start(ctx: FaceTrackContext): void;
+  /** Delivers a payload for the given epoch (stale epochs are rejected inside the track). */
+  feed(payload: unknown, epoch: number): void;
+  /** The source ends its turn (default adapters interrupt the face). */
+  stop(epoch: number): void;
+}
+
+/**
  * Result of loading the avatar
  */
 export interface LoadedAvatar {

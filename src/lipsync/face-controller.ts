@@ -6,6 +6,8 @@ import {
   AnimationMode,
   EyeLookWeights,
   GazeProvider,
+  FaceTrackContext,
+  FaceTrackSource,
 } from '../types/avatar';
 import { AudioEngine } from '../audio/audio-engine';
 import { VisemeScheduler, isSpeechShape } from './viseme-scheduler';
@@ -107,6 +109,9 @@ export class FaceController {
   private blinkProvider: (() => { left: number; right: number }) | null = null;
   // Procedural eye-look morph weights (data only — this class stays the single morph writer)
   private gazeProvider: GazeProvider | null = null;
+  // Track source dispatch table (16-06): id -> adapter. Built-ins: 'viseme', 'frames'.
+  private readonly trackSources: Map<string, FaceTrackSource> = new Map();
+  private readonly trackContext: FaceTrackContext;
   // Speech-owned shapes (jaw/mouth/tongue/cheek/nose) — the only shapes the viseme scheduler may drive
   private readonly speechShapeList: string[];
 
@@ -132,6 +137,29 @@ export class FaceController {
     }
     this.scheduler = new VisemeScheduler();
     this.speechShapeList = driver.listAvailableShapes().filter(isSpeechShape);
+    this.trackContext = {
+      feedFrames: (clip, baseSec, epoch) => this.feedFrames(clip, baseSec, epoch),
+      feedAlignment: (alignment, startTimeSec, epoch) => this.onAudioChunk(alignment, startTimeSec, epoch),
+      interrupt: () => this.onInterruption(),
+    };
+    this.registerTrackSource('viseme', {
+      kind: 'viseme',
+      start: () => {},
+      feed: (payload, epoch) => {
+        const { alignment, startTimeSec } = payload as { alignment: CharAlignment; startTimeSec: number };
+        this.trackContext.feedAlignment(alignment, startTimeSec, epoch);
+      },
+      stop: () => this.trackContext.interrupt(),
+    });
+    this.registerTrackSource('frames', {
+      kind: 'frames',
+      start: () => {},
+      feed: (payload, epoch) => {
+        const { clip, baseSec } = payload as { clip: FramesClip; baseSec: number };
+        this.trackContext.feedFrames(clip, baseSec, epoch);
+      },
+      stop: () => this.trackContext.interrupt(),
+    });
     this.blinker = new ProceduralBlink();
     this.emotionLayer = new EmotionLayer();
     this.blinkProvider = () => this.blinker.update(this.engine.ctx.currentTime);
@@ -145,6 +173,45 @@ export class FaceController {
 
     // Viseme overrides from the Editor (if saved in localStorage)
     this.applyVisemeOverridesRecord(loadVisemeOverrides());
+  }
+
+  /**
+   * Registers a track source adapter under `id` (overwrites). The adapter only routes data into
+   * the existing tracks — the state machine, epoch guard and safety clamps stay in FaceController.
+   */
+  public registerTrackSource(id: string, source: FaceTrackSource): void {
+    this.trackSources.set(id, source);
+  }
+
+  /** Activates a registered source: switches to its track at a safe boundary, then calls start(). */
+  public startTrack(id: string): boolean {
+    const source = this.trackSources.get(id);
+    if (!source) {
+      console.warn(`[FaceController] Unknown track source '${id}'`);
+      return false;
+    }
+    this.setAnimationMode(source.kind, { deferToTurnEnd: this.state === 'SPEAKING' });
+    source.start(this.trackContext);
+    return true;
+  }
+
+  /** Dispatches a payload to a registered source (table lookup — no per-source branching here). */
+  public feedTrack(id: string, payload: unknown, epoch: number): boolean {
+    const source = this.trackSources.get(id);
+    if (!source) {
+      console.warn(`[FaceController] Unknown track source '${id}'`);
+      return false;
+    }
+    source.feed(payload, epoch);
+    return true;
+  }
+
+  /** Ends a source's turn (adapter decides; built-ins interrupt the face). */
+  public stopTrack(id: string): boolean {
+    const source = this.trackSources.get(id);
+    if (!source) return false;
+    source.stop(this.engine.getEpoch());
+    return true;
   }
 
   /** Replaces the whole viseme override map (called when saving from the Editor). */
