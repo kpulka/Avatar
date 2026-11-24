@@ -25,7 +25,12 @@ export function createStatusPill(): PanelDefinition {
       const state = el('span', { className: 'status-pill voice-idle', text: LABELS.idle, role: 'status' });
       // Degradation chip (17-06): visible while the lip-sync runs on the acoustic fallback (no real alignment).
       // Studio keeps its detailed ALIGN badge; this is the subtle user-mode signal.
-      const degraded = el('span', { className: 'status-pill lipsync-chip', text: t('chip.simplifiedLipsync'), role: 'status', hidden: true });
+      const degraded = el('span', {
+        className: 'status-pill lipsync-chip',
+        text: t('chip.simplifiedLipsync'),
+        role: 'status',
+        hidden: true,
+      });
       const root = el('div', { className: 'user-status' }, [
         el('span', { className: 'pulse-dot', attrs: { 'aria-hidden': 'true' } }),
         el('span', { className: 'brand-title', text: t('brand.title') }),

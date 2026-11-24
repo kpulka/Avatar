@@ -8,6 +8,7 @@ function okResponse(body: string | object, status = 200): Response {
     ok: status >= 200 && status < 300,
     status,
     statusText: status === 200 ? 'OK' : 'ERR',
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-return -- test double / mock typing: the value comes from an untyped mock or JSON fixture
     json: async () => JSON.parse(json),
     text: async () => json,
   } as unknown as Response;
@@ -46,9 +47,12 @@ describe('a2f-backend (09-03, klient wrappera /predict)', () => {
     expect(typeof res.predictMs).toBe('number');
 
     // Sent FormData to /predict.
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- test double / mock typing: the value comes from an untyped mock or JSON fixture
     const [url, init] = defined(fetchMock.mock.calls[0]);
     expect(url).toBe('http://127.0.0.1:8000/predict');
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access -- test double / mock typing: the value comes from an untyped mock or JSON fixture
     expect(init.method).toBe('POST');
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access -- test double / mock typing: the value comes from an untyped mock or JSON fixture
     expect(init.body instanceof FormData).toBe(true);
   });
 
@@ -74,6 +78,7 @@ describe('a2f-backend (09-03, klient wrappera /predict)', () => {
     fetchMock.mockImplementation(
       (_url: string, init: RequestInit) =>
         new Promise((_resolve, reject) => {
+          // eslint-disable-next-line @typescript-eslint/prefer-promise-reject-errors -- test double / mock typing: the value comes from an untyped mock or JSON fixture
           init.signal?.addEventListener('abort', () => reject(init.signal?.reason ?? new Error('aborted')));
         })
     );
@@ -87,6 +92,7 @@ describe('a2f-backend (09-03, klient wrappera /predict)', () => {
     fetchMock.mockImplementation(
       (_url: string, init: RequestInit) =>
         new Promise((_resolve, reject) => {
+          // eslint-disable-next-line @typescript-eslint/prefer-promise-reject-errors -- test double / mock typing: the value comes from an untyped mock or JSON fixture
           init.signal?.addEventListener('abort', () => reject(init.signal?.reason ?? new Error('aborted')));
         })
     );

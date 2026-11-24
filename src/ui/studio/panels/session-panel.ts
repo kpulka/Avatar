@@ -25,7 +25,7 @@ export function createSessionPanel(): PanelDefinition {
         className: 'text-input',
         type: 'text',
         placeholder: t('session.agentPlaceholder'),
-      }) as HTMLInputElement;
+      });
       agentInput.value = store.getEffective<string>('agentId');
       const agentSave = el('button', { className: 'btn btn-small btn-primary', type: 'button', text: t('session.agentSave') });
       agentSave.addEventListener('click', () => {
@@ -44,7 +44,7 @@ export function createSessionPanel(): PanelDefinition {
         id: uid('session-volume'),
         type: 'range',
         attrs: { min: '0', max: '1', step: '0.05' },
-      }) as HTMLInputElement;
+      });
       volumeSlider.value = String(store.getEffective<number>('volume'));
       volumeSlider.addEventListener('input', () => {
         const value = parseFloat(volumeSlider.value);
@@ -82,15 +82,10 @@ export function createSessionPanel(): PanelDefinition {
       // --- Settings locks for the user
       const locksSection = el('div', { className: 'locks-list' });
       for (const key of LOCK_KEYS) {
-        const checkbox = el('input', { type: 'checkbox' }) as HTMLInputElement;
+        const checkbox = el('input', { type: 'checkbox' });
         checkbox.checked = store.isLocked(key);
         checkbox.addEventListener('change', () => store.setLock(key, checkbox.checked));
-        locksSection.append(
-          el('label', { className: 'engine-toggle' }, [
-            checkbox,
-            el('span', { text: t('session.lockLabel', { key }) }),
-          ])
-        );
+        locksSection.append(el('label', { className: 'engine-toggle' }, [checkbox, el('span', { text: t('session.lockLabel', { key }) })]));
       }
 
       // --- Profile: export/import
@@ -99,7 +94,7 @@ export function createSessionPanel(): PanelDefinition {
         const json = store.exportProfile();
         try {
           const blob = new Blob([json], { type: 'application/json' });
-          const link = el('a', { attrs: { download: 'avatar-profile.json' } }) as HTMLAnchorElement;
+          const link = el('a', { attrs: { download: 'avatar-profile.json' } });
           link.href = URL.createObjectURL(blob);
           link.click();
           URL.revokeObjectURL(link.href);
@@ -109,11 +104,12 @@ export function createSessionPanel(): PanelDefinition {
         }
       });
 
-      const importInput = el('input', { type: 'file', attrs: { accept: '.json,application/json' } }) as HTMLInputElement;
+      const importInput = el('input', { type: 'file', attrs: { accept: '.json,application/json' } });
       // Keyboard users go through the visible button; the native input stays out of the tab order / a11y tree.
       importInput.classList.add('hidden');
       importInput.tabIndex = -1;
       importInput.setAttribute('aria-hidden', 'true');
+      // eslint-disable-next-line @typescript-eslint/no-misused-promises -- async DOM event handler: the browser ignores the returned promise
       importInput.addEventListener('change', async () => {
         const file = importInput.files?.[0];
         importInput.value = '';

@@ -18,7 +18,9 @@ describe('SceneController avatar loading', () => {
     } as unknown as SceneControllerDeps;
     const controller = new SceneController(deps);
     let infoDuringEvent: ReturnType<SceneController['getAvatarInfo']> = null;
-    events.on('avatar:loaded', () => { infoDuringEvent = controller.getAvatarInfo(); });
+    events.on('avatar:loaded', () => {
+      infoDuringEvent = controller.getAvatarInfo();
+    });
 
     controller.loadDemo();
 
@@ -78,4 +80,3 @@ describe('AppScene.clearAvatar', () => {
     expect(scene.avatarContainer.children).not.toContain(a.root);
   });
 });
-

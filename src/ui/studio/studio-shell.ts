@@ -30,11 +30,15 @@ export function createStudioShell(options: StudioShellOptions): StudioShell {
   const leftPanels = registry.list('studio').filter((panel) => panel.region === 'left');
 
   // ---- right drawer with tabs
-  const closeButton = el('button', {
-    className: 'btn-drawer-close',
-    type: 'button',
-    ariaLabel: t('studio.closeAria'),
-  }, [icon('close')]);
+  const closeButton = el(
+    'button',
+    {
+      className: 'btn-drawer-close',
+      type: 'button',
+      ariaLabel: t('studio.closeAria'),
+    },
+    [icon('close')]
+  );
   const drawer = el('aside', { className: 'side-drawer right-drawer hidden' });
   const tablist = el('div', { className: 'studio-tabs', attrs: { role: 'tablist', 'aria-label': t('studio.tabsAria') } });
   // One shared tabpanel: WAI-ARIA Tabs allow a single panel element whose labelling follows the active tab.
@@ -42,10 +46,7 @@ export function createStudioShell(options: StudioShellOptions): StudioShell {
   const header = el('div', { className: 'drawer-header' }, [
     el('div', { className: 'drawer-title-group' }, [
       el('span', { className: 'drawer-header-icon', text: '🛠️' }),
-      el('div', {}, [
-        el('h3', { text: t('studio.title') }),
-        el('p', { className: 'drawer-subtitle', text: t('studio.subtitle') }),
-      ]),
+      el('div', {}, [el('h3', { text: t('studio.title') }), el('p', { className: 'drawer-subtitle', text: t('studio.subtitle') })]),
     ]),
   ]);
   header.append(closeButton);
@@ -74,15 +75,16 @@ export function createStudioShell(options: StudioShellOptions): StudioShell {
   };
 
   for (const panel of rightPanels) {
-    const button = el('button', {
-      id: uid(`tab-${panel.id}`),
-      className: 'studio-tab',
-      type: 'button',
-      attrs: { role: 'tab', 'aria-selected': 'false', 'aria-controls': body.id, 'data-panel': panel.id, tabindex: '-1' },
-    }, [
-      el('span', { className: 'btn-icon', text: panel.icon }),
-      el('span', { className: 'btn-label', text: panel.title }),
-    ]);
+    const button = el(
+      'button',
+      {
+        id: uid(`tab-${panel.id}`),
+        className: 'studio-tab',
+        type: 'button',
+        attrs: { role: 'tab', 'aria-selected': 'false', 'aria-controls': body.id, 'data-panel': panel.id, tabindex: '-1' },
+      },
+      [el('span', { className: 'btn-icon', text: panel.icon }), el('span', { className: 'btn-label', text: panel.title })]
+    );
     button.addEventListener('click', () => openTab(panel.id));
     tabButtons.set(panel.id, button);
     tablist.append(button);
@@ -97,7 +99,7 @@ export function createStudioShell(options: StudioShellOptions): StudioShell {
     const ids = rightPanels.map((panel) => panel.id);
     const currentIndex = ids.findIndex((panelId) => tabButtons.get(panelId) === document.activeElement);
     if (currentIndex === -1) return;
-    let nextIndex = currentIndex;
+    let nextIndex: number;
     switch (event.key) {
       case 'ArrowRight':
         nextIndex = (currentIndex + 1) % ids.length;
@@ -129,11 +131,15 @@ export function createStudioShell(options: StudioShellOptions): StudioShell {
   for (const panel of leftPanels) {
     const drawerEl = el('aside', { className: 'side-drawer left-drawer hidden' });
     const panelBody = el('div', { className: 'drawer-body' });
-    const panelClose = el('button', {
-      className: 'btn-drawer-close',
-      type: 'button',
-      ariaLabel: t('studio.leftCloseAria', { panel: panel.title }),
-    }, [icon('close')]);
+    const panelClose = el(
+      'button',
+      {
+        className: 'btn-drawer-close',
+        type: 'button',
+        ariaLabel: t('studio.leftCloseAria', { panel: panel.title }),
+      },
+      [icon('close')]
+    );
     const panelHeader = el('div', { className: 'drawer-header' }, [
       el('div', { className: 'drawer-title-group' }, [
         el('span', { className: 'drawer-header-icon', text: panel.icon }),
@@ -143,14 +149,15 @@ export function createStudioShell(options: StudioShellOptions): StudioShell {
     panelHeader.append(panelClose);
     drawerEl.append(panelHeader, panelBody);
 
-    const toggleButton = el('button', {
-      className: 'dock-icon-btn studio-left-toggle',
-      type: 'button',
-      ariaLabel: t('studio.leftOpenAria', { panel: panel.title }),
-    }, [
-      el('span', { className: 'btn-icon', text: panel.icon }),
-      el('span', { className: 'icon-label', text: panel.title }),
-    ]);
+    const toggleButton = el(
+      'button',
+      {
+        className: 'dock-icon-btn studio-left-toggle',
+        type: 'button',
+        ariaLabel: t('studio.leftOpenAria', { panel: panel.title }),
+      },
+      [el('span', { className: 'btn-icon', text: panel.icon }), el('span', { className: 'icon-label', text: panel.title })]
+    );
 
     const entry = { drawer: drawerEl, mounted: false };
     leftDrawers.set(panel.id, entry);

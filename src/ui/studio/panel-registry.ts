@@ -52,11 +52,7 @@ export interface PanelRegistryOptions {
   renderError?: (container: HTMLElement, definition: PanelDefinition, retry: () => void) => void;
 }
 
-export function renderPanelError(
-  container: HTMLElement,
-  definition: PanelDefinition,
-  retry: () => void
-): void {
+export function renderPanelError(container: HTMLElement, definition: PanelDefinition, retry: () => void): void {
   const button = el('button', {
     className: 'btn btn-tiny btn-secondary',
     text: t('panel.retry'),
@@ -64,10 +60,7 @@ export function renderPanelError(
   });
   button.addEventListener('click', () => retry());
   container.replaceChildren(
-    el('div', { className: 'panel-error' }, [
-      el('p', { text: t('panel.errorTitle', { title: definition.title }) }),
-      button,
-    ])
+    el('div', { className: 'panel-error' }, [el('p', { text: t('panel.errorTitle', { title: definition.title }) }), button])
   );
 }
 

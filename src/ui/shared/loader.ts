@@ -31,11 +31,12 @@ export function createLoader(container: HTMLElement, options: LoaderOptions = {}
     text: options.retryLabel ?? t('panel.retry'),
   });
   retry.addEventListener('click', () => options.onRetry?.());
-  const node = el(
-    'div',
-    { className: 'loader-overlay hidden', role: 'status', attrs: { 'aria-live': 'polite' } },
-    [spinner, errorIcon, text, retry]
-  );
+  const node = el('div', { className: 'loader-overlay hidden', role: 'status', attrs: { 'aria-live': 'polite' } }, [
+    spinner,
+    errorIcon,
+    text,
+    retry,
+  ]);
   container.append(node);
 
   const setBusy = (): void => {

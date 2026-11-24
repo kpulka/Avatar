@@ -15,7 +15,7 @@ function deepFreeze<T extends object>(value: T): DeepReadonly<T> {
     const inner = value[key];
     if (inner !== null && typeof inner === 'object') deepFreeze(inner as unknown as object);
   }
-  return Object.freeze(value) as DeepReadonly<T>;
+  return Object.freeze(value);
 }
 
 export const ANIM_DEFAULTS = deepFreeze({

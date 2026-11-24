@@ -11,11 +11,21 @@ class FakeSocket {
   onopen: (() => void) | null = null;
   onmessage: ((event: MessageEvent) => void) | null = null;
   send() {}
-  open() { this.onopen?.(); }
-  metadata() { this.onmessage?.({ data: JSON.stringify({ type: 'conversation_initiation_metadata', conversation_initiation_metadata_event: {} }) } as MessageEvent); }
-  constructor(_url: string) { FakeSocket.instances.push(this); }
+  open() {
+    this.onopen?.();
+  }
+  metadata() {
+    this.onmessage?.({
+      data: JSON.stringify({ type: 'conversation_initiation_metadata', conversation_initiation_metadata_event: {} }),
+    } as MessageEvent);
+  }
+  constructor(_url: string) {
+    FakeSocket.instances.push(this);
+  }
   close() {}
-  fail(code: number, reason = '') { this.onclose?.({ code, reason } as CloseEvent); }
+  fail(code: number, reason = '') {
+    this.onclose?.({ code, reason } as CloseEvent);
+  }
 }
 
 beforeEach(() => {
@@ -24,7 +34,10 @@ beforeEach(() => {
   vi.stubGlobal('window', globalThis);
   vi.stubGlobal('WebSocket', FakeSocket);
 });
-afterEach(() => { vi.useRealTimers(); vi.unstubAllGlobals(); });
+afterEach(() => {
+  vi.useRealTimers();
+  vi.unstubAllGlobals();
+});
 
 describe('reconnect failures', () => {
   it('reports a socket error once after five reconnect attempts', () => {
@@ -38,6 +51,7 @@ describe('reconnect failures', () => {
     }
     expect(FakeSocket.instances).toHaveLength(6);
     expect(onError).toHaveBeenCalledTimes(1);
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access -- test double / mock typing: the value comes from an untyped mock or JSON fixture
     expect(defined(onError.mock.calls[0])[0].message).toContain('5 attempts');
     expect(client.getState()).toBe('disconnected');
   });
@@ -77,6 +91,7 @@ describe('reconnect failures', () => {
     new RawWssClient('agent', { onError }).connect();
     defined(FakeSocket.instances[0]).fail(4001, 'invalid agent');
     expect(onError).toHaveBeenCalledTimes(1);
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access -- test double / mock typing: the value comes from an untyped mock or JSON fixture
     expect(defined(onError.mock.calls[0])[0].message).toContain('invalid agent');
     expect(vi.getTimerCount()).toBe(0);
   });

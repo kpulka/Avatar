@@ -34,8 +34,7 @@ export class EmbedBridge {
 
     const params = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
     const devMode = options.devMode ?? import.meta.env.DEV;
-    this.allowAnyOrigin = devMode &&
-      (params?.get('allow_any_origin') === '1' || params?.get('allow_any_origin') === 'true');
+    this.allowAnyOrigin = devMode && (params?.get('allow_any_origin') === '1' || params?.get('allow_any_origin') === 'true');
     this.sameOrigin = typeof window !== 'undefined' ? window.location.origin : '';
 
     this.allowedOrigins = new Set(
@@ -115,8 +114,10 @@ export class EmbedBridge {
 
     window.addEventListener('message', (event: MessageEvent) => {
       if (!this.isSourceTrusted(event.source)) return;
-      const data = event.data;
-      if (!data || typeof data !== 'object') return;
+      // event.data is untrusted input from another window: treat it as unknown and narrow it.
+      const raw: unknown = event.data;
+      if (!raw || typeof raw !== 'object') return;
+      const data = raw as { type?: unknown; text?: unknown };
 
       if (!this.isOriginTrusted(event.origin)) {
         console.warn(

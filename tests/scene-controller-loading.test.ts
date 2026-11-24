@@ -4,7 +4,9 @@ import type { AppEvents } from '../src/app/app-types';
 import { SceneController, type SceneControllerDeps } from '../src/features/scene-controller';
 
 vi.mock('../src/avatar/test-avatar-generator', () => ({
-  createTestAvatar: () => { throw new Error('fallback failed'); },
+  createTestAvatar: () => {
+    throw new Error('fallback failed');
+  },
 }));
 
 describe('default avatar loading', () => {

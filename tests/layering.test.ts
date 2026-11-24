@@ -3,20 +3,21 @@
  * module under src/ and fails on any edge the contract in tests/layering-rules.ts does not allow,
  * on module-level import cycles, and on top-level DOM / storage access in the domain layers.
  *
- * The rules are data (layering-rules.ts); this file is the checker. The checkers are pure
- * functions so the negative self-tests can feed them synthetic edges and sources.
+ * The rules are data (layering-rules.ts) and the per-edge decision is a pure function
+ * (layering-check.ts, shared with the ESLint rule in eslint.config.ts, 18-04); this file walks the
+ * tree and asserts. The checkers are pure so the negative self-tests can feed them synthetic edges
+ * and sources.
  */
 import { readdirSync, readFileSync } from 'node:fs';
 import { dirname, join, posix, relative, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import ts from 'typescript';
 import { describe, expect, it } from 'vitest';
+import { type Edge, findViolations, layerOf } from './layering-check';
 import {
-  DIR_LAYER,
   EXCEPTIONS,
   LAYER_MAY_IMPORT,
   LAYER_ORDER,
-  Layer,
   MODULE_RULES,
   SIDE_EFFECT_EXEMPTIONS,
   SIDE_EFFECT_FREE_DIRS,
@@ -25,16 +26,11 @@ import {
 
 const SRC = join(dirname(fileURLToPath(import.meta.url)), '..', 'src');
 
-interface Edge {
-  from: string;
-  to: string;
-}
-
 // ---------------------------------------------------------------- source walking & import parsing
 
 function walk(dir: string): string[] {
   return readdirSync(dir, { withFileTypes: true }).flatMap((entry) =>
-    entry.isDirectory() ? walk(join(dir, entry.name)) : [join(dir, entry.name)],
+    entry.isDirectory() ? walk(join(dir, entry.name)) : [join(dir, entry.name)]
   );
 }
 
@@ -64,7 +60,9 @@ export function importSpecifiers(fileName: string, text: string): string[] {
 const NON_CODE_TARGET = /\.(css|json|svg|png|glb)$/;
 
 function collectModules(): { files: string[]; edges: Edge[]; unresolved: string[] } {
-  const files = walk(SRC).filter((f) => f.endsWith('.ts') && !f.endsWith('.d.ts')).map(toRel);
+  const files = walk(SRC)
+    .filter((f) => f.endsWith('.ts') && !f.endsWith('.d.ts'))
+    .map(toRel);
   const known = new Set(files);
   const edges: Edge[] = [];
   const unresolved: string[] = [];
@@ -82,30 +80,6 @@ function collectModules(): { files: string[]; edges: Edge[]; unresolved: string[
 }
 
 // ---------------------------------------------------------------- the checkers (pure)
-
-export function layerOf(module: string): Layer | undefined {
-  const rule = MODULE_RULES[module];
-  if (rule) return rule.layer;
-  const top = module.split('/')[0] ?? '';
-  return DIR_LAYER[top];
-}
-
-export function findViolations(edges: readonly Edge[]): string[] {
-  const out: string[] = [];
-  for (const { from, to } of edges) {
-    const fromLayer = layerOf(from);
-    const toLayer = layerOf(to);
-    if (!fromLayer) { out.push(`${from}: module is not classified (add it to MODULE_RULES / DIR_LAYER)`); continue; }
-    if (!toLayer) { out.push(`${from} -> ${to}: target is not classified`); continue; }
-    const excepted = EXCEPTIONS.some((e) => e.from === from && e.to === to);
-    const layerAllows = fromLayer === toLayer || LAYER_MAY_IMPORT[fromLayer].includes(toLayer);
-    const importableBy = MODULE_RULES[to]?.importableBy;
-    const targetAllows = !importableBy || fromLayer === toLayer || importableBy.includes(fromLayer);
-    if (!excepted && !layerAllows) out.push(`${from} (${fromLayer}) -> ${to} (${toLayer}): layer may not import layer`);
-    else if (!excepted && !targetAllows) out.push(`${from} (${fromLayer}) -> ${to}: importable only by ${importableBy?.join(', ')}`);
-  }
-  return out;
-}
 
 /** Module-level import cycles (each reported once as `a -> b -> a`). */
 export function findCycles(edges: readonly Edge[]): string[] {
@@ -138,9 +112,18 @@ export function topLevelGlobalUses(fileName: string, text: string): string[] {
   const visit = (node: ts.Node): void => {
     if (ts.isFunctionLike(node) || ts.isClassLike(node)) return; // bodies run later, not at load
     if (ts.isTypeNode(node) || ts.isTypeOfExpression(node)) return; // `typeof window` guards / type positions
-    if (ts.isPropertyAccessExpression(node)) { visit(node.expression); return; } // skip the member name
-    if (ts.isPropertyAssignment(node)) { visit(node.initializer); return; } // skip the property key
-    if (ts.isVariableDeclaration(node)) { if (node.initializer) visit(node.initializer); return; } // skip the binding name
+    if (ts.isPropertyAccessExpression(node)) {
+      visit(node.expression);
+      return;
+    } // skip the member name
+    if (ts.isPropertyAssignment(node)) {
+      visit(node.initializer);
+      return;
+    } // skip the property key
+    if (ts.isVariableDeclaration(node)) {
+      if (node.initializer) visit(node.initializer);
+      return;
+    } // skip the binding name
     if (ts.isIdentifier(node) && SIDE_EFFECT_GLOBALS.includes(node.text)) found.add(node.text);
     ts.forEachChild(node, visit);
   };
@@ -186,7 +169,10 @@ describe('layering gate: import contract (14-02)', () => {
   it('every exception is documented with a reason and still matches a real edge', () => {
     for (const exception of EXCEPTIONS) {
       expect(exception.reason.length, exception.from).toBeGreaterThan(40);
-      expect(edges.some((e) => e.from === exception.from && e.to === exception.to), `stale exception ${exception.from} -> ${exception.to}`).toBe(true);
+      expect(
+        edges.some((e) => e.from === exception.from && e.to === exception.to),
+        `stale exception ${exception.from} -> ${exception.to}`
+      ).toBe(true);
     }
     expect(EXCEPTIONS).toHaveLength(1);
   });
@@ -270,7 +256,7 @@ describe('layering gate: negative self-tests', () => {
         "import './side';",
         "const lazy = () => import('./lazy');",
         "import * as THREE from 'three';",
-      ].join('\n'),
+      ].join('\n')
     );
     expect(specs).toEqual(['./a', '../b', './c', './d', './side', './lazy']);
   });

@@ -79,7 +79,7 @@ export class ProceduralBlink {
     }
 
     // Compute the blink weight
-    let weight = 0;
+    let weight: number;
     if (elapsed < this.closeDurationSec) {
       // Phase 1: fast closing (80ms)
       const t = elapsed / this.closeDurationSec;

@@ -5,8 +5,14 @@ import { AudioEngine } from '../src/audio/audio-engine';
 import { SceneController, type SceneControllerDeps } from '../src/features/scene-controller';
 
 const EYE_LOOK = [
-  'eyeLookInLeft', 'eyeLookOutLeft', 'eyeLookUpLeft', 'eyeLookDownLeft',
-  'eyeLookInRight', 'eyeLookOutRight', 'eyeLookUpRight', 'eyeLookDownRight',
+  'eyeLookInLeft',
+  'eyeLookOutLeft',
+  'eyeLookUpLeft',
+  'eyeLookDownLeft',
+  'eyeLookInRight',
+  'eyeLookOutRight',
+  'eyeLookUpRight',
+  'eyeLookDownRight',
 ];
 
 class RecordingDriver implements FaceDriver {
@@ -20,8 +26,17 @@ class RecordingDriver implements FaceDriver {
     this.writes.push([shape, weight]);
   }
   public listAvailableShapes(): string[] {
-    return ['jawOpen', 'mouthClose', 'mouthFunnel', 'mouthSmileLeft', 'mouthSmileRight',
-      'browInnerUp', 'eyeBlinkLeft', 'eyeBlinkRight', ...EYE_LOOK];
+    return [
+      'jawOpen',
+      'mouthClose',
+      'mouthFunnel',
+      'mouthSmileLeft',
+      'mouthSmileRight',
+      'browInnerUp',
+      'eyeBlinkLeft',
+      'eyeBlinkRight',
+      ...EYE_LOOK,
+    ];
   }
   public getSpeechMeshes(): never[] {
     return [];
@@ -44,8 +59,14 @@ class MockAudioEngine {
 }
 
 const GAZE: EyeLookWeights = {
-  eyeLookInLeft: 0, eyeLookOutLeft: 0.8, eyeLookUpLeft: 0, eyeLookDownLeft: 0,
-  eyeLookInRight: 0.8, eyeLookOutRight: 0, eyeLookUpRight: 0, eyeLookDownRight: 0,
+  eyeLookInLeft: 0,
+  eyeLookOutLeft: 0.8,
+  eyeLookUpLeft: 0,
+  eyeLookDownLeft: 0,
+  eyeLookInRight: 0.8,
+  eyeLookOutRight: 0,
+  eyeLookUpRight: 0,
+  eyeLookDownRight: 0,
 };
 
 function framesClip(carriesEyes: boolean): FramesClip {
@@ -83,7 +104,10 @@ describe('single morph writer: gaze through the FaceController provider seam', (
     expect(controller.getState()).toBe('SPEAKING');
     expect(provider).toHaveBeenCalledTimes(30);
 
-    const outLeft = driver.writes.slice(mark).filter(([s]) => s === 'eyeLookOutLeft').map(([, w]) => w);
+    const outLeft = driver.writes
+      .slice(mark)
+      .filter(([s]) => s === 'eyeLookOutLeft')
+      .map(([, w]) => w);
     // Only the provider writes eyeLook*: exactly one write per frame, the gaze value, never 0.
     expect(outLeft).toHaveLength(30);
     expect(outLeft.every((w) => Math.abs(w - 0.8 * 0.35) < 1e-9)).toBe(true);
@@ -98,7 +122,10 @@ describe('single morph writer: gaze through the FaceController provider seam', (
     controller.onInterruption();
     const mark = driver.writes.length;
     controller.render(0.016);
-    const outLeft = driver.writes.slice(mark).filter(([s]) => s === 'eyeLookOutLeft').map(([, w]) => w);
+    const outLeft = driver.writes
+      .slice(mark)
+      .filter(([s]) => s === 'eyeLookOutLeft')
+      .map(([, w]) => w);
     expect(outLeft).toEqual([0.8 * 0.35]);
   });
 

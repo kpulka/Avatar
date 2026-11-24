@@ -4,7 +4,7 @@ Thanks for your interest. This project is **All Rights Reserved** (see [LICENSE]
 
 ## Prerequisites
 
-- Node.js 20 or newer (the test runner, vitest 4, sets that floor).
+- Node.js 20.19 or newer (ESLint 10 sets that floor; CI runs Node 22).
 - A WebGL-capable browser for manual checks.
 
 ## Setup and commands
@@ -16,18 +16,22 @@ npm install          # or `npm ci` for a reproducible install from package-lock.
 npm run dev          # dev server on http://localhost:5310 (port pinned in vite.config.ts)
 npm test             # vitest: unit tests plus the language gate
 npm run build        # tsc (strict) followed by the Vite production build
+npm run typecheck    # tsc over src AND tests (tsconfig.test.json)
+npm run lint         # ESLint, zero warnings, includes the import-layer rule
+npm run format:check # Prettier (npm run format rewrites)
+npm run verify       # all of the above in one chain
 ```
 
-`npm run build` runs `tsc` first, so it is the type check. There is no separate typecheck script yet.
+The build runs `tsc` over `src` only; `npm run typecheck` also covers the tests.
 
 ## Gates a change must pass
 
 Before you open a pull request, run locally:
 
-1. `npm run build` exits 0.
-2. `npm test` exits 0. This includes the language gate in `tests/language.test.ts`, which requires English text in the enforced scopes (README, `docs/`, root documents) and resolves relative `.md` links.
+1. `npm run verify` exits 0 (typecheck, tests, build, lint, format check).
+2. Within it, `npm test` exits 0. This includes the language gate in `tests/language.test.ts`, which requires English text in the enforced scopes (README, `docs/`, root documents) and resolves relative `.md` links.
 
-A CI workflow is planned but not in the repository yet. Until it lands, these local runs are the only gates.
+CI (`.github/workflows/ci.yml`) runs `npm ci`, `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm test` and `npm run build` on every push to `master` and every pull request. Run the same commands locally before you push.
 
 ## Language
 

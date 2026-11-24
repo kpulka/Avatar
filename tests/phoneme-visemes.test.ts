@@ -1,24 +1,12 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
-import {
-  mapPhonemeToShapes,
-  lipPoseToShapes,
-  PHONEME_POSES,
-  DIPHTHONG_END_POSES,
-} from '../src/lipsync/g2p/phoneme-visemes';
+import { mapPhonemeToShapes, lipPoseToShapes, PHONEME_POSES, DIPHTHONG_END_POSES } from '../src/lipsync/g2p/phoneme-visemes';
 import { ANIM_DEFAULTS } from '../src/realism/anim-config';
 import { VisemeScheduler } from '../src/lipsync/viseme-scheduler';
 import { CALIBRATION_PRESETS } from '../src/lipsync/calibration';
 import { defined } from './helpers/defined';
 
-const SPEECH_SHAPES = [
-  'jawOpen',
-  'mouthClose',
-  'mouthPressLeft',
-  'mouthPressRight',
-  'mouthRollLower',
-  'mouthRollUpper',
-];
+const SPEECH_SHAPES = ['jawOpen', 'mouthClose', 'mouthPressLeft', 'mouthPressRight', 'mouthRollLower', 'mouthRollUpper'];
 
 /** Effective pose = table x preset scale applied by the scheduler, converged in the hold phase. */
 function effectivePose(phoneme: string, preset: 'subtle' | 'balanced' | 'expressive' = 'balanced'): Map<string, number> {
@@ -116,9 +104,9 @@ describe('mapPhonemeToShapes (ARPAbet → ARKit)', () => {
 // Phase 17 (17-02): the table is the single source of truth
 // ---------------------------------------------------------------------------------------------
 
-const snapshot = JSON.parse(
-  readFileSync(new URL('./fixtures/phoneme-poses-snapshot.json', import.meta.url), 'utf8'),
-) as { poses: Record<string, Record<string, number>> };
+const snapshot = JSON.parse(readFileSync(new URL('./fixtures/phoneme-poses-snapshot.json', import.meta.url), 'utf8')) as {
+  poses: Record<string, Record<string, number>>;
+};
 
 describe('PHONEME_POSES single source of truth (LIP-04)', () => {
   it('has exactly the 39 ARPAbet keys of the committed snapshot', () => {

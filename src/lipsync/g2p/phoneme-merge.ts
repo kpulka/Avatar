@@ -33,8 +33,23 @@ export interface PhonemeSpan {
 
 /** Vowel-like phonemes — they get a larger share of the word time. */
 const VOWEL_PHONEMES = new Set([
-  'AA', 'AH', 'AE', 'AO', 'AW', 'AY', 'EH', 'ER', 'EY', 'IH', 'IY', 'OW', 'OY', 'UH', 'UW',
-  'PL_AN', 'PL_EN', // Polish nasal vowels (17-04)
+  'AA',
+  'AH',
+  'AE',
+  'AO',
+  'AW',
+  'AY',
+  'EH',
+  'ER',
+  'EY',
+  'IH',
+  'IY',
+  'OW',
+  'OY',
+  'UH',
+  'UW',
+  'PL_AN',
+  'PL_EN', // Polish nasal vowels (17-04)
 ]);
 
 /** Soft minimum span (ms). */
@@ -121,10 +136,7 @@ function toUnits(phonemes: readonly string[]): Unit[] {
  * `options.defaultLanguage` (default 'en'). Both languages produce the same `PhonemeSpan[]` shape and the
  * same weighting / renormalization.
  */
-export function mergeCharAlignmentToPhonemes(
-  alignment: CharAlignment,
-  options: { defaultLanguage?: G2pLanguage } = {},
-): PhonemeSpan[] {
+export function mergeCharAlignmentToPhonemes(alignment: CharAlignment, options: { defaultLanguage?: G2pLanguage } = {}): PhonemeSpan[] {
   const defaultLanguage = options.defaultLanguage ?? 'en';
   if (alignment.source !== undefined && alignment.source !== 'elevenlabs') {
     return [];
@@ -141,7 +153,8 @@ export function mergeCharAlignmentToPhonemes(
 
   while (i < n) {
     // Boundary: look for the start of a run of letters
-    if (!WORD_CHAR.test(chars[i] ?? '')) { // i < n
+    if (!WORD_CHAR.test(chars[i] ?? '')) {
+      // i < n
       i += 1;
       continue;
     }
@@ -170,7 +183,10 @@ export function mergeCharAlignmentToPhonemes(
     if (phonemes.length === 0 || wordSpanMs <= 0) continue;
 
     const units = toUnits(phonemes);
-    const lengths = distributeDurations(units.map((u) => u.weight), wordSpanMs);
+    const lengths = distributeDurations(
+      units.map((u) => u.weight),
+      wordSpanMs
+    );
 
     let cursorMs = wordStartMs;
     for (let k = 0; k < units.length; k++) {

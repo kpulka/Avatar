@@ -86,12 +86,7 @@ export class VisemeScheduler {
    * BORROWED: the returned Map is a reused scratch instance — valid until the next update() call;
    * copy it if you need to keep it.
    */
-  public update(
-    nowSec: number,
-    dt: number,
-    activeEpoch: number,
-    speechShapes: string[]
-  ): Map<string, number> {
+  public update(nowSec: number, dt: number, activeEpoch: number, speechShapes: string[]): Map<string, number> {
     const targets = this.scratchTargets;
     targets.clear();
 

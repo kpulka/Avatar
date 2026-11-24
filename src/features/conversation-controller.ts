@@ -63,8 +63,7 @@ export class ConversationController implements ConversationService {
     };
 
     this.speechBackend.onAudioChunk = (pcm, alignment, epoch, scheduledStartTime, sampleRate) => {
-      const startTime =
-        typeof scheduledStartTime === 'number' ? scheduledStartTime : this.audioEngine.getTailTime();
+      const startTime = typeof scheduledStartTime === 'number' ? scheduledStartTime : this.audioEngine.getTailTime();
       this.events.emit('audio:chunk', {
         bytes: new Uint8Array(pcm),
         alignment,
@@ -123,9 +122,11 @@ export class ConversationController implements ConversationService {
     if (this.startPromise) return this.startPromise;
     const pending = this.startSession();
     this.startPromise = pending;
-    void pending.finally(() => {
-      if (this.startPromise === pending) this.startPromise = null;
-    }).catch(() => undefined);
+    void pending
+      .finally(() => {
+        if (this.startPromise === pending) this.startPromise = null;
+      })
+      .catch(() => undefined);
     return pending;
   }
 

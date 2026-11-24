@@ -12,11 +12,19 @@ export class MicAccessError extends Error {
   public readonly reason: 'denied' | 'not-found' | 'other';
   constructor(cause: unknown) {
     const name = (cause as { name?: string } | null)?.name;
-    const reason = name === 'NotAllowedError' || name === 'SecurityError' ? 'denied'
-      : name === 'NotFoundError' || name === 'OverconstrainedError' ? 'not-found' : 'other';
-    super(reason === 'denied' ? 'Microphone access is blocked. Allow it via the icon in the address bar, then press Start again.'
-      : reason === 'not-found' ? 'No microphone was found. Connect one and press Start again.'
-      : 'The microphone could not be started.');
+    const reason =
+      name === 'NotAllowedError' || name === 'SecurityError'
+        ? 'denied'
+        : name === 'NotFoundError' || name === 'OverconstrainedError'
+          ? 'not-found'
+          : 'other';
+    super(
+      reason === 'denied'
+        ? 'Microphone access is blocked. Allow it via the icon in the address bar, then press Start again.'
+        : reason === 'not-found'
+          ? 'No microphone was found. Connect one and press Start again.'
+          : 'The microphone could not be started.'
+    );
     this.name = 'MicAccessError';
     this.reason = reason;
   }
@@ -60,7 +68,10 @@ export class ElevenAgentsSpeechBackend implements SpeechBackend {
   private diagEpoch = -1;
   private diagPrevChunkEndSec = 0;
 
-  constructor(audioEngine: AudioEngine, private readonly getAgentId: () => string) {
+  constructor(
+    audioEngine: AudioEngine,
+    private readonly getAgentId: () => string
+  ) {
     this.audioEngine = audioEngine;
     this.micCapture = new MicCapture(this.audioEngine.ctx);
     this.wssClient = new RawWssClient(this.getAgentId());
@@ -77,9 +88,12 @@ export class ElevenAgentsSpeechBackend implements SpeechBackend {
         const match = /^pcm_(\d+)$/.exec(f);
         if (match && Number(match[1]) > 0) {
           this.agentOutputSampleRate = Number(match[1]);
+          // eslint-disable-next-line no-console -- trace log, not a diagnostic: kept as console.log on purpose (warn/error are the diagnostic channels)
           console.log(`[SpeechBackend] Agent audio format: ${f} -> ${this.agentOutputSampleRate} Hz`);
         } else {
-          console.warn(`[SpeechBackend] unsupported agent output format '${f}' - keeping ${this.agentOutputSampleRate} Hz (expected pcm_<rate>).`);
+          console.warn(
+            `[SpeechBackend] unsupported agent output format '${f}' - keeping ${this.agentOutputSampleRate} Hz (expected pcm_<rate>).`
+          );
         }
       },
 
@@ -123,6 +137,7 @@ export class ElevenAgentsSpeechBackend implements SpeechBackend {
       },
 
       onInterruption: (reason = 'user_interrupted') => {
+        // eslint-disable-next-line no-console -- trace log, not a diagnostic: kept as console.log on purpose (warn/error are the diagnostic channels)
         console.log(`[SpeechBackend] Interruption from the server: ${reason}`);
         this.audioEngine.hardStop();
         this.onInterruption(reason);
@@ -135,6 +150,7 @@ export class ElevenAgentsSpeechBackend implements SpeechBackend {
       },
 
       onAgentResponse: (text: string) => {
+        // eslint-disable-next-line no-console -- trace log, not a diagnostic: kept as console.log on purpose (warn/error are the diagnostic channels)
         console.log(`[SpeechBackend] Agent response: ${text}`);
         this.onAgentResponse(text);
       },
@@ -163,9 +179,11 @@ export class ElevenAgentsSpeechBackend implements SpeechBackend {
     const generation = this.startGeneration;
     const pending = this.startSession(generation);
     this.startPromise = pending;
-    void pending.finally(() => {
-      if (this.startPromise === pending) this.startPromise = null;
-    }).catch(() => undefined);
+    void pending
+      .finally(() => {
+        if (this.startPromise === pending) this.startPromise = null;
+      })
+      .catch(() => undefined);
     return pending;
   }
 
@@ -197,6 +215,7 @@ export class ElevenAgentsSpeechBackend implements SpeechBackend {
     this.onStateChange('listening');
   }
 
+  // eslint-disable-next-line @typescript-eslint/require-await -- SpeechBackend.stop() is Promise-returning; async keeps a throw a rejection
   public async stop(): Promise<void> {
     this.startGeneration++;
     if (!this.isRunning) return;
@@ -210,10 +229,12 @@ export class ElevenAgentsSpeechBackend implements SpeechBackend {
 
   public setMuted(muted: boolean): void {
     this.isMuted = muted;
+    // eslint-disable-next-line no-console -- trace log, not a diagnostic: kept as console.log on purpose (warn/error are the diagnostic channels)
     console.log(`[SpeechBackend] Microphone: ${muted ? 'muted' : 'active'}`);
   }
 
   public triggerInterruption(reason = 'client_interrupted'): void {
+    // eslint-disable-next-line no-console -- trace log, not a diagnostic: kept as console.log on purpose (warn/error are the diagnostic channels)
     console.log(`[SpeechBackend] Forced interruption: ${reason}`);
     this.audioEngine.hardStop();
     this.onInterruption(reason);
@@ -257,13 +278,7 @@ export class ElevenAgentsSpeechBackend implements SpeechBackend {
    * `rawRatio` is the same ratio measured BEFORE the rescale (the real drift signal, -1 when unknown);
    * it is logged as `raw=` and flagged when it falls outside the rescale clamp range [0.5, 2.5].
    */
-  private diagnoseSync(
-    alignment: CharAlignment,
-    pcmBytes: Uint8Array,
-    epoch: number,
-    scheduledStartTime: number,
-    rawRatio = -1
-  ): void {
+  private diagnoseSync(alignment: CharAlignment, pcmBytes: Uint8Array, epoch: number, scheduledStartTime: number, rawRatio = -1): void {
     if (this.diagEpoch !== epoch) {
       this.diagEpoch = epoch;
       this.diagChunkIndex = 0;
@@ -284,25 +299,23 @@ export class ElevenAgentsSpeechBackend implements SpeechBackend {
     const gapMs = index > 0 ? (scheduledStartTime - this.diagPrevChunkEndSec) * 1000 : 0;
     if (scheduledStartTime > 0 && index === 0) this.diagPrevChunkEndSec = scheduledStartTime;
     if (scheduledStartTime > 0) {
-      this.diagPrevChunkEndSec = Math.max(
-        this.diagPrevChunkEndSec,
-        scheduledStartTime + audioDurMs / 1000
-      );
+      this.diagPrevChunkEndSec = Math.max(this.diagPrevChunkEndSec, scheduledStartTime + audioDurMs / 1000);
     }
 
     const flags: string[] = [];
     if (isFallback) flags.push('FALLBACK (no alignment from EL)');
     else if (alignEndMs <= 0) flags.push('empty alignment');
     // EL boundary chunks (<150 ms) tend to have slightly misaligned text/audio boundaries — skipped.
-    else if (audioDurMs >= 150 && (ratio < 0.9 || ratio > 1.1))
-      flags.push(`ratio=${ratio.toFixed(2)} outside [0.9,1.1]`);
+    else if (audioDurMs >= 150 && (ratio < 0.9 || ratio > 1.1)) flags.push(`ratio=${ratio.toFixed(2)} outside [0.9,1.1]`);
     // A mid-utterance gap (30..1500 ms) = jitter worth noting; otherwise a normal pause between turns.
-    if (rawRatio > 0 && audioDurMs >= 150 && (rawRatio < 0.5 || rawRatio > 2.5)) flags.push(`raw=${rawRatio.toFixed(2)} beyond the rescale clamp`);
+    if (rawRatio > 0 && audioDurMs >= 150 && (rawRatio < 0.5 || rawRatio > 2.5))
+      flags.push(`raw=${rawRatio.toFixed(2)} beyond the rescale clamp`);
     if (gapMs > 30 && gapMs < 1500) flags.push(`GAP ${gapMs.toFixed(0)}ms`);
     if (samples === 0) flags.push('empty chunk');
 
     // Dump of the first chunk of the utterance — a look at the times (after the rescale).
     if (index === 0) {
+      // eslint-disable-next-line no-console -- trace log, not a diagnostic: kept as console.log on purpose (warn/error are the diagnostic channels)
       console.log(
         '[AlignDiag] first-chunk',
         JSON.stringify({
@@ -323,6 +336,7 @@ export class ElevenAgentsSpeechBackend implements SpeechBackend {
       ` start=${scheduledStartTime.toFixed(3)}s` +
       (flags.length ? ` ⚠ ${flags.join(' | ')}` : ' ✓');
     if (flags.length) console.warn(log);
+    // eslint-disable-next-line no-console -- trace log, not a diagnostic: kept as console.log on purpose (warn/error are the diagnostic channels)
     else if (index < 4) console.log(log);
   }
 
@@ -343,10 +357,7 @@ export class ElevenAgentsSpeechBackend implements SpeechBackend {
       const t = i / sampleRate;
       // Voiced sound with a speech envelope
       const envelope = Math.sin((t / durationSec) * Math.PI);
-      const voice =
-        0.5 * Math.sin(2 * Math.PI * 140 * t) +
-        0.3 * Math.sin(2 * Math.PI * 280 * t) +
-        0.2 * Math.sin(2 * Math.PI * 420 * t);
+      const voice = 0.5 * Math.sin(2 * Math.PI * 140 * t) + 0.3 * Math.sin(2 * Math.PI * 280 * t) + 0.2 * Math.sin(2 * Math.PI * 420 * t);
       int16Buffer[i] = Math.floor(voice * envelope * 12000);
     }
 
@@ -374,10 +385,13 @@ export class ElevenAgentsSpeechBackend implements SpeechBackend {
     const scheduled = this.audioEngine.playChunk(pcmBytes, sampleRate, epoch);
     this.onAudioChunk(pcmBytes.buffer as ArrayBuffer, alignment, epoch, scheduled, sampleRate);
 
-    setTimeout(() => {
-      if (!this.audioEngine.hasPendingAudio()) {
-        this.onStateChange('idle');
-      }
-    }, durationSec * 1000 + 300);
+    setTimeout(
+      () => {
+        if (!this.audioEngine.hasPendingAudio()) {
+          this.onStateChange('idle');
+        }
+      },
+      durationSec * 1000 + 300
+    );
   }
 }

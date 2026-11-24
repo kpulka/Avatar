@@ -53,10 +53,7 @@ describe('Scene Lighting & Materials', () => {
   });
 
   it('enhances skin materials with sheen and clearcoat', () => {
-    const headMesh = new THREE.Mesh(
-      new THREE.SphereGeometry(1, 8, 8),
-      new THREE.MeshStandardMaterial({ color: 0xffccaa })
-    );
+    const headMesh = new THREE.Mesh(new THREE.SphereGeometry(1, 8, 8), new THREE.MeshStandardMaterial({ color: 0xffccaa }));
     headMesh.name = 'Avatar_Head_Skin';
 
     // Mock renderer capabilities

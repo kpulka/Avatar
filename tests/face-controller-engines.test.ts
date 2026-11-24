@@ -25,16 +25,16 @@ class StubDriver implements FaceDriver {
 
 const engine = { ctx: { currentTime: 0 }, getEpoch: () => 0, hasPendingAudio: () => true };
 
-function turn(engineId: 'phoneme-en' | 'phoneme-pl' | 'char', text: string, mapper?: (c: string[], i: number, ctx?: CharContext) => Map<string, number>) {
+function turn(
+  engineId: 'phoneme-en' | 'phoneme-pl' | 'char',
+  text: string,
+  mapper?: (c: string[], i: number, ctx?: CharContext) => Map<string, number>
+) {
   const controller = new FaceController(new StubDriver(), engine as unknown as AudioEngine);
   controller.setLipSyncEngine(engineId);
   if (mapper) controller.setCharMapper(mapper);
   const chars = text.split('');
-  controller.onAudioChunk(
-    { chars, char_start_times_ms: chars.map((_, i) => i * 60), char_durations_ms: chars.map(() => 60) },
-    0,
-    0,
-  );
+  controller.onAudioChunk({ chars, char_start_times_ms: chars.map((_, i) => i * 60), char_durations_ms: chars.map(() => 60) }, 0, 0);
   return controller.getVisemeQueueLength();
 }
 

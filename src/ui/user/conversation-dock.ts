@@ -30,27 +30,29 @@ export function createConversationDock(): PanelDefinition {
         void services.conversation.toggle();
       });
 
-      const mute = el('button', {
-        className: 'dock-btn btn-subtle',
-        type: 'button',
-        ariaLabel: t('dock.muteAria'),
-        title: t('dock.muteAria'),
-        attrs: { 'aria-pressed': 'false' },
-      }, [
-        iconSlot('mic'),
-        el('span', { className: 'btn-label', text: t('dock.mute') }),
-      ]);
+      const mute = el(
+        'button',
+        {
+          className: 'dock-btn btn-subtle',
+          type: 'button',
+          ariaLabel: t('dock.muteAria'),
+          title: t('dock.muteAria'),
+          attrs: { 'aria-pressed': 'false' },
+        },
+        [iconSlot('mic'), el('span', { className: 'btn-label', text: t('dock.mute') })]
+      );
       mute.addEventListener('click', () => services.conversation.toggleMute());
 
-      const interrupt = el('button', {
-        className: 'dock-btn btn-danger-subtle',
-        type: 'button',
-        ariaLabel: t('dock.interruptAria'),
-        title: t('dock.interruptAria'),
-      }, [
-        iconSlot('stop'),
-        el('span', { className: 'btn-label', text: t('dock.interrupt') }),
-      ]);
+      const interrupt = el(
+        'button',
+        {
+          className: 'dock-btn btn-danger-subtle',
+          type: 'button',
+          ariaLabel: t('dock.interruptAria'),
+          title: t('dock.interruptAria'),
+        },
+        [iconSlot('stop'), el('span', { className: 'btn-label', text: t('dock.interrupt') })]
+      );
       interrupt.addEventListener('click', () => services.conversation.interrupt());
 
       // S12: nothing to mute or interrupt before a session exists.
@@ -67,8 +69,8 @@ export function createConversationDock(): PanelDefinition {
         primary.title = running ? t('dock.end') : t('dock.start'); // tooltip for the icon-only collapse (<=1152px)
         primary.querySelector('.btn-label')!.textContent = running ? t('dock.end') : t('dock.start');
         setIcon(primary, running ? 'phoneOff' : 'phone');
-        (mute as HTMLButtonElement).disabled = !running;
-        (interrupt as HTMLButtonElement).disabled = !running;
+        mute.disabled = !running;
+        interrupt.disabled = !running;
       });
 
       const unsubMuted = events.on('voice:muted', (muted) => {

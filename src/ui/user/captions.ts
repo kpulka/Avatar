@@ -25,17 +25,18 @@ export function createCaptions(): PanelDefinition {
           attrs: { 'aria-live': 'polite' },
         },
         [
-        el('div', { className: 'transcript-box' }, [
-          el('div', { className: 'transcript-line user-line' }, [
-            el('span', { className: 'speaker-tag', text: t('captions.you') }),
-            userText,
+          el('div', { className: 'transcript-box' }, [
+            el('div', { className: 'transcript-line user-line' }, [
+              el('span', { className: 'speaker-tag', text: t('captions.you') }),
+              userText,
+            ]),
+            el('div', { className: 'transcript-line agent-line' }, [
+              el('span', { className: 'speaker-tag', text: t('captions.agent') }),
+              agentText,
+            ]),
           ]),
-          el('div', { className: 'transcript-line agent-line' }, [
-            el('span', { className: 'speaker-tag', text: t('captions.agent') }),
-            agentText,
-          ]),
-        ]),
-      ]);
+        ]
+      );
       container.append(root);
 
       const unsubUser = events.on('transcript:user', (text) => {

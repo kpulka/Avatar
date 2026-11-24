@@ -27,7 +27,6 @@ const ROUND_CONSONANTS = new Set('wr'.split(''));
 /** Voiced consonants (resonant) — a quiet voiced source. */
 const VOICED_CONSONANTS = new Set('mbnwlrgyjdżdźdz'.split(''));
 
-
 /** Target pose for a single letter (simplified, for the demo only). */
 function poseForChar(ch: string): Record<string, number> {
   const c = ch.toLowerCase();
@@ -173,7 +172,7 @@ export function synthesizeDemoAudio(sampleRate: number, durationSec: number, phr
     const f0 = 105 + ((charIndex * 37) % 85); // 105..190 Hz
     const nz = noise() * 2 - 1;
 
-    let s = 0;
+    let s: number;
     if (isVowelChar(ch) || VOICED_CONSONANTS.has(ch)) {
       // Voiced source: f0 + harmonics; front vowels boost the higher formants.
       const v = ch;

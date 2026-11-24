@@ -99,7 +99,7 @@ export interface SpeechBounds {
 export function detectSpeechBounds(
   pcmBytes: Uint8Array,
   sampleRate: number,
-  threshold: number = SPEECH_ENERGY_THRESHOLD,
+  threshold: number = SPEECH_ENERGY_THRESHOLD
 ): SpeechBounds | null {
   const perSlice = samplesPerWindow(sampleRate);
   const int16 = toInt16(pcmBytes);

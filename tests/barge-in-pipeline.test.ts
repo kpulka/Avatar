@@ -13,16 +13,7 @@ class MockFaceDriver implements FaceDriver {
     this.appliedWeights[shape] = weight;
   }
   public listAvailableShapes(): string[] {
-    return [
-      'jawOpen',
-      'mouthClose',
-      'mouthFunnel',
-      'mouthPucker',
-      'mouthSmileLeft',
-      'mouthSmileRight',
-      'eyeBlinkLeft',
-      'eyeBlinkRight',
-    ];
+    return ['jawOpen', 'mouthClose', 'mouthFunnel', 'mouthPucker', 'mouthSmileLeft', 'mouthSmileRight', 'eyeBlinkLeft', 'eyeBlinkRight'];
   }
   public getSpeechMeshes(): never[] {
     return [];

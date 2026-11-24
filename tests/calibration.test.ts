@@ -41,11 +41,11 @@ describe('Lip-Sync Calibration Module', () => {
     // An old record under the v1 key (0.3-0.65 attenuation semantics) must not poison v2:
     const legacyV1: Omit<CalibrationProfile, 'clockVersion'> = {
       jawScale: 0.55,
-      closeScale: 0.30,
-      puckerScale: 0.50,
-      funnelScale: 0.40,
+      closeScale: 0.3,
+      puckerScale: 0.5,
+      funnelScale: 0.4,
       rollScale: 0.65,
-      teethExposureScale: 0.50,
+      teethExposureScale: 0.5,
       smileScale: 0.45,
       coarticulationSpeed: 18,
       syncOffsetMs: -25,
@@ -65,9 +65,9 @@ describe('Lip-Sync Calibration Module', () => {
       closeScale: 0.58,
       puckerScale: 0.45,
       funnelScale: 0.35,
-      rollScale: 0.60,
-      teethExposureScale: 0.50,
-      smileScale: 0.40,
+      rollScale: 0.6,
+      teethExposureScale: 0.5,
+      smileScale: 0.4,
       coarticulationSpeed: 20,
       syncOffsetMs: -15,
       clockVersion: 2,
@@ -102,12 +102,12 @@ describe('Lip-Sync Calibration Module', () => {
   it('dynamically adapts VisemeScheduler scaling and coarticulation speed when profile is updated', () => {
     const scheduler = new VisemeScheduler();
     scheduler.setCalibrationProfile({
-      jawScale: 0.30,
+      jawScale: 0.3,
       coarticulationSpeed: 25,
     });
 
     const activeProfile = scheduler.getCalibrationProfile();
-    expect(activeProfile.jawScale).toBe(0.30);
+    expect(activeProfile.jawScale).toBe(0.3);
     expect(activeProfile.coarticulationSpeed).toBe(25);
 
     // Check the contribution of phoneme 'a' with a smaller jawScale
@@ -126,4 +126,3 @@ describe('Lip-Sync Calibration Module', () => {
     expect(jawWeight).toBeGreaterThan(0.05);
   });
 });
-

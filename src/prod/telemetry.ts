@@ -54,7 +54,7 @@ export class TelemetryManager {
   /**
    * Counts an audio chunk by alignment source ('elevenlabs' vs 'energy-fallback') — LIPS-07
    */
-  public recordAlignmentChunk(source: 'elevenlabs' | 'energy-fallback' | string): void {
+  public recordAlignmentChunk(source: string): void {
     if (source === 'energy-fallback') {
       this.alignmentFallback++;
     } else {

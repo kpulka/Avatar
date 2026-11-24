@@ -18,14 +18,7 @@ import { TypedEventBus, Unsub } from '../app/events';
 import { AppEvents, CompareResultEvent } from '../app/app-types';
 import { t } from '../app/copy';
 
-export type CompareState =
-  | 'idle'
-  | 'ready'
-  | 'predicting'
-  | 'playing-a'
-  | 'playing-b'
-  | 'done'
-  | 'error';
+export type CompareState = 'idle' | 'ready' | 'predicting' | 'playing-a' | 'playing-b' | 'done' | 'error';
 
 export interface CompareControllerDeps {
   buffer: LastTurnBuffer;
@@ -186,6 +179,7 @@ export class CompareController {
     this.deps.audioEngine.hardStop();
     this.restoreMode(token);
     this.setState('idle');
+    // eslint-disable-next-line no-console -- trace log, not a diagnostic: kept as console.log on purpose (warn/error are the diagnostic channels)
     console.log(`[CompareController] Replay cancelled (${reason}).`);
     this.deps.events.emit('compare:cancelled', undefined);
   }
@@ -214,16 +208,16 @@ export class CompareController {
     this.deps.events.emit('compare:state', state);
   }
 
+  // eslint-disable-next-line @typescript-eslint/require-await -- Promise-returning contract; async keeps a throw a rejection
   private async playLive(turn: LastTurn, token: number, faceController: FaceController): Promise<void> {
     this.setState('playing-a');
     if (!this.isCurrent(token)) return;
     this.deps.audioEngine.hardStop();
     if (faceController.getAnimationMode() !== 'viseme') faceController.setAnimationMode('viseme');
-    let epoch = this.deps.audioEngine.getEpoch();
     for (const chunk of turn.chunks) {
       if (!this.isCurrent(token)) return;
       const scheduledStart = this.deps.audioEngine.playChunk(chunk.bytes, turn.sampleRate);
-      epoch = this.deps.audioEngine.getEpoch();
+      const epoch = this.deps.audioEngine.getEpoch();
       faceController?.onAudioChunk(chunk.alignment, scheduledStart || this.deps.audioEngine.getTailTime(), epoch);
     }
   }
@@ -261,6 +255,7 @@ export class CompareController {
     }
   }
 
+  // eslint-disable-next-line @typescript-eslint/require-await -- Promise-returning contract; async keeps a throw a rejection
   private async playA2f(turn: LastTurn, prepared: A2fPrepared, token: number, faceController: FaceController): Promise<void> {
     this.setState('playing-b');
     if (!this.isCurrent(token)) return;

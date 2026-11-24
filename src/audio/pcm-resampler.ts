@@ -6,11 +6,7 @@
  * Resamples a Float32 buffer from inSampleRate to outSampleRate (default 16000 Hz)
  * using linear interpolation.
  */
-export function resampleFloat32(
-  input: Float32Array,
-  inSampleRate: number,
-  outSampleRate = 16000
-): Float32Array {
+export function resampleFloat32(input: Float32Array, inSampleRate: number, outSampleRate = 16000): Float32Array {
   if (inSampleRate === outSampleRate || input.length === 0) {
     return new Float32Array(input);
   }

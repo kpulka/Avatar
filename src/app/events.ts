@@ -19,17 +19,17 @@ export class TypedEventBus<Events extends Record<string, unknown>> {
       set = new Set();
       this.handlers.set(type, set);
     }
-    set.add(handler as EventHandler<never>);
+    set.add(handler);
     let active = true;
     return () => {
       if (!active) return;
       active = false;
-      set?.delete(handler as EventHandler<never>);
+      set?.delete(handler);
     };
   }
 
   public off<K extends keyof Events>(type: K, handler: EventHandler<Events[K]>): void {
-    this.handlers.get(type)?.delete(handler as EventHandler<never>);
+    this.handlers.get(type)?.delete(handler);
   }
 
   public emit<K extends keyof Events>(type: K, payload: Events[K]): void {

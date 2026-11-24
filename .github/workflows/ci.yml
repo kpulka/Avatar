@@ -1,0 +1,61 @@
+# CI: one boring workflow (Phase 18-03, D3). Clean Linux checkout, lockfile-exact install,
+# then the same four commands a contributor runs locally. No matrix, no Docker, no GPU jobs
+# (the a2f/ pipeline needs an RTX-class GPU and a 2 GB vendored SDK and is out of CI scope).
+# The committed pruned lexicon (src/lipsync/g2p/dict-en-pruned.json) means no build:dict step.
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+
+# Only read access is needed; nothing here publishes or comments.
+permissions:
+  contents: read
+
+# A newer push to the same ref makes the older run pointless.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      # npm ci installs exactly what package-lock.json pins (never npm install in CI).
+      - name: Install
+        run: npm ci
+
+      # tsc --noEmit over src AND tests (tsconfig.test.json), noUncheckedIndexedAccess on.
+      - name: Typecheck
+        run: npm run typecheck
+
+      # ESLint (typescript-eslint type-checked + the import-layer rule from tests/layering-rules.ts), zero warnings.
+      - name: Lint
+        run: npm run lint
+
+      # Prettier check over src, tests and the two TypeScript config files.
+      - name: Format check
+        run: npm run format:check
+
+      # Vitest suite, including the fs-based gates (English-only language gate, import layering).
+      - name: Test
+        run: npm test
+
+      # tsc (strict, src only) + vite production build.
+      - name: Build
+        run: npm run build
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist
+          retention-days: 7

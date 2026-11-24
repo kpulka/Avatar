@@ -99,9 +99,23 @@ const CATEGORIES: Category[] = [
 ];
 
 const MIRROR_BASES = [
-  'eyeBlink', 'eyeSquint', 'eyeWide', 'eyeLookUp', 'eyeLookDown', 'eyeLookIn', 'eyeLookOut',
-  'browDown', 'browOuterUp', 'cheekSquint', 'noseSneer',
-  'mouthSmile', 'mouthPress', 'mouthUpperUp', 'mouthLowerDown', 'mouthDimple', 'mouthFrown',
+  'eyeBlink',
+  'eyeSquint',
+  'eyeWide',
+  'eyeLookUp',
+  'eyeLookDown',
+  'eyeLookIn',
+  'eyeLookOut',
+  'browDown',
+  'browOuterUp',
+  'cheekSquint',
+  'noseSneer',
+  'mouthSmile',
+  'mouthPress',
+  'mouthUpperUp',
+  'mouthLowerDown',
+  'mouthDimple',
+  'mouthFrown',
   'mouthStretch',
 ];
 
@@ -133,11 +147,11 @@ export function createInspectorPanel(): PanelDefinition {
         placeholder: t('inspector.searchPlaceholder'),
         ariaLabel: t('inspector.searchAria'),
         type: 'text',
-      }) as HTMLInputElement;
+      });
       const resetAllButton = el('button', { className: 'btn btn-tiny btn-secondary', type: 'button', text: t('inspector.resetAll') });
       const toolbar = el('div', { className: 'drawer-toolbar' }, [searchInput, resetAllButton]);
 
-      const mirrorCheckbox = el('input', { type: 'checkbox' }) as HTMLInputElement;
+      const mirrorCheckbox = el('input', { type: 'checkbox' });
       const mirrorToggle = el('label', { className: 'engine-toggle inspector-mirror-toggle' }, [
         mirrorCheckbox,
         el('span', { text: t('inspector.mirror') }),
@@ -158,7 +172,7 @@ export function createInspectorPanel(): PanelDefinition {
             id: uid('inspector-shape'),
             type: 'range',
             attrs: { min: '0', max: '1', step: '0.01' },
-          }) as HTMLInputElement;
+          });
           input.value = '0';
 
           input.addEventListener('input', () => {

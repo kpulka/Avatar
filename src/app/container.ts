@@ -80,20 +80,14 @@ export function createApp(canvas: HTMLCanvasElement): AppHandle {
   // ---- Stan (F11): store + mirror legacy + tryb UI
   const store = new SettingsStore(localStorage);
   const unsubLegacyBridge = attachLegacyBridge(store, localStorage);
-  const speechBackend = new ElevenAgentsSpeechBackend(
-    audioEngine,
-    () => resolveAgentId(store.getEffective<string>('agentId')).id
-  );
+  const speechBackend = new ElevenAgentsSpeechBackend(audioEngine, () => resolveAgentId(store.getEffective<string>('agentId')).id);
   const uiMode = createUiMode(store, { search: window.location.search, body: document.body });
   const unsubUiModeShortcut = uiMode.attachShortcut(window);
 
   // Theme and volume from the profile — also on store changes (Session panel, import).
   const applyAppearance = (): void => {
     document.body.classList.toggle('theme-light', store.getEffective<'dark' | 'light'>('theme') === 'light');
-    audioEngine.masterGain.gain.setValueAtTime(
-      store.getEffective<number>('volume'),
-      audioEngine.ctx.currentTime
-    );
+    audioEngine.masterGain.gain.setValueAtTime(store.getEffective<number>('volume'), audioEngine.ctx.currentTime);
   };
   applyAppearance();
   const unsubStore = store.subscribe(() => applyAppearance());
@@ -122,9 +116,7 @@ export function createApp(canvas: HTMLCanvasElement): AppHandle {
   });
   const unsubAvatarProgress = events.on('avatar:progress', ({ fraction }) => {
     if (avatarReady) return;
-    loaderUi.show(
-      fraction === null ? t('loader.avatar') : t('loader.avatarProgress', { percent: Math.round(fraction * 100) })
-    );
+    loaderUi.show(fraction === null ? t('loader.avatar') : t('loader.avatarProgress', { percent: Math.round(fraction * 100) }));
   });
   // S1: a double failure keeps the loader pill visible as an error with a retry (demo avatar), no dead end.
   const unsubAvatarError = events.on('avatar:error', () => {
@@ -163,9 +155,7 @@ export function createApp(canvas: HTMLCanvasElement): AppHandle {
   // Gaze: the scene computes the weights, FaceController applies them (single morph writer);
   // an A2F clip that carries its own eyes switches off the procedural eyes (morphs AND bones).
   animationController.setGazeProvider(() => sceneController.getGazeWeights());
-  sceneController.setProceduralEyesGate(
-    () => animationController.getFaceController()?.areProceduralEyesActive() ?? true
-  );
+  sceneController.setProceduralEyesGate(() => animationController.getFaceController()?.areProceduralEyesActive() ?? true);
 
   // ---- A/B comparison (F11): last-turn buffer + source registry
   const lastTurnBuffer = new LastTurnBuffer({ events });
@@ -365,6 +355,7 @@ export function createApp(canvas: HTMLCanvasElement): AppHandle {
       sceneController.loadDefaultAvatar();
       rafId = requestAnimationFrame(animate);
       embedBridge.notifyReady();
+      // eslint-disable-next-line no-console -- trace log, not a diagnostic: kept as console.log on purpose (warn/error are the diagnostic channels)
       console.log('Avatar application initialized successfully.');
     },
     dispose(): void {

@@ -38,7 +38,7 @@ export function createScenePanel(): PanelDefinition {
         }, 50);
       });
 
-      const fileInput = el('input', { type: 'file', attrs: { accept: '.glb,.gltf' } }) as HTMLInputElement;
+      const fileInput = el('input', { type: 'file', attrs: { accept: '.glb,.gltf' } });
       // Keyboard users go through the visible button; the native input stays out of the tab order / a11y tree.
       fileInput.classList.add('hidden');
       fileInput.tabIndex = -1;
@@ -49,6 +49,7 @@ export function createScenePanel(): PanelDefinition {
         text: t('scene.chooseGlb'),
       });
       fileButton.addEventListener('click', () => fileInput.click());
+      // eslint-disable-next-line @typescript-eslint/no-misused-promises -- async DOM event handler: the browser ignores the returned promise
       fileInput.addEventListener('change', async () => {
         const file = fileInput.files?.[0];
         fileInput.value = '';
@@ -72,7 +73,7 @@ export function createScenePanel(): PanelDefinition {
       const availablePresets = services.scenePresets.list();
       if (availablePresets.length >= 2) {
         for (const preset of availablePresets) {
-          const radio = el('input', { type: 'radio', attrs: { name: 'scene-preset' } }) as HTMLInputElement;
+          const radio = el('input', { type: 'radio', attrs: { name: 'scene-preset' } });
           radio.value = preset.id;
           radio.checked = services.scenePresets.getCurrentId() === preset.id;
           radio.addEventListener('change', () => {
@@ -80,17 +81,12 @@ export function createScenePanel(): PanelDefinition {
             store.setUser('scenePresetManual', true);
             services.scenePresets.apply(preset.id);
           });
-          presetList.append(
-            el('label', { className: 'engine-toggle' }, [
-              radio,
-              el('span', { text: preset.label }),
-            ])
-          );
+          presetList.append(el('label', { className: 'engine-toggle' }, [radio, el('span', { text: preset.label })]));
         }
       }
 
       // --- Skin subsurface scattering toggle (uniform flip, no shader recompile)
-      const sssToggle = el('input', { type: 'checkbox' }) as HTMLInputElement;
+      const sssToggle = el('input', { type: 'checkbox' });
       sssToggle.checked = true;
       sssToggle.addEventListener('change', () => setSkinSSSEnabled(sssToggle.checked));
 

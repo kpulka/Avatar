@@ -179,7 +179,10 @@ function letterRules(w: string): string[] {
     // Silent endings
     if (i === n - 1 && c === 'e') {
       // magic-e / silent final e — skipped unless it is the only vowel
-      const hasOtherVowel = w.slice(0, n - 1).split('').some(isVowelLetter);
+      const hasOtherVowel = w
+        .slice(0, n - 1)
+        .split('')
+        .some(isVowelLetter);
       if (hasOtherVowel) {
         i += 1;
         continue;
@@ -200,102 +203,289 @@ function letterRules(w: string): string[] {
 
     // Consonant digraphs
     switch (pair) {
-      case 'sh': out.push('SH'); i += 2; continue;
-      case 'ch': out.push('CH'); i += 2; continue;
-      case 'th': out.push('TH'); i += 2; continue;
-      case 'ph': out.push('F'); i += 2; continue;
-      case 'wh': out.push('W'); i += 2; continue;
-      case 'ck': out.push('K'); i += 2; continue;
-      case 'qu': out.push('K', 'W'); i += 2; continue;
-      case 'ng': out.push('NG'); i += 2; continue;
-      case 'zz': out.push('Z'); i += 2; continue;
-      case 'kn': if (i === 0) { out.push('N'); i += 2; continue; } break;
-      case 'wr': if (i === 0) { out.push('R'); i += 2; continue; } break;
-      case 'mb': if (i === n - 2) { out.push('M'); i += 2; continue; } break;
+      case 'sh':
+        out.push('SH');
+        i += 2;
+        continue;
+      case 'ch':
+        out.push('CH');
+        i += 2;
+        continue;
+      case 'th':
+        out.push('TH');
+        i += 2;
+        continue;
+      case 'ph':
+        out.push('F');
+        i += 2;
+        continue;
+      case 'wh':
+        out.push('W');
+        i += 2;
+        continue;
+      case 'ck':
+        out.push('K');
+        i += 2;
+        continue;
+      case 'qu':
+        out.push('K', 'W');
+        i += 2;
+        continue;
+      case 'ng':
+        out.push('NG');
+        i += 2;
+        continue;
+      case 'zz':
+        out.push('Z');
+        i += 2;
+        continue;
+      case 'kn':
+        if (i === 0) {
+          out.push('N');
+          i += 2;
+          continue;
+        }
+        break;
+      case 'wr':
+        if (i === 0) {
+          out.push('R');
+          i += 2;
+          continue;
+        }
+        break;
+      case 'mb':
+        if (i === n - 2) {
+          out.push('M');
+          i += 2;
+          continue;
+        }
+        break;
       case 'gh':
         if (i === n - 2 || (i > 0 && isVowelLetter(w.charAt(i - 1)))) {
           i += 2; // silent gh (end of word or after a vowel)
           continue;
         }
-        out.push('G'); i += 2; continue;
-      default: break;
+        out.push('G');
+        i += 2;
+        continue;
+      default:
+        break;
     }
 
     // Vowel pairs
     switch (pair) {
-      case 'ee': out.push('IY'); i += 2; continue;
-      case 'ea': out.push('IY'); i += 2; continue;
-      case 'oo': out.push('UW'); i += 2; continue;
-      case 'ou': out.push('AW'); i += 2; continue;
-      case 'ow': out.push('OW'); i += 2; continue;
-      case 'ai': out.push('EY'); i += 2; continue;
-      case 'ay': out.push('EY'); i += 2; continue;
-      case 'oi': out.push('OY'); i += 2; continue;
-      case 'oy': out.push('OY'); i += 2; continue;
-      case 'au': out.push('AO'); i += 2; continue;
-      case 'aw': out.push('AO'); i += 2; continue;
-      case 'oa': out.push('OW'); i += 2; continue;
-      case 'ie': out.push('IY'); i += 2; continue;
-      case 'ue': out.push('UW'); i += 2; continue;
-      case 'ui': out.push('UW'); i += 2; continue;
-      default: break;
+      case 'ee':
+        out.push('IY');
+        i += 2;
+        continue;
+      case 'ea':
+        out.push('IY');
+        i += 2;
+        continue;
+      case 'oo':
+        out.push('UW');
+        i += 2;
+        continue;
+      case 'ou':
+        out.push('AW');
+        i += 2;
+        continue;
+      case 'ow':
+        out.push('OW');
+        i += 2;
+        continue;
+      case 'ai':
+        out.push('EY');
+        i += 2;
+        continue;
+      case 'ay':
+        out.push('EY');
+        i += 2;
+        continue;
+      case 'oi':
+        out.push('OY');
+        i += 2;
+        continue;
+      case 'oy':
+        out.push('OY');
+        i += 2;
+        continue;
+      case 'au':
+        out.push('AO');
+        i += 2;
+        continue;
+      case 'aw':
+        out.push('AO');
+        i += 2;
+        continue;
+      case 'oa':
+        out.push('OW');
+        i += 2;
+        continue;
+      case 'ie':
+        out.push('IY');
+        i += 2;
+        continue;
+      case 'ue':
+        out.push('UW');
+        i += 2;
+        continue;
+      case 'ui':
+        out.push('UW');
+        i += 2;
+        continue;
+      default:
+        break;
     }
 
     // Trigraph at the start of a word (e.g. "sch" -> SK)
     if (triple === 'sch' && i === 0) {
-      out.push('S', 'K'); i += 3; continue;
+      out.push('S', 'K');
+      i += 3;
+      continue;
     }
 
     // Word-internal silent letters: S in "isl-" (island, isle), B before T (doubt, subtle, debt).
-    if (c === 's' && at(1) === 'l' && w.charAt(i - 1) === 'i') { i += 1; continue; }
-    if (c === 'b' && at(1) === 't' && i > 0) { i += 1; continue; }
+    if (c === 's' && at(1) === 'l' && w.charAt(i - 1) === 'i') {
+      i += 1;
+      continue;
+    }
+    if (c === 'b' && at(1) === 't' && i > 0) {
+      i += 1;
+      continue;
+    }
 
     // Doubled consonant letters (mopping, attention) are one sound, not two visemes.
-    if (c === at(1) && 'bdfgklmnprstvz'.includes(c)) { i += 1; continue; }
+    if (c === at(1) && 'bdfgklmnprstvz'.includes(c)) {
+      i += 1;
+      continue;
+    }
 
     // Single consonants
     switch (c) {
-      case 'b': out.push('B'); i += 1; continue;
+      case 'b':
+        out.push('B');
+        i += 1;
+        continue;
       case 'c':
-        if (['e', 'i', 'y'].includes(at(1))) { out.push('S'); } else { out.push('K'); }
-        i += 1; continue;
-      case 'd': out.push('D'); i += 1; continue;
-      case 'f': out.push('F'); i += 1; continue;
-      case 'g': out.push('G'); i += 1; continue;
+        if (['e', 'i', 'y'].includes(at(1))) {
+          out.push('S');
+        } else {
+          out.push('K');
+        }
+        i += 1;
+        continue;
+      case 'd':
+        out.push('D');
+        i += 1;
+        continue;
+      case 'f':
+        out.push('F');
+        i += 1;
+        continue;
+      case 'g':
+        out.push('G');
+        i += 1;
+        continue;
       case 'h':
-        if (i === 0) { out.push('HH'); }
-        else if (i > 0 && i < n - 1 && isVowelLetter(w.charAt(i - 1)) && isVowelLetter(at(1))) {
+        if (i === 0) {
+          out.push('HH');
+        } else if (i > 0 && i < n - 1 && isVowelLetter(w.charAt(i - 1)) && isVowelLetter(at(1))) {
           // h between vowels — silent in many cases
-        } else { out.push('HH'); }
-        i += 1; continue;
-      case 'j': out.push('JH'); i += 1; continue;
-      case 'k': out.push('K'); i += 1; continue;
-      case 'l': out.push('L'); i += 1; continue;
-      case 'm': out.push('M'); i += 1; continue;
-      case 'n': out.push('N'); i += 1; continue;
-      case 'p': out.push('P'); i += 1; continue;
-      case 'q': out.push('K'); i += 1; continue;
-      case 'r': out.push('R'); i += 1; continue;
-      case 's': out.push('S'); i += 1; continue;
-      case 't': out.push('T'); i += 1; continue;
-      case 'v': out.push('V'); i += 1; continue;
-      case 'w': out.push('W'); i += 1; continue;
-      case 'x': out.push('K', 'S'); i += 1; continue;
-      case 'z': out.push('Z'); i += 1; continue;
-      default: break;
+        } else {
+          out.push('HH');
+        }
+        i += 1;
+        continue;
+      case 'j':
+        out.push('JH');
+        i += 1;
+        continue;
+      case 'k':
+        out.push('K');
+        i += 1;
+        continue;
+      case 'l':
+        out.push('L');
+        i += 1;
+        continue;
+      case 'm':
+        out.push('M');
+        i += 1;
+        continue;
+      case 'n':
+        out.push('N');
+        i += 1;
+        continue;
+      case 'p':
+        out.push('P');
+        i += 1;
+        continue;
+      case 'q':
+        out.push('K');
+        i += 1;
+        continue;
+      case 'r':
+        out.push('R');
+        i += 1;
+        continue;
+      case 's':
+        out.push('S');
+        i += 1;
+        continue;
+      case 't':
+        out.push('T');
+        i += 1;
+        continue;
+      case 'v':
+        out.push('V');
+        i += 1;
+        continue;
+      case 'w':
+        out.push('W');
+        i += 1;
+        continue;
+      case 'x':
+        out.push('K', 'S');
+        i += 1;
+        continue;
+      case 'z':
+        out.push('Z');
+        i += 1;
+        continue;
+      default:
+        break;
     }
 
     // Single vowels
     switch (c) {
-      case 'a': out.push('AE'); i += 1; continue;
-      case 'e': out.push('EH'); i += 1; continue;
-      case 'i': out.push('IH'); i += 1; continue;
-      case 'o': out.push('AA'); i += 1; continue;
-      case 'u': out.push('AH'); i += 1; continue;
+      case 'a':
+        out.push('AE');
+        i += 1;
+        continue;
+      case 'e':
+        out.push('EH');
+        i += 1;
+        continue;
+      case 'i':
+        out.push('IH');
+        i += 1;
+        continue;
+      case 'o':
+        out.push('AA');
+        i += 1;
+        continue;
+      case 'u':
+        out.push('AH');
+        i += 1;
+        continue;
       case 'y':
-        out.push(i === 0 ? 'Y' : 'IH'); i += 1; continue;
+        out.push(i === 0 ? 'Y' : 'IH');
+        i += 1;
+        continue;
       default:
-        i += 1; continue; // unknown character (digit etc.) — skip
+        i += 1;
+        continue; // unknown character (digit etc.) — skip
     }
   }
 
@@ -307,7 +497,11 @@ function letterRules(w: string): string[] {
 // ---------------------------------------------------------------------------------------------
 
 // A typographic apostrophe (U+2019) is folded to the ASCII one: the lexicon keys use U+0027 only.
-const normalizeWord = (word: string) => word.toLowerCase().replace(/’/g, "'").replace(/[^a-z'-]/g, '');
+const normalizeWord = (word: string) =>
+  word
+    .toLowerCase()
+    .replace(/’/g, "'")
+    .replace(/[^a-z'-]/g, '');
 
 /**
  * Lexicon-only lookup (no rules): direct -> apostrophes removed -> every hyphen part present.

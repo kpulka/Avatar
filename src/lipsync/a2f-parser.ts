@@ -19,20 +19,57 @@ import { clamp01 } from '../realism/anim-config';
 
 /** Canonical (camelCase) names of the 52 ARKit blendshapes — the parser whitelist. */
 export const ARKIT_52: readonly string[] = [
-  'jawOpen', 'jawForward', 'jawLeft', 'jawRight',
-  'mouthClose', 'mouthFunnel', 'mouthPucker', 'mouthLeft', 'mouthRight',
-  'mouthSmileLeft', 'mouthSmileRight', 'mouthFrownLeft', 'mouthFrownRight',
-  'mouthDimpleLeft', 'mouthDimpleRight', 'mouthStretchLeft', 'mouthStretchRight',
-  'mouthRollLower', 'mouthRollUpper', 'mouthShrugUpper', 'mouthShrugLower',
-  'mouthPressLeft', 'mouthPressRight', 'mouthLowerDownLeft', 'mouthLowerDownRight',
-  'mouthUpperUpLeft', 'mouthUpperUpRight',
-  'browDownLeft', 'browDownRight', 'browInnerUp', 'browOuterUpLeft', 'browOuterUpRight',
-  'cheekPuff', 'cheekSquintLeft', 'cheekSquintRight',
-  'eyeBlinkLeft', 'eyeBlinkRight',
-  'eyeLookDownLeft', 'eyeLookDownRight', 'eyeLookInLeft', 'eyeLookInRight',
-  'eyeLookOutLeft', 'eyeLookOutRight', 'eyeLookUpLeft', 'eyeLookUpRight',
-  'eyeSquintLeft', 'eyeSquintRight', 'eyeWideLeft', 'eyeWideRight',
-  'noseSneerLeft', 'noseSneerRight',
+  'jawOpen',
+  'jawForward',
+  'jawLeft',
+  'jawRight',
+  'mouthClose',
+  'mouthFunnel',
+  'mouthPucker',
+  'mouthLeft',
+  'mouthRight',
+  'mouthSmileLeft',
+  'mouthSmileRight',
+  'mouthFrownLeft',
+  'mouthFrownRight',
+  'mouthDimpleLeft',
+  'mouthDimpleRight',
+  'mouthStretchLeft',
+  'mouthStretchRight',
+  'mouthRollLower',
+  'mouthRollUpper',
+  'mouthShrugUpper',
+  'mouthShrugLower',
+  'mouthPressLeft',
+  'mouthPressRight',
+  'mouthLowerDownLeft',
+  'mouthLowerDownRight',
+  'mouthUpperUpLeft',
+  'mouthUpperUpRight',
+  'browDownLeft',
+  'browDownRight',
+  'browInnerUp',
+  'browOuterUpLeft',
+  'browOuterUpRight',
+  'cheekPuff',
+  'cheekSquintLeft',
+  'cheekSquintRight',
+  'eyeBlinkLeft',
+  'eyeBlinkRight',
+  'eyeLookDownLeft',
+  'eyeLookDownRight',
+  'eyeLookInLeft',
+  'eyeLookInRight',
+  'eyeLookOutLeft',
+  'eyeLookOutRight',
+  'eyeLookUpLeft',
+  'eyeLookUpRight',
+  'eyeSquintLeft',
+  'eyeSquintRight',
+  'eyeWideLeft',
+  'eyeWideRight',
+  'noseSneerLeft',
+  'noseSneerRight',
   'tongueOut',
 ];
 
@@ -73,7 +110,7 @@ export function parseA2fJson(json: string): A2fParseResult {
   try {
     payload = JSON.parse(json);
   } catch (e) {
-    throw new Error(`A2F: invalid JSON — ${(e as Error).message}`);
+    throw new Error(`A2F: invalid JSON — ${(e as Error).message}`, { cause: e });
   }
   return parseA2fPayload(payload as A2fPayload);
 }
@@ -132,8 +169,7 @@ export function parseA2fPayload(payload: A2fPayload): A2fParseResult {
   }
 
   const explicitEyes = payload.carriesEyes;
-  const carriesEyes =
-    explicitEyes !== undefined ? explicitEyes === true : sawEyeShape;
+  const carriesEyes = explicitEyes !== undefined ? explicitEyes === true : sawEyeShape;
   return {
     clip: {
       frames,
@@ -144,4 +180,3 @@ export function parseA2fPayload(payload: A2fPayload): A2fParseResult {
     unknownShapes,
   };
 }
-

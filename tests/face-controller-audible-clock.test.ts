@@ -55,11 +55,7 @@ describe('FaceController audible clock (SHOW-05)', () => {
 
   it('keeps the mouth closed until the viseme is audible, even if the render position is past it', () => {
     const { driver, controller, setAudible } = setup();
-    controller.onAudioChunk(
-      { chars: ['a'], char_start_times_ms: [0], char_durations_ms: [400] },
-      1.0,
-      0
-    );
+    controller.onAudioChunk({ chars: ['a'], char_start_times_ms: [0], char_durations_ms: [400] }, 1.0, 0);
 
     // ctx.currentTime (5.0) is long past the viseme; the audible time (0.9) is not.
     setAudible(0.9);

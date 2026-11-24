@@ -22,7 +22,7 @@ export function createA2fPanel(): PanelDefinition {
         className: 'text-input',
         type: 'text',
         placeholder: t('a2f.urlPlaceholder'),
-      }) as HTMLInputElement;
+      });
       urlInput.value = store.getEffective<string>('a2fUrl');
 
       const saveButton = el('button', { className: 'btn btn-small btn-primary', type: 'button', text: t('a2f.save') });
@@ -38,6 +38,7 @@ export function createA2fPanel(): PanelDefinition {
 
       const statusLine = el('p', { className: 'drawer-subtitle', text: t('a2f.statusIdle'), role: 'status' });
       const checkButton = el('button', { className: 'btn btn-small', type: 'button', text: t('a2f.checkStatus') });
+      // eslint-disable-next-line @typescript-eslint/no-misused-promises -- async DOM event handler: the browser ignores the returned promise
       checkButton.addEventListener('click', async () => {
         const base = (urlInput.value.trim() || store.getEffective<string>('a2fUrl')).replace(/\/$/, '');
         statusLine.textContent = t('a2f.statusChecking');

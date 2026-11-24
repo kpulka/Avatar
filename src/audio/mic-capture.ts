@@ -101,6 +101,7 @@ export class MicCapture {
     silentGain.connect(ctx.destination);
 
     this.isRunning = true;
+    // eslint-disable-next-line no-console -- trace log, not a diagnostic: kept as console.log on purpose (warn/error are the diagnostic channels)
     console.log(`[MicCapture] Microphone active. Source sample rate: ${ctx.sampleRate}Hz -> output: 16000Hz`);
   }
 
@@ -127,6 +128,7 @@ export class MicCapture {
       this.mediaStream = null;
     }
 
+    // eslint-disable-next-line no-console -- trace log, not a diagnostic: kept as console.log on purpose (warn/error are the diagnostic channels)
     console.log('[MicCapture] Microphone stopped.');
   }
 

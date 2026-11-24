@@ -1,13 +1,6 @@
 import { describe, it, expect, beforeAll } from 'vitest';
 import { readFileSync, readdirSync } from 'node:fs';
-import {
-  ensureG2pLoaded,
-  isG2pReady,
-  g2pAvailable,
-  wordToPhonemesSync,
-  wordInLexicon,
-  rulesFallback,
-} from '../src/lipsync/g2p/g2p-en';
+import { ensureG2pLoaded, isG2pReady, g2pAvailable, wordToPhonemesSync, wordInLexicon, rulesFallback } from '../src/lipsync/g2p/g2p-en';
 import { GATE_TOKENS } from '../scripts/lipsync-corpus.mjs';
 
 describe('G2P EN (CMUdict + rules)', () => {
@@ -67,9 +60,7 @@ interface OovCase {
   absent?: string[];
 }
 
-const oovFixture = JSON.parse(
-  readFileSync(new URL('./fixtures/oov-wordlist.json', import.meta.url), 'utf8'),
-) as { cases: OovCase[] };
+const oovFixture = JSON.parse(readFileSync(new URL('./fixtures/oov-wordlist.json', import.meta.url), 'utf8')) as { cases: OovCase[] };
 
 describe('OOV exception coverage (LIP-02)', () => {
   beforeAll(async () => {
@@ -118,16 +109,54 @@ describe('pruned lexicon (LIP-01)', () => {
   });
 
   it('artifact integrity: counts, ordering, ARPAbet-only, no stress digits', () => {
-    const artifact = JSON.parse(
-      readFileSync(new URL('../src/lipsync/g2p/dict-en-pruned.json', import.meta.url), 'utf8'),
-    ) as { meta: { entries: number; source: string }; entries: Record<string, string> };
+    const artifact = JSON.parse(readFileSync(new URL('../src/lipsync/g2p/dict-en-pruned.json', import.meta.url), 'utf8')) as {
+      meta: { entries: number; source: string };
+      entries: Record<string, string>;
+    };
     const keys = Object.keys(artifact.entries);
     expect(artifact.meta.entries).toBeGreaterThanOrEqual(5000);
     expect(keys.length).toBe(artifact.meta.entries);
     expect(keys).toEqual([...keys].sort());
     const arpabet = new Set([
-      'AA', 'AE', 'AH', 'AO', 'AW', 'AY', 'B', 'CH', 'D', 'DH', 'EH', 'ER', 'EY', 'F', 'G', 'HH', 'IH', 'IY',
-      'JH', 'K', 'L', 'M', 'N', 'NG', 'OW', 'OY', 'P', 'R', 'S', 'SH', 'T', 'TH', 'UH', 'UW', 'V', 'W', 'Y', 'Z', 'ZH',
+      'AA',
+      'AE',
+      'AH',
+      'AO',
+      'AW',
+      'AY',
+      'B',
+      'CH',
+      'D',
+      'DH',
+      'EH',
+      'ER',
+      'EY',
+      'F',
+      'G',
+      'HH',
+      'IH',
+      'IY',
+      'JH',
+      'K',
+      'L',
+      'M',
+      'N',
+      'NG',
+      'OW',
+      'OY',
+      'P',
+      'R',
+      'S',
+      'SH',
+      'T',
+      'TH',
+      'UH',
+      'UW',
+      'V',
+      'W',
+      'Y',
+      'Z',
+      'ZH',
     ]);
     for (const [word, pronunciation] of Object.entries(artifact.entries)) {
       for (const phoneme of pronunciation.split(' ')) {
@@ -142,10 +171,7 @@ describe('pruned lexicon (LIP-01)', () => {
       for (const entry of readdirSync(dir, { withFileTypes: true })) {
         const child = new URL(entry.name + (entry.isDirectory() ? '/' : ''), dir);
         if (entry.isDirectory()) walk(child);
-        else if (
-          entry.name.endsWith('.ts') &&
-          /(from|import\()\s*['"]cmu-pronouncing-dictionary/.test(readFileSync(child, 'utf8'))
-        ) {
+        else if (entry.name.endsWith('.ts') && /(from|import\()\s*['"]cmu-pronouncing-dictionary/.test(readFileSync(child, 'utf8'))) {
           importing.push(entry.name);
         }
       }

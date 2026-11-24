@@ -1,9 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import {
-  mergeCharAlignmentToPhonemes,
-  distributeDurations,
-  HARD_MIN_SPAN_MS,
-} from '../src/lipsync/g2p/phoneme-merge';
+import { mergeCharAlignmentToPhonemes, distributeDurations, HARD_MIN_SPAN_MS } from '../src/lipsync/g2p/phoneme-merge';
 import { CharAlignment } from '../src/types/avatar';
 import { wordToPhonemesSync } from '../src/lipsync/g2p/g2p-en';
 import { beforeAll } from 'vitest';
@@ -62,8 +58,7 @@ describe('mergeCharAlignmentToPhonemes (ElevenLabs timing anchors)', () => {
   it('punctuation produces no spans', () => {
     const alignment = alignmentFor('say it.');
     const spans = mergeCharAlignmentToPhonemes(alignment);
-    const expected =
-      (wordToPhonemesSync('say')?.length ?? 0) + (wordToPhonemesSync('it')?.length ?? 0);
+    const expected = (wordToPhonemesSync('say')?.length ?? 0) + (wordToPhonemesSync('it')?.length ?? 0);
     expect(spans).toHaveLength(expected);
     for (const span of spans) {
       expect(span.phoneme).not.toBe('.');
@@ -71,9 +66,7 @@ describe('mergeCharAlignmentToPhonemes (ElevenLabs timing anchors)', () => {
   });
 
   it('empty alignment -> []', () => {
-    expect(
-      mergeCharAlignmentToPhonemes({ chars: [], char_start_times_ms: [], char_durations_ms: [] })
-    ).toEqual([]);
+    expect(mergeCharAlignmentToPhonemes({ chars: [], char_start_times_ms: [], char_durations_ms: [] })).toEqual([]);
   });
 });
 

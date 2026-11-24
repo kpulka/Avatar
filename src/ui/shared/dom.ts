@@ -55,12 +55,7 @@ export function el<K extends keyof HTMLElementTagNameMap>(
   return node;
 }
 
-export function listen(
-  target: EventTarget,
-  type: string,
-  handler: EventListener,
-  options?: AddEventListenerOptions
-): Unsub {
+export function listen(target: EventTarget, type: string, handler: EventListener, options?: AddEventListenerOptions): Unsub {
   target.addEventListener(type, handler, options);
   return () => target.removeEventListener(type, handler, options);
 }

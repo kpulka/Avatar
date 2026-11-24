@@ -18,9 +18,7 @@ export class AudioEngine {
     if (existingCtx) {
       this.ctx = existingCtx;
     } else {
-      const AudioCtxClass =
-        window.AudioContext ||
-        (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+      const AudioCtxClass = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
       this.ctx = new AudioCtxClass();
     }
 
@@ -97,6 +95,7 @@ export class AudioEngine {
 
     this.activeNodes = [];
     this.tailTime = 0;
+    // eslint-disable-next-line no-console -- trace log, not a diagnostic: kept as console.log on purpose (warn/error are the diagnostic channels)
     console.log(`[AudioEngine] hardStop() — epoch: ${this.epoch}`);
   }
 

@@ -75,6 +75,7 @@ export class SceneController implements SceneService {
       })
       .then((avatar) => {
         this.onLoaded(avatar, 'MetaPerson Rigged Avatar (avatar.glb)');
+        // eslint-disable-next-line no-console -- trace log, not a diagnostic: kept as console.log on purpose (warn/error are the diagnostic channels)
         console.log('[Avatar] Successfully loaded the rigged MetaPerson avatar.glb model');
       })
       .catch((error) => {
@@ -152,13 +153,15 @@ export class SceneController implements SceneService {
 
     // Eyeball bones: skipped when the active A2F clip carries its own eyes.
     if (root && this.proceduralEyesGate()) {
+      // userData is an untyped bag (any): the eye objects, when a loader sets them, are Object3Ds.
+      const eyeData = root.userData as { leftEye?: THREE.Object3D; rightEye?: THREE.Object3D };
       const leftEye =
-        root.userData?.leftEye ||
+        eyeData.leftEye ||
         root.getObjectByName('LeftEye') ||
         root.getObjectByName('AvatarLeftEyeball') ||
         root.getObjectByName('Avatar_LeftEye');
       const rightEye =
-        root.userData?.rightEye ||
+        eyeData.rightEye ||
         root.getObjectByName('RightEye') ||
         root.getObjectByName('AvatarRightEyeball') ||
         root.getObjectByName('Avatar_RightEye');

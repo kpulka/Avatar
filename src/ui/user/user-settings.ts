@@ -16,12 +16,16 @@ export function createUserSettings(): PanelDefinition {
     mount(ctx: PanelContext): PanelHandle {
       const { store, services, container, ui } = ctx;
 
-      const gear = el('button', {
-        className: 'dock-icon-btn user-settings-btn',
-        type: 'button',
-        ariaLabel: t('settings.title'),
-        title: t('settings.title'),
-      }, [icon('settings', 20)]);
+      const gear = el(
+        'button',
+        {
+          className: 'dock-icon-btn user-settings-btn',
+          type: 'button',
+          ariaLabel: t('settings.title'),
+          title: t('settings.title'),
+        },
+        [icon('settings', 20)]
+      );
       container.append(gear);
 
       const volumeValue = el('span', { text: `${Math.round(store.getEffective<number>('volume') * 100)}%` });
@@ -29,7 +33,7 @@ export function createUserSettings(): PanelDefinition {
         id: uid('volume'),
         type: 'range',
         attrs: { min: '0', max: '1', step: '0.05' },
-      }) as HTMLInputElement;
+      });
       volumeSlider.value = String(store.getEffective<number>('volume'));
       volumeSlider.addEventListener('input', () => {
         const value = parseFloat(volumeSlider.value);
@@ -38,7 +42,7 @@ export function createUserSettings(): PanelDefinition {
       });
       applyLock(volumeSlider, 'volume');
 
-      const micSelect = el('select', { id: uid('mic'), className: 'engine-select' }) as HTMLSelectElement;
+      const micSelect = el('select', { id: uid('mic'), className: 'engine-select' });
       micSelect.append(el('option', { value: '', text: t('settings.defaultDevice') }));
       const refreshDevices = async (): Promise<void> => {
         const devices = await services.conversation.listInputDevices();
@@ -56,7 +60,7 @@ export function createUserSettings(): PanelDefinition {
       void refreshDevices();
       applyLock(micSelect, 'micDeviceId');
 
-      const themeSelect = el('select', { id: uid('theme'), className: 'engine-select' }) as HTMLSelectElement;
+      const themeSelect = el('select', { id: uid('theme'), className: 'engine-select' });
       themeSelect.append(
         el('option', { value: 'dark', text: t('settings.themeDark') }),
         el('option', { value: 'light', text: t('settings.themeLight') })
@@ -67,7 +71,7 @@ export function createUserSettings(): PanelDefinition {
       });
       applyLock(themeSelect, 'theme');
 
-      const presetSelect = el('select', { id: uid('preset'), className: 'engine-select' }) as HTMLSelectElement;
+      const presetSelect = el('select', { id: uid('preset'), className: 'engine-select' });
       const availablePresets = services.scenePresets.list();
       if (availablePresets.length >= 2) {
         for (const preset of availablePresets) {
@@ -85,7 +89,7 @@ export function createUserSettings(): PanelDefinition {
       applyLock(presetSelect, 'scenePreset');
 
       // Studio mode switch (15-06): routed through AppServices.uiMode, lock-respecting.
-      const studioToggle = el('input', { id: uid('studio-mode'), type: 'checkbox' }) as HTMLInputElement;
+      const studioToggle = el('input', { id: uid('studio-mode'), type: 'checkbox' });
       studioToggle.checked = services.uiMode.getMode() === 'studio';
       studioToggle.addEventListener('change', () => {
         services.uiMode.set(studioToggle.checked ? 'studio' : 'user');
@@ -107,10 +111,7 @@ export function createUserSettings(): PanelDefinition {
             el('label', { attrs: { for: volumeSlider.id } }, [el('span', { text: t('settings.volumeLabel') }), volumeValue]),
             volumeSlider,
           ]),
-          el('div', { className: 'form-group' }, [
-            el('label', { text: t('settings.micLabel'), attrs: { for: micSelect.id } }),
-            micSelect,
-          ]),
+          el('div', { className: 'form-group' }, [el('label', { text: t('settings.micLabel'), attrs: { for: micSelect.id } }), micSelect]),
           el('div', { className: 'form-group' }, [
             el('label', { text: t('settings.themeLabel'), attrs: { for: themeSelect.id } }),
             themeSelect,

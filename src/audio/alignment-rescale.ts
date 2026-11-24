@@ -27,11 +27,7 @@ const MIN_BOUNDED_SPAN_MS = 100;
 
 const clampFactor = (raw: number): number => Math.min(MAX_FACTOR, Math.max(MIN_FACTOR, raw));
 
-export function rescaleAlignmentToAudio(
-  alignment: CharAlignment,
-  audioDurMs: number,
-  bounds?: SpeechBounds | null
-): CharAlignment {
+export function rescaleAlignmentToAudio(alignment: CharAlignment, audioDurMs: number, bounds?: SpeechBounds | null): CharAlignment {
   const { chars, char_start_times_ms: starts, char_durations_ms: durs } = alignment;
   if (!Array.isArray(starts) || starts.length === 0) return alignment;
   if (!Array.isArray(durs) || durs.length !== starts.length) return alignment;

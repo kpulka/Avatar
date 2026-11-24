@@ -8,12 +8,7 @@
  *   prototype pollution and DoS via import (ASVS L1, T-11-01/T-11-02),
  * - no dead microphone-sensitivity field (removed in F11, UI-05).
  */
-import {
-  CalibrationProfile,
-  DEFAULT_CALIBRATION_PROFILE,
-  LEGACY_SYNC_OFFSETS,
-  SYNC_CLOCK_VERSION,
-} from '../../lipsync/calibration';
+import { CalibrationProfile, DEFAULT_CALIBRATION_PROFILE, LEGACY_SYNC_OFFSETS, SYNC_CLOCK_VERSION } from '../../lipsync/calibration';
 import { VisemeOverrideMap } from '../../lipsync/viseme-overrides';
 import { DEFAULT_LIP_SYNC_ENGINE, LipSyncEngine, parseLipSyncEngine } from '../../lipsync/lipsync-engine';
 import { DEFAULT_AGENT_CONFIG } from '../../audio/agent-config';
@@ -100,6 +95,11 @@ export function isValidA2fUrl(value: string): boolean {
   }
 }
 
+/** A prototype-less map (no inherited keys): Object.create(null) is typed any, so the cast lives here once. */
+function nullProtoRecord<T extends object>(): T {
+  return Object.create(null) as T;
+}
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
@@ -146,19 +146,19 @@ function migrateSyncClock(profile: CalibrationProfile, stored: Record<string, un
 }
 
 function sanitizeVisemeOverrides(value: unknown): VisemeOverrideMap {
-  const result: VisemeOverrideMap = Object.create(null);
+  const result = nullProtoRecord<VisemeOverrideMap>();
   if (!isRecord(value)) return result;
   if (hasReservedKeys(value)) return result;
   let total = 0;
   for (const [visemeKey, shapesRaw] of Object.entries(value)) {
-    if (RESERVED_KEYS.has(visemeKey)) return Object.create(null);
+    if (RESERVED_KEYS.has(visemeKey)) return nullProtoRecord<VisemeOverrideMap>();
     if (!isRecord(shapesRaw) || hasReservedKeys(shapesRaw)) continue;
     const shapes: Record<string, number> = {};
     for (const [shapeKey, raw] of Object.entries(shapesRaw)) {
       if (typeof raw !== 'number' || !Number.isFinite(raw)) continue;
       shapes[shapeKey] = Math.max(0, Math.min(1, raw));
       total += 1;
-      if (total > MAX_VISEME_OVERRIDES) return Object.create(null);
+      if (total > MAX_VISEME_OVERRIDES) return nullProtoRecord<VisemeOverrideMap>();
     }
     result[visemeKey] = shapes;
   }
@@ -166,7 +166,7 @@ function sanitizeVisemeOverrides(value: unknown): VisemeOverrideMap {
 }
 
 function sanitizeLocks(value: unknown): Record<string, boolean> {
-  const locks: Record<string, boolean> = Object.create(null);
+  const locks = nullProtoRecord<Record<string, boolean>>();
   if (!isRecord(value)) return locks;
   for (const [key, raw] of Object.entries(value)) {
     if (RESERVED_KEYS.has(key)) continue;
@@ -188,7 +188,9 @@ export function validateSettings(raw: unknown): { ok: true; value: SettingsState
     return { ok: false, error: 'Settings contain reserved keys (__proto__/constructor/prototype).' };
   }
   if (raw.schemaVersion !== undefined && raw.schemaVersion !== 1) {
-    return { ok: false, error: `Unsupported schema version: ${String(raw.schemaVersion)}.` };
+    // eslint-disable-next-line @typescript-eslint/no-base-to-string -- message text only; an object version prints as [object Object] on purpose
+    const version = String(raw.schemaVersion);
+    return { ok: false, error: `Unsupported schema version: ${version}.` };
   }
 
   const userRaw = isRecord(raw.user) && !hasReservedKeys(raw.user) ? raw.user : {};
@@ -216,8 +218,8 @@ export function validateSettings(raw: unknown): { ok: true; value: SettingsState
     a2fUrl: DEFAULT_SETTINGS.studio.a2fUrl,
     lipSyncEngine: DEFAULT_SETTINGS.studio.lipSyncEngine,
     calibration: { ...DEFAULT_CALIBRATION_PROFILE },
-    visemeOverrides: Object.create(null),
-    locks: Object.create(null),
+    visemeOverrides: nullProtoRecord<VisemeOverrideMap>(),
+    locks: nullProtoRecord<Record<string, boolean>>(),
   };
   if (typeof studioRaw.agentId === 'string' && studioRaw.agentId.trim() !== '') {
     studio.agentId = studioRaw.agentId.trim();

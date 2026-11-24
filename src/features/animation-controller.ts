@@ -10,12 +10,7 @@ import { predictFrames } from '../audio/a2f-backend';
 import { FaceController } from '../lipsync/face-controller';
 import { resolveAnimationSource } from '../lipsync/animation-router';
 import { buildDemoFrames, synthesizeDemoAudio } from '../lipsync/demo-frames';
-import {
-  CalibrationPresetName,
-  CalibrationProfile,
-  CALIBRATION_PRESETS,
-  DEFAULT_CALIBRATION_PROFILE,
-} from '../lipsync/calibration';
+import { CalibrationPresetName, CalibrationProfile, CALIBRATION_PRESETS, DEFAULT_CALIBRATION_PROFILE } from '../lipsync/calibration';
 import { VisemeOverrideMap } from '../lipsync/viseme-overrides';
 import type { LipSyncEngine } from '../lipsync/lipsync-engine';
 import { TypedEventBus, Unsub } from '../app/events';
@@ -148,9 +143,7 @@ export class AnimationController implements AnimationService {
   }
 
   public testPhoneme(phoneme: string): void {
-    this.faceController?.testPhoneme(
-      phoneme as 'A' | 'E' | 'O' | 'U' | 'M' | 'SZ' | 'F' | 'neutral'
-    );
+    this.faceController?.testPhoneme(phoneme as 'A' | 'E' | 'O' | 'U' | 'M' | 'SZ' | 'F' | 'neutral');
   }
 
   public setManualOverride(shape: string, value: number): void {

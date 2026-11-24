@@ -49,14 +49,26 @@ function makeFaceController(initial: 'viseme' | 'frames' = 'viseme') {
   const modeAtFrames: string[] = [];
   let mode = initial;
   return {
-    sequence, modeAtLiveChunk, modeAtFrames,
+    sequence,
+    modeAtLiveChunk,
+    modeAtFrames,
     faceController: {
-      get mode() { return mode; },
-      onAudioChunk: vi.fn(() => { sequence.push('live'); modeAtLiveChunk.push(mode); }),
-      feedFrames: vi.fn(() => { sequence.push('a2f'); modeAtFrames.push(mode); }),
+      get mode() {
+        return mode;
+      },
+      onAudioChunk: vi.fn(() => {
+        sequence.push('live');
+        modeAtLiveChunk.push(mode);
+      }),
+      feedFrames: vi.fn(() => {
+        sequence.push('a2f');
+        modeAtFrames.push(mode);
+      }),
       getState: vi.fn(() => 'IDLE'),
       getAnimationMode: vi.fn(() => mode),
-      setAnimationMode: vi.fn((next: 'viseme' | 'frames') => { mode = next; }),
+      setAnimationMode: vi.fn((next: 'viseme' | 'frames') => {
+        mode = next;
+      }),
       onInterruption: vi.fn(),
     },
   };
@@ -95,8 +107,7 @@ function makeHarness(options: HarnessOptions = {}) {
   const engine = makeEngine();
   if (options.pendingAudio) engine.hasPendingAudio.mockReturnValue(true);
   const { faceController, sequence, modeAtLiveChunk, modeAtFrames } = makeFaceController(options.initialMode);
-  const predict =
-    options.predict ?? vi.fn(async () => ({ parsed: { clip: CLIP }, predictMs: 120 }));
+  const predict = options.predict ?? vi.fn(async () => ({ parsed: { clip: CLIP }, predictMs: 120 }));
   const results: CompareResultEvent[] = [];
   events.on('compare:result', (result) => results.push(result));
 
@@ -136,8 +147,7 @@ describe('LastTurnBuffer sample rate', () => {
     const events = new TypedEventBus<AppEvents>();
     const buffer = new LastTurnBuffer({ events });
     for (let i = 0; i < 2; i++) {
-      events.emit('audio:chunk', { bytes: new Uint8Array(44100 * 2), alignment: ALIGNMENT,
-        epoch: 0, startTime: i, sampleRate: 44100 });
+      events.emit('audio:chunk', { bytes: new Uint8Array(44100 * 2), alignment: ALIGNMENT, epoch: 0, startTime: i, sampleRate: 44100 });
     }
     const turn = buffer.getLastTurn()!;
     expect(turn.sampleRate).toBe(44100);
@@ -183,10 +193,10 @@ describe('CompareController', () => {
     // 2 chunki × 2 tory
     expect(harness.engine.playChunk).toHaveBeenCalledTimes(4);
     const calls = harness.engine.playChunk.mock.calls;
-    expect(Array.from(defined(calls[0])[0] as Uint8Array)).toEqual([1, 2, 3, 4]);
-    expect(Array.from(defined(calls[2])[0] as Uint8Array)).toEqual([1, 2, 3, 4]);
-    expect(Array.from(defined(calls[1])[0] as Uint8Array)).toEqual([5, 6, 7, 8]);
-    expect(Array.from(defined(calls[3])[0] as Uint8Array)).toEqual([5, 6, 7, 8]);
+    expect(Array.from(defined(calls[0])[0])).toEqual([1, 2, 3, 4]);
+    expect(Array.from(defined(calls[2])[0])).toEqual([1, 2, 3, 4]);
+    expect(Array.from(defined(calls[1])[0])).toEqual([5, 6, 7, 8]);
+    expect(Array.from(defined(calls[3])[0])).toEqual([5, 6, 7, 8]);
     expect(defined(calls[0])[1]).toBe(defined(calls[2])[1]);
 
     expect(harness.faceController.onAudioChunk).toHaveBeenCalledTimes(2);
@@ -286,8 +296,13 @@ describe('CompareController', () => {
   });
 
   it('restores the original mode after a failed run', async () => {
-    const harness = makeHarness({ initialMode: 'viseme', random: () => 0.9,
-      predict: vi.fn(async () => { throw new Error('offline'); }) });
+    const harness = makeHarness({
+      initialMode: 'viseme',
+      random: () => 0.9,
+      predict: vi.fn(async () => {
+        throw new Error('offline');
+      }),
+    });
     expect(await harness.controller.run({ blind: true })).toBe(false);
     expect(harness.faceController.mode).toBe('viseme');
     expect(harness.controller.getState()).toBe('error');
@@ -297,7 +312,7 @@ describe('CompareController', () => {
     const harness = makeHarness();
     vi.spyOn(harness.buffer, 'concatPcm').mockReturnValue(null);
     const toasts: AppEvents['toast'][] = [];
-    harness.events.on('toast', toast => toasts.push(toast));
+    harness.events.on('toast', (toast) => toasts.push(toast));
     expect(await harness.controller.run()).toBe(false);
     expect(harness.controller.getState()).toBe('error');
     expect(toasts).toEqual(expect.arrayContaining([expect.objectContaining({ type: 'error' })]));
@@ -305,7 +320,13 @@ describe('CompareController', () => {
 
   it('cancellation still returns true and restores the original mode', async () => {
     let release!: () => void;
-    const harness = makeHarness({ initialMode: 'frames', sleep: () => new Promise<void>(resolve => { release = resolve; }) });
+    const harness = makeHarness({
+      initialMode: 'frames',
+      sleep: () =>
+        new Promise<void>((resolve) => {
+          release = resolve;
+        }),
+    });
     const running = harness.controller.run();
     await Promise.resolve();
     harness.controller.cancel('test');
@@ -319,7 +340,7 @@ describe('CompareController', () => {
     { initialMode: 'frames' as const, random: (): number => 0.9, finalMode: 'viseme', finalState: 'playing-a' },
   ])('keeps the final lane active until its audio finishes ($finalMode)', async ({ initialMode, random, finalMode, finalState }) => {
     const releases: Array<() => void> = [];
-    const harness = makeHarness({ initialMode, random, sleep: () => new Promise<void>(resolve => releases.push(resolve)) });
+    const harness = makeHarness({ initialMode, random, sleep: () => new Promise<void>((resolve) => releases.push(resolve)) });
     const running = harness.controller.run({ blind: true });
     for (let i = 0; i < 10 && releases.length < 1; i++) await Promise.resolve();
     expect(releases).toHaveLength(1);
@@ -337,7 +358,7 @@ describe('CompareController', () => {
 
   it('waits for the audio engine tail if playback extends past the initial wait', async () => {
     const releases: Array<() => void> = [];
-    const harness = makeHarness({ sleep: () => new Promise<void>(resolve => releases.push(resolve)) });
+    const harness = makeHarness({ sleep: () => new Promise<void>((resolve) => releases.push(resolve)) });
     const running = harness.controller.run();
     for (let i = 0; i < 10 && releases.length < 1; i++) await Promise.resolve();
     defined(releases[0])();
@@ -356,7 +377,7 @@ describe('CompareController', () => {
 
   it('restores immediately on cancel and a stale run cannot change a new run mode', async () => {
     const releases: Array<() => void> = [];
-    const harness = makeHarness({ initialMode: 'frames', sleep: () => new Promise<void>(resolve => releases.push(resolve)) });
+    const harness = makeHarness({ initialMode: 'frames', sleep: () => new Promise<void>((resolve) => releases.push(resolve)) });
     const oldRun = harness.controller.run();
     for (let i = 0; i < 10 && releases.length < 1; i++) await Promise.resolve();
     expect(harness.faceController.mode).toBe('viseme');

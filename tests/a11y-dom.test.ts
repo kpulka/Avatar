@@ -122,9 +122,7 @@ describe('form label association', () => {
     expect(controls.length).toBeGreaterThan(0);
     for (const control of controls) {
       const labelled =
-        control.getAttribute('aria-label') ||
-        (control.id && root.querySelector(`label[for="${control.id}"]`)) ||
-        control.closest('label');
+        control.getAttribute('aria-label') || (control.id && root.querySelector(`label[for="${control.id}"]`)) || control.closest('label');
       expect(labelled, `${control.tagName}#${control.id} has no label`).toBeTruthy();
     }
   }
@@ -133,13 +131,15 @@ describe('form label association', () => {
     const fixture = createUiFixture();
     createUserSettings().mount(fixture.ctx);
     (fixture.host.querySelector('.user-settings-btn') as HTMLButtonElement).click();
-    return vi.waitFor(() => expect(fixture.modalCalls).toHaveLength(1)).then(() => {
-      const form = defined(fixture.modalCalls[0]).content;
-      // Controls live in the form; labels too (ids are stable, same document).
-      document.body.append(form);
-      assertLabelled(form);
-      expect(form.querySelectorAll('label[for]').length).toBe(5);
-    });
+    return vi
+      .waitFor(() => expect(fixture.modalCalls).toHaveLength(1))
+      .then(() => {
+        const form = defined(fixture.modalCalls[0]).content;
+        // Controls live in the form; labels too (ids are stable, same document).
+        document.body.append(form);
+        assertLabelled(form);
+        expect(form.querySelectorAll('label[for]').length).toBe(5);
+      });
   });
 
   it('a2f URL input has a visible label; session agent and volume are labelled; animation sliders too', () => {
@@ -230,8 +230,10 @@ describe('SVG icons', () => {
 
   it('user layer sources contain no emoji', async () => {
     const { readFileSync, readdirSync } = await import('node:fs');
+    // eslint-disable-next-line @typescript-eslint/unbound-method -- test double / mock typing: the value comes from an untyped mock or JSON fixture
     const { join } = await import('node:path');
     const dir = join(process.cwd(), 'src', 'ui', 'user');
+    // eslint-disable-next-line no-misleading-character-class -- test double / mock typing: the value comes from an untyped mock or JSON fixture
     const emoji = /[\u{1F300}-\u{1FAFF}\u{2699}\u{FE0F}]/u;
     const offenders = readdirSync(dir)
       .filter((name) => name.endsWith('.ts'))

@@ -45,7 +45,10 @@ describe('EmbedBridge', () => {
   });
 
   it('accepts same-origin parent messages and dispatches callbacks', () => {
-    const onConnect = vi.fn(), onDisconnect = vi.fn(), onInterrupt = vi.fn(), onSay = vi.fn();
+    const onConnect = vi.fn(),
+      onDisconnect = vi.fn(),
+      onInterrupt = vi.fn(),
+      onSay = vi.fn();
     new EmbedBridge({ onConnect, onDisconnect, onInterrupt, onSay }, { devMode: false });
     send(connect, 'https://widget.example');
     send({ type: 'avatar:disconnect' }, 'https://widget.example');
@@ -105,6 +108,7 @@ describe('EmbedBridge', () => {
   it('posts to each configured origin before a trusted message and then replies to its origin', () => {
     const bridge = new EmbedBridge({}, { devMode: false, allowedOrigins: ['https://a.example', 'https://b.example'] });
     bridge.emit('ready');
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-return -- test double / mock typing: the value comes from an untyped mock or JSON fixture
     expect(mockWindow.parent.postMessage.mock.calls.map((call) => call[1])).toEqual(['https://a.example', 'https://b.example']);
     mockWindow.parent.postMessage.mockClear();
     send(connect, 'https://b.example');

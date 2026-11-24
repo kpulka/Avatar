@@ -126,7 +126,10 @@ describe('FaceController clocks (16-03): injectable wall clock + audio clock', (
     controller.onAudioChunk(CHUNK, 0, engine.epoch);
     controller.render(0.016);
     expect(controller.getState()).toBe('SPEAKING');
-    const jaw = driver.writes.slice(mark).filter(([s]) => s === 'jawOpen').map(([, w]) => w);
+    const jaw = driver.writes
+      .slice(mark)
+      .filter(([s]) => s === 'jawOpen')
+      .map(([, w]) => w);
     expect(jaw.length).toBeGreaterThan(0);
     expect(jaw.every((w) => w > 0)).toBe(true);
   });
