@@ -54,3 +54,15 @@ Skipped per user; plans stop at checkpoint:human-* and are recorded as PARTIAL/B
 - F/18-03 PARTIAL (CI written+locally validated; first GitHub run DEFERRED-HUMAN), 18-04 DONE, 18-07 PARTIAL merged 3a0690b [sonnet]. Interrupted once by 5h API limit, resumed via SendMessage.
 - Orchestrator fix: `npm test` → `vitest run --dir tests` (plain vitest collected .claude/worktrees/** → stale worktree test failed `verify` locally; CI unaffected). tests/agent-id.test.ts CRLF-only Prettier fix. `npm run verify` exit 0: typecheck 0, 75/706, build OK, lint 0 (--max-warnings 0), format OK.
 - Not executed (owner): 11.2-03, 11.2-09, 13-03, 18-05, 18-06. Deferred human sign-offs: 11.2-04..08 visual, 12 UI/console UAT, 13 manual, 14 cold-open doc + dev boot, 15 §2-5, 16 UAT + 5 behavior changes, 17 live UAT, 18 LICENSE wording + first CI run.
+
+## Follow-up 2026-11-24: audit remediation (Sonnet executors)
+
+| Item | Owner | Result |
+|---|---|---|
+| L-2, L-3, L-4 (language scope, CSP note, .gitignore EN) | orchestrator | 5702590 |
+| UIX-02/04 static gates (44px targets, WCAG AA tokens, aria-live, modal focus) | sonnet | merged 8507d78 |
+| L-5 dispose paths (EmbedBridge, AudioEngine, vignette), @elevenlabs/client removed, npm audit 5 to 0, T-8 tests, M-3 engines | sonnet | merged 7f3cbd5 |
+| THIRD-PARTY-NOTICES regeneration | sonnet | pending |
+
+Gate after both merges: `npm run verify` exit 0, 78 files / 855 tests.
+Drift: the UIX agent applied 44px (REQUIREMENTS UIX-02). `15-DRAFT-ui-spec.md` still says 36/40px, so the owner should amend the spec. Both executor worktrees were created from `master` and the agents rebased onto `implement/v1.1-refactor` themselves; future dispatch prompts must state the base branch.

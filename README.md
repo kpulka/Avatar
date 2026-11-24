@@ -5,7 +5,7 @@ An interactive 3D avatar that **holds a voice conversation with you**. It listen
 <!-- 13-03: hero screenshot (dark theme, avatar mid-speech). Alt: "The Avatar talking —
      mouth shapes match the audio waveform playing in real time." ≤ 300 kB. -->
 
-**What makes it interesting:** lip-sync is not canned blendshape playback. The client converts English text to phonemes with the CMU Pronouncing Dictionary (with fallback rules for unknown words), maps them to ARKit viseme targets, and schedules them against the same audible clock that plays the audio. Interrupted turns are tagged with an epoch, so late audio from a cancelled turn is ignored by construction. A second animation source, neural frames in the Audio2Face style, goes through the same router. The codebase is TypeScript in strict mode with 706 automated tests in 75 files (measured 2026-11-24), and the planning process records each architectural decision.
+**What makes it interesting:** lip-sync is not canned blendshape playback. The client converts English text to phonemes with the CMU Pronouncing Dictionary (with fallback rules for unknown words), maps them to ARKit viseme targets, and schedules them against the same audible clock that plays the audio. Interrupted turns are tagged with an epoch, so late audio from a cancelled turn is ignored by construction. A second animation source, neural frames in the Audio2Face style, goes through the same router. The codebase is TypeScript in strict mode with 855 automated tests in 78 files (measured 2026-11-24), and the planning process records each architectural decision.
 
 ## Quickstart
 
@@ -104,7 +104,7 @@ npm run lint          # ESLint (typescript-eslint, type-checked), zero warnings,
 npm run format:check  # Prettier over src, tests and the TS config files
 ```
 
-706 tests in 75 files, measured 2026-11-24 with `npx vitest run --dir tests`; `npm run verify` took about 22 s on the development machine. The CI workflow runs the same steps on every push and pull request.
+855 tests in 78 files, measured 2026-11-24 with `npx vitest run --dir tests`; `npm run verify` took about 22 s on the development machine. The CI workflow runs the same steps on every push and pull request.
 
 The workflow in [`.github/workflows/ci.yml`](.github/workflows/ci.yml) runs `npm ci`, `typecheck`, `lint`, `format:check`, `test` and `build` on Node 22 for every push to `master` and every pull request. Its status:
 

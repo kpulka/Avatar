@@ -124,11 +124,11 @@ Milestone v1.1 (2026-11): publiczne repo jako produkt rekruterski — język ang
 ### README showcase (READ, Faza 13)
 
 - [ ] **READ-01**: Angielski README w repo root — struktura rekruterska: hero + wizual, zweryfikowany quickstart (≤ 4 komendy), highlights, tabela decyzji (wybór + odrzucona alternatywa + dlaczego), architektura ≤ 10 linii + link, indeks docs, status, proces (GSD), licencja; ≤ ~150 linii body
-- [ ] **READ-02**: Truthfulness — zero nieaktualnych twierdzeń (usuń "etap dokumentacji / brak kodu" i "wymagany eksport modelu"); każde twierdzenie weryfikowalne w dniu pisania; wiersze statusu z datą "Verified"; praca eksperymentalna (A2F) oznaczona designed-not-running
+- [x] **READ-02**: Truthfulness — zero nieaktualnych twierdzeń (usuń "etap dokumentacji / brak kodu" i "wymagany eksport modelu"); każde twierdzenie weryfikowalne w dniu pisania; wiersze statusu z datą "Verified"; praca eksperymentalna (A2F) oznaczona designed-not-running
 - [ ] **READ-03**: Quickstart reprodukowalny — komendy wykonane na zimnym klonie i zapisane (13-02); troubleshooting pokrywa 3 realne frictions (agent_id, mic, port 5310)
 - [ ] **READ-04**: Indeks docs — 10 kanonicznych nazw + 2 deep-dive'e (`docs/animation-runtime.md`, `docs/lipsync-deep-dive.md` z markerem do 16-07/17-06)
 - [ ] **READ-05**: Zasoby wizualne (po Fazie 15) — hero ≤ 300 kB (dark), GIF talk+barge-in ≤ 3 MB/≤ 6 s, shot light-theme, social preview 1200×630; alt-teksty; budżety rozmiarów dotrzymane
-- [ ] **READ-06**: Sloty wiarygodności — badge CI (18-03), licencja (18-02), demo (18-05) z dokładnymi URL w komentarzach placeholderów; linki wzajemne README ↔ ARCHITECTURE.md ↔ .planning/README.md
+- [x] **READ-06**: Sloty wiarygodności — badge CI (18-03), licencja (18-02), demo (18-05) z dokładnymi URL w komentarzach placeholderów; linki wzajemne README ↔ ARCHITECTURE.md ↔ .planning/README.md
 
 ### Architecture guards (ARCH, Faza 14)
 
@@ -144,9 +144,9 @@ Milestone v1.1 (2026-11): publiczne repo jako produkt rekruterski — język ang
 ### Web UI refactor (UIX, Faza 15)
 
 - [x] **UIX-01**: Design tokens & theming — style.css sterowany custom properties (15-DRAFT-ui-spec); light theme działa end-to-end
-- [ ] **UIX-02**: Typografia & targets — brak tekstu < 12 px; role typograficzne wg spec; targets ≥ 44 px
+- [x] **UIX-02**: Typografia & targets — brak tekstu < 12 px; role typograficzne wg spec; targets ≥ 44 px
 - [x] **UIX-03**: Kontrakt shared primitives — toast `role=status` (błędy `role=alert`), loader, modal wg spec
-- [ ] **UIX-04**: Accessibility — aria-live (polite) na captions/status/algo status; focus management w modale; contrast WCAG AA
+- [x] **UIX-04**: Accessibility — aria-live (polite) na captions/status/algo status; focus management w modale; contrast WCAG AA
 - [x] **UIX-05**: Stany & recovery — błąd połączenia = inline banner z retry (nie toast); każda powierzchnia ma zdefiniowany stan pusty/ładowanie/błąd
 - [x] **UIX-06**: Higiena feedbacku & compare UX — rutynowe zmiany stanu nie toastują; przebieg porównania A/B czytelny (który tor, kiedy, cancel widoczny)
 - [ ] **UIX-07**: Integralność responsive — min viewport 1152×648 deklarowany; brak nakładania/ucięcia przy 125%/150% zoom
@@ -187,7 +187,7 @@ Milestone v1.1 (2026-11): publiczne repo jako produkt rekruterski — język ang
 - [x] **QUAL-05**: Lint/format — ESLint (flat, typescript-eslint) z regułą layering z `layering-rules.ts` (single source z 14-02); Prettier; `lint`/`format:check` zielone; dwa osobne commity (fix violations / one-shot format); CI je uruchamia
 - [ ] **QUAL-06**: Pages demo — build demo (`?demo=1`, base-path override) deployowany na push do main; demo = avatar + demo speech + synthetic A2F + bring-your-own agent_id (bez live conversation, chyba że owner zaakceptował koszt kwoty — D4); link w README
 - [ ] **QUAL-07**: Higiena & metadane — dyspozycje `.bak`/config.json wykonane (decyzje ownera); `.gitignore` audytowany (dist, .env, a2f/sdk, a2f/.venv — `git ls-files` czysty); description/topics/social preview ustawione; TODO header przyjazny visitorowi
-- [ ] **QUAL-08**: Anyone-can-verify — `npm run verify` (typecheck+test+build+lint+format) w package.json i README §Verification; zimny klon z samym Node.js przechodzi wszystkie bramki
+- [x] **QUAL-08**: Anyone-can-verify — `npm run verify` (typecheck+test+build+lint+format) w package.json i README §Verification; zimny klon z samym Node.js przechodzi wszystkie bramki
 
 ## Out of Scope
 
@@ -242,12 +242,12 @@ Milestone v1.1 (2026-11): publiczne repo jako produkt rekruterski — język ang
 | HARD-01..07 | Phase 11.1 | Verified by automated tests and drift reviews; manual UAT pending |
 | SHOW-01..10 | Phase 11.2 | Partial: 02, 03-09 complete (code; visual UAT deferred); 01, 10 pending (11.2-03, 11.2-09 blocked) |
 | I18N-01..08 | Phase 12 | 01-03,06-08 Complete; 04-05 automated-complete, manual UI/console UAT pending |
-| READ-01..06 | Phase 13 | Partial: 13-01/02 complete; READ-02 FAIL (stale test count), READ-04/06 partial, READ-05 pending (13-03 blocked) |
+| READ-01..06 | Phase 13 | Partial: 13-01/02 complete; READ-02, READ-06 complete (test count refreshed, ARCHITECTURE link; demo slot awaits 18-05); READ-04 partial, READ-05 pending (13-03 blocked) |
 | ARCH-01..08 | Phase 14 | Complete (automated PASS; manual UAT pending) |
-| UIX-01..11 | Phase 15 | Partial: 01, 03, 05, 06, 08-11 complete (automated); 02, 04, 07 pending manual or unverified |
+| UIX-01..11 | Phase 15 | Partial: 01-06, 08-11 complete (automated; 02/04 static gates in 15-UIX-STATIC-CHECKS.md, manual UAT pending); 07 manual (zoom/responsive) |
 | ANIM-01..10 | Phase 16 | Complete (automated PASS; manual UAT and behavior sign-off pending) |
 | LIP-01..07 | Phase 17 | LIP-01..06 complete (automated); LIP-07 partial (17-05 UAT deferred) |
-| QUAL-01..08 | Phase 18 | Partial: 01, 03, 04, 05 complete; 02, 08 partial; 06, 07 pending (18-05, 18-06 blocked) |
+| QUAL-01..08 | Phase 18 | Partial: 01, 03, 04, 05, 08 complete (08: verify gate + cold-export check by the auditor); 02 partial (CI never run on GitHub); 06, 07 pending (18-05, 18-06 blocked) |
 
 **Coverage:**
 

@@ -162,7 +162,7 @@ Each recipe lists the files to touch. If a change needs more than this, that is 
 
 ## 7. Quality gates that run on every `npm test`
 
-The suite is vitest with jsdom: 705 tests in 75 files at the verification date, plus these structural gates:
+The suite is vitest with jsdom: 855 tests in 78 files at the verification date (2026-11-24), plus these structural gates:
 
 - **Layering gate** (`tests/layering.test.ts`): section 2's import contract, cycles, and the top-level side-effect rule.
 - **Doc sync** (`tests/architecture-doc.test.ts`): this document's layer table equals `LAYER_MAY_IMPORT`, its event catalog lists exactly the `AppEvents` keys, and every cited file exists.

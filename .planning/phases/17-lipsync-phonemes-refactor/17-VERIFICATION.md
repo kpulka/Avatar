@@ -85,3 +85,7 @@ T-8 gap; every manual UAT section is DEFERRED-HUMAN and no UAT claim is made, so
 PASS until a person runs `17-UAT-PROTOCOL.md`. Per-plan summaries: `17-01-SUMMARY.md` to `17-06-SUMMARY.md`.
 
 No FAIL findings exist because nothing was run live; the first human session may produce them.
+
+## Addendum 2026-11-24 (post-audit)
+
+The T-8 gap is closed by commit 03bd9da. `tests/a2f-parser.test.ts` now pins empty frames, duplicate `frame_time`, absent `fps` (defaults to 60) and non-numeric `fps` (60). The parser needed no change. 17-05 live UAT remains DEFERRED-HUMAN.

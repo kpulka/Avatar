@@ -51,3 +51,7 @@ manual_uat: pending
 **Phase verdict: PARTIAL.** Reasons: (a) 13-03 visual assets are blocked on a human, so READ-05 is pending and manual UAT is pending; (b) READ-02 has one stale count (417/66 vs measured 678/73) that the owner must apply; (c) READ-06 ARCHITECTURE.md link waits for Phase 14. Everything automated that can be checked here passes: language gate 11/11, suite 73/678, build green.
 
 Per-plan SUMMARY links: 13-01 `13-01-SUMMARY.md`, 13-02 `13-02-SUMMARY.md`, 13-03 (blocked, no SUMMARY), 13-04 `13-04-SUMMARY.md`.
+
+## Addendum 2026-11-24 (post-audit)
+
+README test counts now read 855 tests in 78 files (README:8, :107), and README links ARCHITECTURE.md. READ-02 and READ-06 are therefore PASS. The READ-06 demo slot stays a placeholder until 18-05. The phase stays PARTIAL only because of 13-03 (READ-05) and manual UAT.
