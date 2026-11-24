@@ -103,3 +103,4 @@ Success = `[trtexec-shim] wrote ...network.trt` entries. Then `run_sample.bat` +
 | `build.bat` → "TENSORRT_ROOT_DIR is not defined" | env var not set | set `$env:TENSORRT_ROOT_DIR="C:\TensorRT-10.13"` |
 | `uv pip install` error `certifi==...` | index order (pytorch) | add `--index-strategy unsafe-best-match` |
 | Sample: "Unable to parse file…" | missing `_data\generated` | run `download_models.bat` + `gen_testdata.bat` |
+| Browser console: A2F request refused by Content-Security-Policy (`connect-src`) | the production build (`dist/`, `npm run preview`) ships a CSP that only allows same origin and `wss://api.elevenlabs.io` (`vite.config.ts`) | run the A2F track with `npm run dev`, or add the backend origin to `connect-src` for a local build |

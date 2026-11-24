@@ -9,6 +9,8 @@ export default defineConfig({
         return [
           {
             tag: 'meta',
+            // Production CSP: connect-src allows only same origin and the ElevenLabs WSS endpoint, so the
+            // local A2F HTTP backend (docs/a2f-local-setup.md) is blocked in `dist/`; use `npm run dev` for A2F demos.
             attrs: {
               'http-equiv': 'Content-Security-Policy',
               content:

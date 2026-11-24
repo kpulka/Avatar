@@ -132,8 +132,8 @@ function listFiles(relDir: string, exts: readonly string[]): string[] {
 const GATE_A_SCOPES: readonly GateAScope[] = [
   {
     name: 'docs/renamed',
-    // OFF: six of the eight renamed docs still contain Polish prose (translated in 12-03..12-04).
-    enforced: false,
+    // ON: all renamed docs were translated in 12-03..12-04 (subset of docs/all, kept for a precise failure label).
+    enforced: true,
     files: () => RENAME_MAP.map(([, next]) => `docs/${next}`).filter((f) => existsSync(join(ROOT, f))),
   },
   {
