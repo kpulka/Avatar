@@ -69,14 +69,14 @@ export function createDefaultAnimationSources(): AnimationSourceRegistry {
   const registry = new AnimationSourceRegistry();
   registry.register({
     id: 'viseme',
-    label: 'LIVE wizemy',
+    label: 'LIVE visemes',
     short: 'LIVE',
     available: () => true,
     apply: (ctx) => ctx.setSource('viseme'),
   });
   registry.register({
     id: 'a2f-local',
-    label: 'A2F (lokalny)',
+    label: 'A2F (local)',
     short: 'A2F',
     // Availability is actually verified by the A2F panel (/status); the segment does not block selection.
     available: () => true,

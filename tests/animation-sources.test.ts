@@ -24,6 +24,13 @@ class MockDriver implements FaceDriver {
 const engine = { ctx: { currentTime: 0 }, getEpoch: () => 0, hasPendingAudio: () => true };
 
 describe('AnimationSourceRegistry (open ids)', () => {
+  it('built-in source labels are English (the language gate matches diacritics only, so check the words)', () => {
+    const labels = createDefaultAnimationSources()
+      .list()
+      .map((s) => s.label);
+    expect(labels).toEqual(['LIVE visemes', 'A2F (local)']);
+  });
+
   it('registers a third source with its own short badge, no union edit needed', () => {
     const registry = createDefaultAnimationSources();
     const apply = vi.fn();
